@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f6f5f2">
-<title>アツマルコイン</title>
+<title>PITOPA</title>
 <script src="firebase-config.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+1p:wght@500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
@@ -245,6 +245,9 @@ body.hub .linkbox{background:#f6f5f2;border-color:var(--h-line)}
 .hub-field{display:flex;gap:8px}
 .hub-field input{flex:1;min-width:0;min-height:48px;font:inherit;font-size:17px;letter-spacing:.16em;text-transform:uppercase;padding:0 14px;border-radius:12px;border:1px solid var(--h-line);background:#f6f5f2;color:var(--h-ink)}
 @media (prefers-reduced-motion:reduce){.ticket{animation:none}}
+.pill{white-space:nowrap}
+.hub-note.warn{background:#fff1ec;border-color:#ffc9ba;color:#8a2a12}
+.hub-note small{font-size:11px;opacity:.8;word-break:break-all}
 </style>
 
 </head>
@@ -385,7 +388,7 @@ function npcChoice(g, rnd = Math.random) {
 const ARTIFACT_URL = 'https://claude.ai/artifact/AsSjmSCj2UX5796kW6SCuh';
 const VERSION = 'ver 1.0';
 const shareBase = () => window.claude ? ARTIFACT_URL : location.origin + location.pathname;
-let backend = 'local';
+let backend = 'local', wantOnline = false, connectErr = '';
 const clean = v => JSON.parse(JSON.stringify(v));
 /* ---- つなぎ先：Claudeのページ／Firebase／つながらない（1台） ---- */
 function claudeDb(cdb) {
@@ -767,6 +770,7 @@ function viewHub() {
   const left = L ? 0 : Math.max(0, OPEN_MS - (Date.now() - d.openedAt));
   const timer = L ? h('span', { class: 'hub-meta' }, '1台で遊ぶ') : h('span', { class: 'hub-meta', id: 'lobbyTimer' }, `卓 ${tableId} ・ ` + (left ? `あと${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}` : '受付終了'));
   const root = h('div', { class: 'hub-wrap' }, hubHead(timer, L ? null : leaveTable));
+  if (L && connectErr) root.append(h('div', { class: 'hub-note warn' }, h('span', null, 'オンラインにつながりませんでした', h('br'), h('small', null, `理由：${connectErr}`)), h('button', { class: 'pill on', onclick: () => location.reload() }, 'もう一度')));
 
   // メンバー
   const row = h('div', { class: 'hub-members' });
@@ -821,7 +825,7 @@ function viewHub() {
   if (!L && host) more.append(h('details', { class: 'card' }, h('summary', null, 'コインに書き込むリンク'), h('div', { class: 'linkbox' }, shareBase() + '#' + tableId),
     h('p', { class: 'cap', style: 'margin:8px 0 0;font-size:12px' }, window.claude ? 'NFCシールにこのリンクを書き込むと、かざすだけでこの卓に入れます。今はページを共有された人だけが入れます。' : 'NFCコインにこのリンクを書き込むと、かざすだけでこの卓に入れます。')));
   root.append(more);
-  if (L) root.append(h('span', { class: 'hub-meta c' }, `${VERSION} ・ オンラインにつながっていないので、1台で回して遊べます`));
+  if (L) root.append(h('span', { class: 'hub-meta c' }, `PITOPA ${VERSION}` + (connectErr ? '' : ' ・ オンラインにつながっていないので、1台で回して遊べます')));
   return root;
 }
 function viewNick() {
@@ -847,7 +851,7 @@ function viewNick() {
 function viewHome() {
   if (ready && local) return viewHub();
   const root = h('div', { class: 'hub-wrap' }, hubHead(null),
-    h('div', { class: 'hub-hello' }, h('span', { role: 'heading', 'aria-level': '1' }, 'コインを', h('br'), 'かざしてね'), h('span', { class: 'hub-meta' }, '1枚のコインをみんなで回して、スマホをかざすと同じ卓に集まれます')));
+    h('div', { class: 'hub-hello' }, h('span', { role: 'heading', 'aria-level': '1' }, 'ピッとかざして、', h('br'), 'パッと集まる。'), h('span', { class: 'hub-meta' }, '1枚のコインをみんなで回して、スマホをかざすと同じ卓に集まれます')));
   if (!ready) root.append(h('div', { class: 'hub-note c' }, '準備しています…'));
   else {
     const inp = h('input', { id: 'codeIn', maxlength: '8', placeholder: '卓コード', autocomplete: 'off', 'aria-label': '卓コード' });
@@ -856,7 +860,7 @@ function viewHome() {
       h('form', { class: 'hub-field', onsubmit: e => { e.preventDefault(); const v = inp.value.trim().toUpperCase(); if (!/^[A-Z0-9]{4,8}$/.test(v)) { toast('卓コードは英数字4〜8文字です'); return; } openTable(v); } },
         inp, h('button', { class: 'pill on', type: 'submit' }, '入る'))));
   }
-  root.append(h('span', { class: 'hub-meta c' }, VERSION));
+  root.append(h('span', { class: 'hub-meta c' }, `PITOPA ${VERSION}`));
   return root;
 }
 function viewOver() {
@@ -1043,7 +1047,8 @@ setInterval(() => {
 
 render();
 (async () => {
-  const c = window.claude, cfg = window.ATSUMARU_FIREBASE;
+  const c = window.claude, cfg = window.PITOPA_FIREBASE || window.ATSUMARU_FIREBASE;
+  wantOnline = !c && !!(cfg && cfg.apiKey && !/ここに/.test(cfg.apiKey));
   try {
     if (c) {
       let cdb; [cdb, user] = await Promise.all([c.use('db'), c.use('user')]);
@@ -1051,7 +1056,7 @@ render();
     } else if (cfg && cfg.apiKey && !/ここに/.test(cfg.apiKey)) {
       const r = await connectFirebase(cfg); db = r.db; me = r.uid; backend = 'firebase';
     }
-  } catch (e) { console.warn('オンラインにつながりませんでした', e); db = null; me = null; }
+  } catch (e) { console.warn('オンラインにつながりませんでした', e); connectErr = (e && (e.code || e.message)) || '不明なエラー'; db = null; me = null; }
   ready = true;
   if (!db || !me) { local = true; if (!tableId) render(); return; }
   const go = () => { const hsh = (location.hash || '').slice(1).toUpperCase(); if (/^[A-Z0-9]{4,8}$/.test(hsh) && hsh !== tableId) openTable(hsh); };
