@@ -1,6 +1,6 @@
 // Firebaseの設定（プロジェクト：atsumaru-134fa）
 // apiKey は公開されても大丈夫な値です。データはFirestoreのルールで守られています。
-window.ATSUMARU_FIREBASE = {
+window.PITOPA_FIREBASE = {
   apiKey: "AIzaSyDtmVGWM_NTwtX16UekDaB13ySJs20Yvwo",
   authDomain: "atsumaru-134fa.firebaseapp.com",
   projectId: "atsumaru-134fa",

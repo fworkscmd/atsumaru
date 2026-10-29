@@ -1,4 +1,6 @@
-# アツマルコイン（仮） ver 1.0
+# PITOPA（ピトパ） ver 1.0
+
+ピッとかざして、パッと集まる。
 
 NFCコインをスマホにかざして、同じ卓に集まって遊ぶブラウザゲームです。
 今遊べるのは「ドワーフ」（深掘りチキンレース・1〜4人）です。
@@ -20,7 +22,7 @@ NFCコインをスマホにかざして、同じ卓に集まって遊ぶブラ�
 ### 1. Firebaseのプロジェクトを作る（5分）
 
 1. https://console.firebase.google.com/ を開いて、Googleアカウントでログインします。
-2. 「プロジェクトを作成」を押して、好きな名前（例：`atsumaru-coin`）を入れます。Googleアナリティクスはオフで大丈夫です。
+2. 「プロジェクトを作成」を押して、好きな名前（例：`pitopa`）を入れます。Googleアナリティクスはオフで大丈夫です。
 
 ### 2. 匿名ログインをオンにする
 
@@ -43,11 +45,11 @@ NFCコインをスマホにかざして、同じ卓に集まって遊ぶブラ�
 3. 表示される `firebaseConfig = { ... }` の中身を、`firebase-config.js` の `{ ... }` の部分に貼り付けます。
 
 ```js
-window.ATSUMARU_FIREBASE = {
+window.PITOPA_FIREBASE = {
   apiKey: "AIza....",
-  authDomain: "atsumaru-coin.firebaseapp.com",
-  projectId: "atsumaru-coin",
-  storageBucket: "atsumaru-coin.appspot.com",
+  authDomain: "pitopa.firebaseapp.com",
+  projectId: "pitopa",
+  storageBucket: "pitopa.appspot.com",
   messagingSenderId: "1234567890",
   appId: "1:1234567890:web:abcdef"
 };
@@ -57,7 +59,7 @@ window.ATSUMARU_FIREBASE = {
 
 ### 5. GitHubで公開する
 
-1. GitHubで新しいリポジトリを作ります（例：`atsumaru-coin`）。無料プランでGitHub Pagesを使うので **Public** にします。
+1. GitHubで新しいリポジトリを作ります（例：`pitopa`）。無料プランでGitHub Pagesを使うので **Public** にします。
 2. 「Add file」→「Upload files」で、`index.html`・`firebase-config.js`・`firestore.rules`・`README.md` をアップロードして「Commit changes」。
 3. リポジトリの「Settings」→「Pages」を開き、「Branch」を `main`、フォルダを `/ (root)` にして保存します。
 4. 1〜2分待つと、`https://（ユーザー名）.github.io/（リポジトリ名）/` で開けるようになります。

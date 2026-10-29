@@ -248,6 +248,60 @@ body.hub .linkbox{background:#f6f5f2;border-color:var(--h-line)}
 .pill{white-space:nowrap}
 .hub-note.warn{background:#fff1ec;border-color:#ffc9ba;color:#8a2a12}
 .hub-note small{font-size:11px;opacity:.8;word-break:break-all}
+
+/* ===== 1画面に収める ===== */
+body.ingame,body.hub{height:100vh;height:100dvh;overflow:hidden}
+body.ingame #app{height:100%;padding-block:calc(10px + env(safe-area-inset-top,0px)) 0}
+.gscreen{height:100%;display:flex;flex-direction:column;gap:8px}
+.gscreen>.bar,.gscreen>.crew,.gscreen>.tray{flex:none}
+.gscreen>.board{flex:1;min-height:110px}
+.board canvas.view{position:absolute;inset:0;width:100%;height:100%}
+.gscreen>.tray{margin:0;background:#1b1511;border-top:1px solid var(--seam);padding:10px var(--pad-r) calc(14px + env(safe-area-inset-bottom,0px)) var(--pad-l);gap:8px}
+.row.info{gap:10px}
+.reveal{position:absolute;top:10px;left:12px;right:12px;margin:0;z-index:6;max-height:calc(100% - 20px);overflow:auto;cursor:pointer;background:rgba(34,27,22,.96);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.reveal.sum{z-index:5;cursor:default}
+.board.revealing::after{content:"";position:absolute;inset:0 0 auto 0;height:70%;background:linear-gradient(rgba(21,17,14,.85),rgba(21,17,14,0));z-index:4;pointer-events:none}
+.radov{position:absolute;left:12px;right:34px;bottom:42px;z-index:3}
+.gscreen.over{gap:10px;padding:0 var(--pad-r) calc(16px + env(safe-area-inset-bottom,0px)) var(--pad-l)}
+.gscreen.over>.bar{padding:0}
+.winbox{position:relative;flex:1;min-height:110px;border-radius:14px;overflow:hidden;border:1px solid var(--seam);background:#1b2140}
+.winbox canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 25%;image-rendering:pixelated;filter:brightness(.65)}
+.winbox .wtxt{position:absolute;left:0;right:0;bottom:0;padding:28px 12px 12px;background:linear-gradient(rgba(21,17,14,0),rgba(21,17,14,.92));display:flex;flex-direction:column;align-items:center}
+.winbox .wtxt span{font-size:12px;color:var(--muted)}
+.winbox .wtxt b{font-family:var(--f-pix);font-weight:400;font-size:30px;color:var(--gold);text-shadow:0 0 18px rgba(242,165,65,.4);text-align:center;line-height:1.2}
+.ranks{flex:none;padding:2px 14px}
+.ranks .rank{padding:7px 0;gap:10px}
+.ranks .rank .mid b{font-size:14px}
+.ranks .rank .pt{font-size:24px}
+.endbtns{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.endbtns .btn{min-height:56px;font-size:17px}
+@media (max-height:740px){
+  .chip{flex-direction:row;justify-content:space-between;padding:3px 6px;gap:4px;border-width:1px}
+  .chip .face,.chip .sub{display:none}
+  .chip .sc{font-size:14px}
+  .btn.choice{min-height:56px;font-size:22px}
+  .bar .ttl b{font-size:20px}
+  .gscreen{gap:6px}
+  .ranks .rank{padding:4px 0}
+  .ranks .rank .ores{display:none}
+}
+/* チケット画面 */
+body.hub{padding-block:calc(12px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-bottom,0px))}
+body.hub #app{height:100%}
+.hub-wrap{height:100%;overflow-y:auto;gap:12px}
+.hub-wrap>*{flex:none}
+.hub-wrap>.tk-stage{flex:1 1 auto;min-height:170px;padding:2px 0}
+.tk-stage .ticket{height:100%;max-height:400px;display:flex;flex-direction:column}
+.tk-top{flex:1;min-height:0;display:flex;flex-direction:column}
+.tk-art{flex:1;min-height:56px;aspect-ratio:auto}
+.tk-stub,.tk-perf{flex:none}
+.hub-icons{margin-top:0}
+.gi{padding:0}
+.gi-ic{width:56px;height:56px;border-radius:15px}
+.gi-px{width:38px;height:38px}
+.hub-foot{margin-top:0;gap:6px}
+.hub-go{min-height:56px}
+body.hub .sheet .card{background:#fff}
 </style>
 
 </head>
@@ -491,16 +545,16 @@ function faceSvg(i, npc, size) {
 }
 const face = (id, size) => h('span', { class: 'face', svg: faceSvg(Math.max(0, pIndex(id)), id === NPC, size) });
 function drawShaft(cv, g, opt = {}) {
-  cv.width = VW; cv.height = VH; const c = cv.getContext('2d');
+  const vh = opt.vh || VH; cv.width = VW; cv.height = vh; const c = cv.getContext('2d');
   const depth = g.depth, nextFork = g.phase === 'choose' && g.next && g.next.fork;
-  const scroll = Math.max(0, (depth - 3) * LV);
+  const scroll = Math.max(0, TOP + depth * LV - Math.round(vh * 0.62));
   // night sky
   const sky = c.createLinearGradient(0, 0, 0, TOP); sky.addColorStop(0, '#1b2140'); sky.addColorStop(1, '#5a3a4a');
   c.fillStyle = sky; c.fillRect(0, 0, VW, TOP);
   c.fillStyle = '#ffe9a8'; [[14, 6], [40, 12], [96, 5], [128, 14], [170, 8], [60, 3]].forEach(([x, y]) => c.fillRect(x, y, 1, 1));
   c.fillStyle = '#fff6d0'; c.fillRect(151, 5, 3, 1); c.fillRect(150, 6, 5, 3); c.fillRect(151, 9, 3, 1);
   c.save(); c.translate(0, -scroll);
-  const rows = Math.ceil((VH + scroll - TOP) / 8) + 2;
+  const rows = Math.ceil((vh + scroll - TOP) / 8) + 2;
   for (let r = 0; r < rows; r++) {
     const y = TOP + r * 8, dep = r * 8 / LV, heat = Math.min(1, dep / 12);
     c.fillStyle = r < 2 ? '#7a5034' : `rgb(${110 + heat * 40 | 0},${92 - heat * 45 | 0},${80 - heat * 55 | 0})`; c.fillRect(0, y, VW, 8);
@@ -744,8 +798,9 @@ function backToHub() {
 function startLocal() {
   tear(() => { tableId = 'LOCAL'; doc = newGame(Array.from({ length: localN }, (_, i) => 'p' + (i + 1))); doc = autoLocal(doc); render(); });
 }
-function hubHead(right, back) {
+function hubHead(right, back, help) {
   return h('div', { class: 'hub-head' }, right, h('span', { style: 'flex:1' }),
+    help ? h('button', { class: 'hub-ib', 'aria-label': '遊びかたとコインのリンク', onclick: help }, '?') : null,
     back ? h('button', { class: 'hub-ib', 'aria-label': '卓から出る', onclick: back, svg: ICON.back }) : null);
 }
 function ticketEl(g, d) {
@@ -769,7 +824,14 @@ function viewHub() {
   const pick = gameById(pickOf(d)), counts = voteCount(d);
   const left = L ? 0 : Math.max(0, OPEN_MS - (Date.now() - d.openedAt));
   const timer = L ? h('span', { class: 'hub-meta' }, '1台で遊ぶ') : h('span', { class: 'hub-meta', id: 'lobbyTimer' }, `卓 ${tableId} ・ ` + (left ? `あと${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}` : '受付終了'));
-  const root = h('div', { class: 'hub-wrap' }, hubHead(timer, L ? null : leaveTable));
+  const help = () => {
+    const box = h('div', { class: 'stack-s' }, rulesBox(true));
+    if (!L && host) box.append(h('details', { class: 'card' }, h('summary', null, 'コインに書き込むリンク'), h('div', { class: 'linkbox' }, shareBase() + '#' + tableId),
+      h('p', { class: 'cap', style: 'margin:8px 0 0;font-size:12px' }, window.claude ? 'NFCシールにこのリンクを書き込むと、かざすだけでこの卓に入れます。今はページを共有された人だけが入れます。' : 'NFCコインにこのリンクを書き込むと、かざすだけでこの卓に入れます。')));
+    box.append(h('div', { class: 'cap', style: 'text-align:center' }, `PITOPA ${VERSION}` + (L && !connectErr ? ' ・ オンラインにつながっていないので、1台で回して遊べます' : '')));
+    openSheet(box);
+  };
+  const root = h('div', { class: 'hub-wrap' }, hubHead(timer, L ? null : leaveTable, help));
   if (L && connectErr) root.append(h('div', { class: 'hub-note warn' }, h('span', null, 'オンラインにつながりませんでした', h('br'), h('small', null, `理由：${connectErr}`)), h('button', { class: 'pill on', onclick: () => location.reload() }, 'もう一度')));
 
   // メンバー
@@ -821,11 +883,6 @@ function viewHub() {
     if (!L && !left) foot.append(h('button', { class: 'pill', onclick: extend }, '受付を5分延長'));
   } else if (member) foot.append(h('div', { class: 'hub-note c' }, '部屋主がチケットをきるのを待っています'));
   root.append(foot);
-  const more = h('div', { class: 'hub-more' }, rulesBox(false));
-  if (!L && host) more.append(h('details', { class: 'card' }, h('summary', null, 'コインに書き込むリンク'), h('div', { class: 'linkbox' }, shareBase() + '#' + tableId),
-    h('p', { class: 'cap', style: 'margin:8px 0 0;font-size:12px' }, window.claude ? 'NFCシールにこのリンクを書き込むと、かざすだけでこの卓に入れます。今はページを共有された人だけが入れます。' : 'NFCコインにこのリンクを書き込むと、かざすだけでこの卓に入れます。')));
-  root.append(more);
-  if (L) root.append(h('span', { class: 'hub-meta c' }, `PITOPA ${VERSION}` + (connectErr ? '' : ' ・ オンラインにつながっていないので、1台で回して遊べます')));
   return root;
 }
 function viewNick() {
@@ -868,18 +925,20 @@ function viewOver() {
   const rows = g.players.map(id => ({ id, s: score(g, id) })).sort((x, y) => y.s - x.s);
   const best = rows[0].s, winners = rows.filter(r => r.s === best);
   const back = local ? () => { doc = null; tableId = null; render(); } : leaveTable;
-  const root = h('div', { class: 'stack' }, brand(back), heroArt(),
-    h('div', { class: 'hero' }, h('div', { class: 'cap' }, '5回の探検が終わった'), h('div', { style: 'font-size:28px' }, winners.length > 1 ? '引き分け！' : `${nameOf(winners[0].id)}の勝ち！`)));
-  root.append(h('div', { class: 'card' }, rows.map(r => h('div', { class: 'rank' + (r.s === best ? ' win' : '') },
-    h('span', { class: 'no' }, String(rows.findIndex(x => x.s === r.s) + 1)), h('span', { class: 'sw', style: 'width:14px;height:14px;background:' + colOf(r.id) }),
-    h('div', { class: 'mid' }, h('span', null, nameOf(r.id) + (g.gone[r.id] ? '（途中で抜けた）' : '')),
+  const bar = h('div', { class: 'bar' }, h('div', { class: 'ttl' }, h('b', null, 'ドワーフ'), h('span', null, `${local ? '1台で遊ぶ' : '卓 ' + tableId} ・ 5回の探検が終わった`)),
+    h('button', { class: 'ibtn', 'aria-label': 'トップへ戻る', onclick: back, svg: ICON.back }));
+  const art = document.createElement('canvas');
+  drawShaft(art, { depth: 4, phase: 'over', next: null, pot: 0, inside: [], players: g.players, out: Object.fromEntries(g.players.map(p => [p, { result: 'home' }])) });
+  const win = h('div', { class: 'winbox' }, art, h('div', { class: 'wtxt' }, h('span', null, 'いちばん持ち帰ったのは'), h('b', null, winners.length > 1 ? '引き分け！' : `${nameOf(winners[0].id)}の勝ち！`)));
+  const list = h('div', { class: 'card ranks' }, rows.map(r => h('div', { class: 'rank' + (r.s === best ? ' win' : '') },
+    h('span', { class: 'no' }, String(rows.findIndex(x => x.s === r.s) + 1)),
+    h('div', { class: 'mid' }, h('b', null, nameOf(r.id) + (g.gone[r.id] ? '（途中で抜けた）' : '')),
       h('div', { class: 'ores' }, (g.history || []).map(x => { const o = x.out[r.id]; return h('span', { class: o && o.result === 'magma' ? 'warn' : null }, o ? (o.result === 'home' ? `+${o.got}` : 'マグマ') : '—'); }))),
-    h('span', { class: 'pt' }, r.s)))));
-  const btns = h('div', { class: 'stack-s' });
-  if (local || g.host === me) btns.append(h('button', { class: 'btn wide', style: 'min-height:56px;font-size:18px', onclick: rematch }, '同じゲームでもう一度'), h('button', { class: 'btn soft wide', onclick: backToHub }, 'ゲーム選択にもどる'));
-  else btns.append(h('div', { class: 'card', style: 'text-align:center' }, '部屋主が次のゲームを選んでいます'));
-  root.append(btns);
-  return root;
+    h('span', { class: 'pt' }, r.s))));
+  const btns = local || g.host === me
+    ? h('div', { class: 'endbtns' }, h('button', { class: 'btn soft', onclick: backToHub }, 'ゲーム選択へ'), h('button', { class: 'btn', onclick: rematch }, 'もう一度'))
+    : h('div', { class: 'card', style: 'text-align:center' }, '部屋主が次のゲームを選んでいます');
+  return h('div', { class: 'gscreen over' }, bar, win, list, btns);
 }
 function viewOld() {
   return h('div', { class: 'stack' }, brand(leaveTable),
@@ -896,10 +955,19 @@ function viewGameShell() {
   G.heatLbl = h('div', { class: 'heatlbl' }); G.boom = h('div', { class: 'boom', hidden: true }, 'ドボン！');
   G.jp = h('div', { class: 'jptag' });
   G.board = h('div', { class: 'board' }, G.cv, G.depth, G.jp, G.heat, G.heatLbl, G.boom);
-  G.reveal = h('div', { class: 'reveal', hidden: true, role: 'status' });
+  G.reveal = h('div', { class: 'reveal', hidden: true, role: 'status', onclick: hideReveal });
+  G.sum = h('div', { class: 'reveal sum', hidden: true, role: 'status' });
+  G.rad = h('div', { class: 'radov', hidden: true });
+  G.board.append(G.sum, G.rad, G.reveal);
   G.panel = h('div', { class: 'tray' });
-  return h('div', { class: 'stack-s' }, G.bar, G.crew, G.board, G.reveal, G.panel);
+  try { if (window.ResizeObserver) { G.ro && G.ro.disconnect(); G.ro = new ResizeObserver(() => { if (doc && doc.status === 'playing' && G.cv && G.cv.isConnected) drawShaft(G.cv, doc, { boom: Date.now() < boomUntil, burnt: boomBurnt, sides: boomSides, who: boomWho, me: local ? localActor() : me, vh: boardVh() }); }); G.ro.observe(G.board); } } catch (e) { }
+  return h('div', { class: 'gscreen' }, G.bar, G.crew, G.board, G.panel);
 }
+function boardVh() {
+  const r = G.board ? G.board.getBoundingClientRect() : null;
+  return r && r.width > 0 && r.height > 0 ? Math.max(110, Math.min(700, Math.round(VW * r.height / r.width))) : VH;
+}
+function hideReveal() { if (G.reveal) G.reveal.hidden = true; if (G.board) G.board.classList.remove('revealing'); }
 function afterChange() {
   if (!doc) { render(); return; }
   if (doc.status !== 'playing' || !G.cv || !G.cv.isConnected) { render(); return; }
@@ -933,10 +1001,10 @@ function renderGame() {
     showReveal(rv);
   }
   const boom = Date.now() < boomUntil;
-  drawShaft(G.cv, g, { boom, burnt: boomBurnt, sides: boomSides, who: boomWho, me: meId });
+  drawShaft(G.cv, g, { boom, burnt: boomBurnt, sides: boomSides, who: boomWho, me: meId, vh: boardVh() });
   if (boom) { G.boom.textContent = boomSides.includes('main') || boomSides.length > 1 ? 'ドボン！' : (boomSides[0] === 'left' ? '左が' : '右が') + 'ドボン！'; G.boom.className = 'boom'; G.boom.hidden = false; } else if (G.boom.className === 'boom') G.boom.hidden = true;
   G.jp.textContent = `大鉱脈チャンス ${Math.round(jackpotRate(g.exp) * 100)}%`;
-  if (boom) setTimeout(() => { if (Date.now() >= boomUntil && G.cv && G.cv.isConnected && doc) { drawShaft(G.cv, doc, { me: local ? localActor() : me }); G.boom.hidden = true; } }, 3600);
+  if (boom) setTimeout(() => { if (Date.now() >= boomUntil && G.cv && G.cv.isConnected && doc) { drawShaft(G.cv, doc, { me: local ? localActor() : me, vh: boardVh() }); G.boom.hidden = true; } }, 3600);
   const p = Math.round(magmaRate(g.depth + 1) * 100);
   G.depth.textContent = `深さ ${g.depth}`;
   G.heat.firstChild.style.height = Math.min(100, p / 60 * 100) + '%';
@@ -957,8 +1025,8 @@ function showReveal(rv) {
   const hot = Object.values(rv.sides).some(r => r.magma);
   G.reveal.className = 'reveal' + (hot ? ' hot' : '');
   G.reveal.replaceChildren(h('div', { class: 'rtitle' }, 'せーの！'), ...lines, ...notes.map(n => h('div', { class: 'rres' + (/マグマ/.test(n) ? ' magma' : /大鉱脈/.test(n) ? ' jack' : '') }, n)));
-  G.reveal.hidden = false;
-  clearTimeout(showReveal.t); showReveal.t = setTimeout(() => { if (G.reveal) G.reveal.hidden = true; }, hot ? 4200 : 2800);
+  G.reveal.hidden = false; G.board.classList.add('revealing');
+  clearTimeout(showReveal.t); showReveal.t = setTimeout(hideReveal, hot ? 4200 : 2800);
 }
 function radarSheet(a) {
   const g = doc, used = g.radarSeen[a] === g.depth + 1;
@@ -980,21 +1048,24 @@ function renderPanel() {
   if (g.phase === 'summary') {
     const rows = g.players.map(id => { const o = g.out[id] || {}; return h('div', { class: 'rl' }, face(id, 22), h('span', { style: 'flex:1' }, nameOf(id)),
       o.result === 'home' ? h('b', { class: 'home' }, `+${o.got} 持ち帰り`) : o.result === 'magma' ? h('b', { class: 'warn' }, `−${o.lost} マグマ`) : h('span', { class: 'cap' }, '—')); });
-    out.push(h('div', { class: 'card stack-s' }, h('div', { class: 'pix', style: 'font-size:18px;color:var(--lamp)' }, `${g.exp}回目の探検おわり（深さ${g.depth}）`), ...rows));
-    if (g.exp < EXPEDITIONS) out.push(h('div', { class: 'note' }, `次の探検は大鉱脈チャンス ${Math.round(jackpotRate(g.exp + 1) * 100)}%`));
+    G.sum.replaceChildren(h('div', { class: 'rtitle' }, `${g.exp}回目の探検おわり`), h('div', { class: 'note' }, `深さ${g.depth}まで掘った`), ...rows,
+      g.exp < EXPEDITIONS ? h('div', { class: 'rres jack' }, `次の探検は大鉱脈チャンス ${Math.round(jackpotRate(g.exp + 1) * 100)}%`) : null);
+    G.sum.hidden = false; G.board.classList.add('revealing'); G.rad.hidden = true;
     out.push(h('button', { class: 'btn wide', style: 'min-height:56px', onclick: nextExpedition }, g.exp >= EXPEDITIONS ? '結果を見る' : `次の探検へ（${g.exp + 1} / ${EXPEDITIONS}）`));
     if (!local) out.push(h('div', { class: 'note' }, '少しすると自動で進みます'));
     G.panel.replaceChildren(...out); return;
   }
+  if (G.sum && !G.sum.hidden) { G.sum.hidden = true; if (G.reveal.hidden) G.board.classList.remove('revealing'); }
   const a = actor(), inside = a && g.inside.includes(a);
+  const seenNow = inside && g.radarSeen[a] === g.depth + 1;
+  if (G.rad) { G.rad.hidden = !seenNow; if (seenNow) G.rad.replaceChildren(radarMsg(g, a)); }
   if (local && a && g.players.filter(p => p !== NPC).length > 1) out.push(h('div', { class: 'passto' }, face(a, 20), `${nameOf(a)}の番：ほかの人に見えないように選んでね`));
   if (inside) {
     const chosen = g.choice[a], seen = g.radarSeen[a] === g.depth + 1;
-    out.push(h('div', { class: 'card row' },
+    out.push(h('div', { class: 'row info' },
       h('div', { class: 'bag' }, h('span', { class: 'cap' }, 'リュック'), h('b', null, g.bag[a] || 0)),
       h('div', { class: 'bag' }, h('span', { class: 'cap' }, '床に残った鉱石'), h('b', { class: 'plain' }, g.pot)),
       h('button', { class: 'radar', disabled: (!g.radar[a] && !seen) || !!chosen, onclick: () => openRadar(a) }, h('b', null, 'レーダー'), h('span', null, seen ? '反応を見る' : g.radar[a] ? '残り1回' : '使用済み'))));
-    if (seen) out.push(radarMsg(g, a));
     const opts = options(g);
     out.push(h('div', { class: 'choices', style: `grid-template-columns:repeat(${opts.length},minmax(0,1fr))` }, opts.map(c => h('button', {
       class: 'btn choice ' + (c === 'back' ? 'soft' : '') + (chosen === c ? ' picked' : chosen ? ' dim' : ''), 'aria-pressed': String(chosen === c),
@@ -1037,7 +1108,7 @@ function render() {
   else if (doc.status === 'playing') { v = viewGameShell(); inGame = true; }
   else v = viewOver();
   const hubby = !tableId || !doc || doc.status === 'lobby' || nickGate || !myNick && !local;
-  document.body.className = inGame ? 'ingame' : hubby ? 'hub' : 'page';
+  document.body.className = inGame || (doc && doc.status === 'over' && !hubby) ? 'ingame' : hubby ? 'hub' : 'page';
   $('app').replaceChildren(v);
   if (inGame) renderGame();
 }
