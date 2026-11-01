@@ -483,6 +483,15 @@ body.trap :focus-visible{outline:3px solid #3f7fe0;outline-offset:2px}
 @keyframes tppop{0%{opacity:0;margin-top:10px}15%{opacity:1;margin-top:0}75%{opacity:1}100%{opacity:0;margin-top:-18px}}
 .tp-banner{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:3;pointer-events:none;animation:tppop 2.4s ease forwards;white-space:nowrap}
 .tp-banner .st{padding:4px 14px;font-size:13px;font-weight:900}
+/* 確認用：URL に ?fps をつけたときだけ、1秒に何回描けているかと画質の段階を出す */
+.tp-fps{position:absolute;left:8px;bottom:8px;z-index:5;background:rgba(0,0,0,.62);color:#fff;font:700 11px/1.5 ui-monospace,monospace;padding:2px 7px;border-radius:6px;pointer-events:none;white-space:nowrap}
+/* 始まりの動きのあとの札「チュンチュン大作戦」＋朱の「スタート！」 */
+.tp-start{position:absolute;left:50%;top:22%;z-index:4;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:6px;transform:translateX(-50%);animation:tpstart 1.9s ease forwards}
+.tp-start .felt{transform:rotate(-3deg);animation:tpstamp .45s cubic-bezier(.3,1.6,.5,1) both}
+.tp-start .st{padding:8px 20px;font-size:24px;font-weight:900;white-space:nowrap;color:#3a3326}
+.tp-start b{margin-left:70px;background:#ff5a36;color:#fff;font-size:18px;font-weight:900;padding:6px 18px;border-radius:999px;transform:rotate(4deg);box-shadow:0 3px 0 rgba(0,0,0,.14),inset 0 0 0 3px #ff5a36,inset 0 0 0 5px rgba(255,255,255,.7);animation:tpstamp .45s .3s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes tpstamp{from{opacity:0;scale:.3}}
+@keyframes tpstart{0%,80%{opacity:1}100%{opacity:0;translate:0 -14px}}
 .tp-info{flex:none;display:flex;justify-content:center;padding:4px 14px 0;min-height:42px;box-sizing:border-box}
 .tp-info .felt{max-width:100%}
 .tp-info .st{padding:5px 12px;font-size:13px;font-weight:700;color:#3a3326;display:flex;align-items:center;gap:8px;line-height:1.35}
@@ -534,7 +543,7 @@ body.trap .toast{background:#3a3326;color:#fffaf0;top:auto;bottom:calc(240px + e
 .gi-trap{background:linear-gradient(#cfe9ff,#f4e6c8)}
 .gi-trap svg{width:46px;height:46px}
 .tk-art img.tp-tk{display:block;width:100%;height:100%;object-fit:contain;background:linear-gradient(#cfeaff,#fff4dc)}
-@media (prefers-reduced-motion:reduce){.tp-die.spin span,.tp-pop,.tp-banner{animation:none}}
+@media (prefers-reduced-motion:reduce){.tp-die.spin span,.tp-pop,.tp-banner,.tp-start .felt,.tp-start b{animation:none}}
 /* ===== 盤のゲーム（リバーシ・チェス・将棋）とビンゴ大会（body.board）：ハブと同じ白・黒・朱。見た目は仮 ===== */
 body.board{height:100vh;height:100dvh;overflow:hidden;background:#f6f5f2;color:#141414;font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
   padding:calc(10px + env(safe-area-inset-top,0px)) var(--pad-r) calc(12px + env(safe-area-inset-bottom,0px)) var(--pad-l);
@@ -1534,10 +1543,29 @@ const TB = (() => {
     g.strokeStyle = ink; g.lineWidth = 2.5; g.setLineDash([6, 5]); g.lineCap = 'round'; g.strokeRect(11, 11, 106, 106);
     const t = new T.CanvasTexture(c); t.encoding = T.sRGBEncoding; t.anisotropy = 4; return t; }
   const mesh = (g, m) => { const o = new T.Mesh(g, m); o.castShadow = o.receiveShadow = true; return o; };
-  const gloss = (col, o = {}) => new T.MeshPhysicalMaterial({ color: C(col), roughness: o.r ?? .25, metalness: o.m ?? 0, clearcoat: o.cc ?? .6, clearcoatRoughness: .2, transparent: !!o.t, opacity: o.t || 1 });
+  // ツヤのある素材（クリアコートは重いので使わず、つるっとした素材で代わりにする）
+  const gloss = (col, o = {}) => new T.MeshStandardMaterial({ color: C(col), roughness: Math.min(o.r ?? .25, .3) * .8, metalness: o.m ?? 0, transparent: !!o.t, opacity: o.t || 1 });
   const paint = (col, r = .55, m = 0) => new T.MeshStandardMaterial({ color: C(col), roughness: r, metalness: m });
   function rrect(w, d, r) { const s = new T.Shape(), x = -w / 2, y = -d / 2; s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + d - r); s.quadraticCurveTo(x + w, y + d, x + w - r, y + d); s.lineTo(x + r, y + d); s.quadraticCurveTo(x, y + d, x, y + d - r); s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); return s; }
   function slab(w, d, h, r, m, bv = .05) { const g = new T.ExtrudeGeometry(rrect(w - 2 * bv, d - 2 * bv, r), { depth: h - 2 * bv, bevelEnabled: true, bevelThickness: bv, bevelSize: bv, bevelSegments: 3, curveSegments: 8 }); g.rotateX(-Math.PI / 2); g.translate(0, bv, 0); return mesh(g, m); }
+  // 動かない部品を、素材ごとに1つの形にまとめる（描く命令の数が減って軽くなる）。skip の中は動くのでそのまま。
+  // userData.cell のある物（マスの上の面）は、タップしたマスを調べるのに使うので、見えなくして残す
+  function merge(root, skip = []) {
+    root.updateMatrixWorld(true);
+    const inv = new T.Matrix4().copy(root.matrixWorld).invert(), groups = new Map(), skipped = o => { for (let p = o; p && p !== root; p = p.parent) if (skip.includes(p)) return true; return false; };
+    root.traverse(o => { if (!o.isMesh || !o.visible || Array.isArray(o.material) || skipped(o)) return;
+      const k = o.material.uuid + (o.castShadow ? 'c' : '') + (o.receiveShadow ? 'r' : ''); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(o); });
+    groups.forEach(list => {
+      if (list.length < 2) return;
+      let n = 0; const gs = list.map(o => { const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(new T.Matrix4().multiplyMatrices(inv, o.matrixWorld)); n += g.attributes.position.count; return g; });
+      const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2); let i = 0;
+      gs.forEach(g => { const a = g.attributes; pos.set(a.position.array, i * 3); if (a.normal) nor.set(a.normal.array, i * 3); if (a.uv) uv.set(a.uv.array, i * 2); i += a.position.count; g.dispose(); });
+      const bg = new T.BufferGeometry(); bg.setAttribute('position', new T.BufferAttribute(pos, 3)); bg.setAttribute('normal', new T.BufferAttribute(nor, 3)); bg.setAttribute('uv', new T.BufferAttribute(uv, 2));
+      const m = new T.Mesh(bg, list[0].material); m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow; root.add(m);
+      list.forEach(o => { if (o.userData.cell != null) o.visible = false; else { o.parent.remove(o); o.geometry.dispose(); } });
+    });
+    return root;
+  }
   // ── コマ
   // 鳥：平たいフェルトの切り抜きを木の台に立てたコマ。横向き（くちばしが +x）で、平らな面が +z と -z。両面に羽・目・ほっぺ・縁のステッチ
   let SIL = null, THREAD = null;
@@ -1569,7 +1597,7 @@ const TB = (() => {
     }
     const bt = new T.Shape(); bt.moveTo(.25, .46); bt.lineTo(.36, .42); bt.lineTo(.25, .38); bt.lineTo(.25, .46);
     const bkg = new T.ExtrudeGeometry(bt, { depth: .03, bevelEnabled: true, bevelThickness: .008, bevelSize: .006, bevelSegments: 2 }); bkg.translate(0, 0, -.015); st.add(mesh(bkg, felt('#f3a43a', 6)));
-    st.position.y = -.01; g.add(st);
+    st.position.y = -.01; merge(st, wings); g.add(st); // 縫い目の点や目は1羽の中でまとめる（はばたく羽は別のまま）
     const stand = slab(.36, .16, .05, .05, paint('#d6b085', .75), .015); g.add(stand);
     const flap = v => wings.forEach(p => p.rotation.z = -v * .7); flap(.25);
     g.userData.flap = flap; g.userData.stand = stand; return g; }
@@ -1676,11 +1704,15 @@ const TB = (() => {
   // ── 盤
   function Board(host, theme) {
     const th = TH[theme] || TH.flower, tr = trackOf(th.shape);
-    const R = new T.WebGLRenderer({ antialias: true, alpha: true }); R.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); R.shadowMap.enabled = true; R.shadowMap.type = T.PCFSoftShadowMap; R.outputEncoding = T.sRGBEncoding; R.setClearColor(0, 0);
+    // 画質の段階。スマホは画面がこまかく、点の数がそのまま重さになるので、こまかさは1.5倍まで。
+    // 動いているあいだに描くのが追いつかないと、自動で1段ずつ下げる（その端末では次からも下げたまま）
+    const dpr = window.devicePixelRatio || 1, QS = [{ pr: Math.min(1.5, dpr), sm: 1024 }, { pr: Math.min(1, dpr), sm: 1024 }, { pr: Math.min(.75, dpr), sm: 512 }];
+    let q = 0; try { q = Math.min(QS.length - 1, Math.max(0, +localStorage.getItem('atsumaru.q3d') || 0)); } catch (e) { }
+    const R = new T.WebGLRenderer({ antialias: true, alpha: true }); R.setPixelRatio(QS[q].pr); R.shadowMap.enabled = true; R.shadowMap.type = T.PCFShadowMap; R.outputEncoding = T.sRGBEncoding; R.setClearColor(0, 0);
     R.domElement.style.cssText = 'display:block;width:100%;height:100%;touch-action:manipulation'; host.append(R.domElement);
     const sc = new T.Scene();
     sc.add(new T.HemisphereLight(C('#eaf4ff'), C('#7a8a5a'), .6));
-    const SR = 6 * tr.K, key = new T.DirectionalLight(C('#fff4e2'), 1.25); key.position.set(-5, 10, 4).multiplyScalar(tr.K); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -SR, right: SR, top: SR, bottom: -SR, far: 30 * tr.K }); key.shadow.bias = -.0006; sc.add(key);
+    const SR = 6 * tr.K, key = new T.DirectionalLight(C('#fff4e2'), 1.25); key.position.set(-5, 10, 4).multiplyScalar(tr.K); key.castShadow = true; key.shadow.mapSize.set(QS[q].sm, QS[q].sm); Object.assign(key.shadow.camera, { left: -SR, right: SR, top: SR, bottom: -SR, far: 30 * tr.K }); key.shadow.bias = -.0006; sc.add(key);
     const rim = new T.DirectionalLight(C('#ffffff'), .35); rim.position.set(5, 4, -6); sc.add(rim);
     sd = 11;
     const soil = slabShape(islandShape(tr, .5), .7, felt(th.soil, 2), .12); soil.position.y = -.95; sc.add(soil);
@@ -1690,10 +1722,10 @@ const TB = (() => {
     const dg = new T.Group(); dg.scale.setScalar(tr.K); sc.add(dg);
     const deco = decorate(dg, theme, { f: SH[th.shape] });
     const [cA, cB, ink] = th.tiles; const tA = stitchTex(cA, ink), tB = stitchTex(cB, ink), tN = stitchTex('#f6d6a8', '#b98a5a'); const S = tr.size;
-    const tiles = [], tops = [];
+    const tiles = [], tops = [], topMat = [tN, tA, tB].map(map => new T.MeshStandardMaterial({ map, roughness: 1 }));
     tr.cells.forEach((p, k) => { const g = new T.Group(); const col = k === 0 ? '#f6d6a8' : (k % 2 ? cA : cB);
       g.add(slab(S, S, .14, .16, felt(col), .04));
-      const top = new T.Mesh(new T.PlaneGeometry(S - .06, S - .06), new T.MeshStandardMaterial({ map: k === 0 ? tN : (k % 2 ? tA : tB), roughness: 1 })); top.rotation.x = -Math.PI / 2; top.position.y = .141; top.receiveShadow = true; top.userData.cell = k; g.add(top); tops.push(top);
+      const top = new T.Mesh(new T.PlaneGeometry(S - .06, S - .06), topMat[k === 0 ? 0 : k % 2 ? 1 : 2]); top.rotation.x = -Math.PI / 2; top.position.y = .141; top.receiveShadow = true; top.userData.cell = k; g.add(top); tops.push(top);
       g.position.set(p.x, -.04, p.z); g.rotation.y = -p.a; sc.add(g); tiles.push(g); });
     const P = k => { const p = tr.cells[k]; return new T.Vector3(p.x, .1, p.z); };
     // 巣
@@ -1727,7 +1759,7 @@ const TB = (() => {
     const two = () => { const [a, b] = [...ptr.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; };
     function startGesture() { const p = [...ptr.values()]; g0 = { n: p.length, az: V.az, el: V.el, zoom: V.zoom, pan: V.pan.clone(), x: p[0].x, y: p[0].y, t: performance.now(), moved: g0 ? g0.moved : false, ...(p.length > 1 ? two() : {}) }; }
     // 指が1本目のときは前の指の記録を捨てる（離した知らせが届かず指が残ったままになると、タップが効かなくなるため）
-    el.addEventListener('pointerdown', e => { if (e.isPrimary) ptr.clear(); try { el.setPointerCapture(e.pointerId); } catch (x) { } ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptr.size === 1) g0 = null; startGesture(); });
+    el.addEventListener('pointerdown', e => { if (introA) { introA.t0 = -1e9; kick(); return; } if (e.isPrimary) ptr.clear(); try { el.setPointerCapture(e.pointerId); } catch (x) { } ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptr.size === 1) g0 = null; startGesture(); });
     el.addEventListener('pointermove', e => { if (!ptr.has(e.pointerId) || !g0) return; ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (ptr.size === 1) { const p = ptr.get(e.pointerId), dx = p.x - g0.x, dy = p.y - g0.y; if (!g0.moved && Math.hypot(dx, dy) < 8) return; g0.moved = true;
         V.az = g0.az - dx * .009; V.el = Math.min(1.45, Math.max(.42, g0.el + dy * .006)); viewMoved(); }
@@ -1745,18 +1777,37 @@ const TB = (() => {
     // 影は光が動かないので、物が動いたときだけ描き直す（視点を動かすだけなら前の影を使う。動かすと重くなるのはここが大きい）
     // 風車だけが回っているときは、毎フレームではなく1秒に20回くらいに落とす
     R.shadowMap.autoUpdate = false;
-    let dirty = true, raf = 0, shadowDue = true, lastDraw = 0, millN = 0; const anims = [];
+    let dirty = true, raf = 0, shadowDue = true, lastDraw = 0, millN = 0, shadowN = 0; const anims = [];
     function frame(now) { raf = 0; let alive = false;
-      if (anims.length) shadowDue = true;
+      // 始まりの動きのあいだは、影を3回に1回だけ描き直す（動くのは鳥1羽なので、ほとんど気づかない）
+      if (anims.length && (!introA || ++shadowN % 3 === 0)) shadowDue = true;
       for (let i = anims.length - 1; i >= 0; i--) { const a = anims[i]; const t = Math.min(1, (now - a.t0) / a.dur); if (t >= 0) a.step(a.ease ? a.ease(t) : t, t); if (t >= 1) { anims.splice(i, 1); a.done && a.done(); } else alive = true; }
       const millOnly = deco.mill && !dirty && !shadowDue && !anims.length;
       if (millOnly && now - lastDraw < 48) { raf = requestAnimationFrame(frame); return; }
       if (deco.mill) { deco.mill.userData.hub.rotation.z += .01 * Math.min(4, Math.max(1, (now - lastDraw) / 16.7)); alive = true; if (++millN % 6 === 0) shadowDue = true; }
       if (shadowDue) { R.shadowMap.needsUpdate = true; shadowDue = false; }
-      R.render(sc, cam); dirty = false; lastDraw = now; if (alive || anims.length) raf = requestAnimationFrame(frame); }
+      const active = dirty || anims.length > 0, dt = now - lastDraw;
+      R.render(sc, cam); dirty = false; lastDraw = now; if (alive || anims.length) raf = requestAnimationFrame(frame);
+      if (active && dt > 0 && dt < 150) measure(dt);
+    }
+    // 動いているあいだの1コマの時間を測る。30コマの平均が25ms（1秒に40回）より長ければ画質を1段下げる。最初の12コマは準備で重いので数えない
+    let warm = 12, acc = [], fpsAcc = [], fpsAt = 0;
+    const fpsEl = /[?&]fps\b/.test(location.search) ? Object.assign(document.createElement('div'), { className: 'tp-fps' }) : null; if (fpsEl) host.append(fpsEl);
+    function measure(dt) {
+      if (fpsEl) { fpsAcc.push(dt); const t = performance.now(); if (t - fpsAt > 500) { const a = fpsAcc.reduce((s, x) => s + x, 0) / fpsAcc.length; fpsEl.textContent = `${Math.round(1000 / a)}fps　画質 ${QS.length - q}/${QS.length}　×${QS[q].pr}`; fpsAcc = []; fpsAt = t; } }
+      if (warm > 0) { warm--; return; }
+      acc.push(dt); if (acc.length < 30) return;
+      const avg = acc.reduce((s, x) => s + x, 0) / acc.length; acc = [];
+      if (avg > 25 && q < QS.length - 1) setQ(q + 1);
+    }
+    function setQ(n) {
+      q = n; try { localStorage.setItem('atsumaru.q3d', String(q)); } catch (e) { }
+      R.setPixelRatio(QS[q].pr); key.shadow.mapSize.set(QS[q].sm, QS[q].sm); if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; }
+      warm = 6; fit(); kick();
+    }
     const draw = () => { if (!raf) raf = requestAnimationFrame(frame); };
     const kick = () => { shadowDue = true; draw(); };
-    function anim(dur, step, done, delay = 0, ease) { anims.push({ t0: performance.now() + delay, dur, step, done, ease }); kick(); }
+    function anim(dur, step, done, delay = 0, ease) { const a = { t0: performance.now() + delay, dur, step, done, ease }; anims.push(a); kick(); return a; }
     const eo = t => 1 - (1 - t) * (1 - t), eb = t => { const c = 1.7; return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2; };
     // 同じマスに複数の鳥：少しずらす
     function slot(k, i, n) { const v = P(k); if (n < 2) return v; const p = tr.cells[k], r = n === 2 ? .24 : .31, a = (n === 2 ? [Math.PI, 0] : [Math.PI * 7 / 6, -Math.PI / 6, Math.PI / 2])[i % 3], off = [Math.cos(a) * r, -Math.sin(a) * r], ca = Math.cos(-p.a), sa = Math.sin(-p.a); return v.add(new T.Vector3(off[0] * ca + off[1] * sa, 0, -off[0] * sa + off[1] * ca)); }
@@ -1788,7 +1839,7 @@ const TB = (() => {
       (view.rings || []).forEach(([k, col]) => { const r = new T.Mesh(new T.TorusGeometry(.36, .035, 8, 32), new T.MeshBasicMaterial({ color: C(col) })); r.rotation.x = Math.PI / 2; const v = P(k); r.position.set(v.x, v.y + .03, v.z); sc.add(r); marks.push(r); });
       dirty = true; kick();
     }
-    function sync(t, view = {}) { state = t; if (!busy) { placeBirds(t.pos); syncItems(t, view); } setMarks(view); kick(); }
+    function sync(t, view = {}) { state = t; lastView = view; if (!busy) { placeBirds(t.pos); syncItems(t, view); } setMarks(view); kick(); }
     // ── 演出
     function hop(i, path, onStep, done) {
       const b = birds[i]; let k = 0;
@@ -1799,6 +1850,11 @@ const TB = (() => {
     // カメラに向いて立つ星（スピンは children[0].rotation.y）
     function standStar(col, s) { const g = new T.Group(), st = star(col); st.rotation.x = Math.PI / 2; st.scale.setScalar(s); g.add(st); g.rotation.y = V.az; return g; }
     const right = () => new T.Vector3(Math.cos(V.az), 0, -Math.sin(V.az));
+    // ふきだし（白いフェルトに縫い目の丸）。いつもカメラを向く
+    function bubble(txt, col) { const c = document.createElement('canvas'); c.width = c.height = 200; const g = c.getContext('2d');
+      g.fillStyle = '#fffaf0'; g.beginPath(); g.arc(100, 100, 92, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#e8a89a'; g.lineWidth = 6; g.setLineDash([14, 10]); g.lineCap = 'round'; g.beginPath(); g.arc(100, 100, 76, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = col; g.font = '900 140px "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 100, 107);
+      const tx = new T.CanvasTexture(c); tx.encoding = T.sRGBEncoding; const s = new T.Sprite(new T.SpriteMaterial({ map: tx, transparent: true })); s.visible = false; return s; }
     // エサ：りんごが頭の上にポーン → 下で2回ぴょんぴょん → 落ちてきたら星がはじける（案は tools/motion-mockup.html の2）
     function eatShow(b, got, done) {
       const base = b.position.clone(), R0 = right(), top = k => base.clone().addScaledVector(R0, (k - (got.length - 1) / 2) * .4).add(new T.Vector3(0, 1.3, 0)), from = got.map(o => o.position.clone());
@@ -1827,8 +1883,53 @@ const TB = (() => {
         });
       });
     }
+    // ゲームの始まり：あかが巣できょろきょろ →「！」→ 最初のエサへ走る → 手前の罠でばねにはじかれ巣までポーン。
+    // はじかれた鳥を見上げながらカメラが引いて、ふだんの視点にもどる（案は tools/intro-mockup.html の5）。タップでとばせる
+    var introA = null;
+    function intro(done) {
+      const fc = Object.keys(state.food).map(Number).filter(c => c > 1).sort((a, b) => a - b)[0] || 3, tc = fc - 1, path = Array.from({ length: tc }, (_, k) => k + 1);
+      const b = birds[0], start = b.position.clone(), nest = P(0), lift = new T.Vector3(0, .45, 0);
+      const o = trap(); const v = P(tc); o.position.set(v.x - .08, v.y, v.z - .08); o.rotation.y = tc; dyn.add(o); const r0 = o.userData.jaws.map(j => j.rotation.x);
+      const ex = bubble('！', '#ff5a36'); dyn.add(ex);
+      const sp = [0, 1, 2, 3].map(() => { const s = standStar('#fff2a0', .6); s.visible = false; dyn.add(s); return s; });
+      // 寄りの視点：走るマスの外側から、島の中心のほうを向いて見る
+      const m = new T.Vector3(); [0, ...path].forEach(k => m.add(P(k))); m.divideScalar(tc + 1);
+      const az0 = Math.atan2(m.x, m.z), el0 = .4, z0 = Math.min(.5, 4.6 / fitDist), RUN = 850, HOP = 230, HIT = RUN + tc * HOP, FLY = 1340, L = HIT + 110 + FLY + 220;
+      const seg = (t, a, d) => Math.max(0, Math.min(1, (t - a) / d)), bell = u => Math.sin(Math.PI * u), ss = u => u * u * (3 - 2 * u);
+      const camTo = (tg, k) => { V.az = az0 * (1 - k); V.el = el0 + (EL0 - el0) * k; V.zoom = z0 + (1 - z0) * k; V.pan.copy(tg).sub(TARGET).multiplyScalar(1 - k); applyCam(); };
+      busy = true;
+      const end = () => {
+        introA = null; [o, ex, ...sp].forEach(x => dyn.remove(x)); b.rotation.z = 0; b.scale.setScalar(BS); b.userData.flap(.25);
+        V.az = 0; V.el = EL0; V.zoom = 1; V.pan.set(0, 0, 0); applyCam(); resetBtn.hidden = true;
+        busy = false; if (state) { placeBirds(state.pos); syncItems(state, lastView); } setMarks(lastView); kick(); done && done();
+      };
+      const step = (_, u) => { const t = u * L;
+        // きょろきょろ →「！」
+        b.position.copy(start); face(b, 0); if (t < 600) b.rotation.y += Math.sin(t * .011) * .35;
+        const j = seg(t, 500, 260); if (j > 0 && j < 1) { b.position.y = start.y + bell(j) * .25; b.userData.flap(.25 + bell(j) * 1.2); }
+        const eu = seg(t, 500, 550); ex.visible = eu > 0 && eu < 1; if (ex.visible) { const s = eb(Math.min(1, eu * 550 / 280)) * (1 - Math.max(0, (eu * 550 - 390) / 160)); ex.position.copy(start).add(new T.Vector3(0, 1.05, 0)); ex.scale.set(.42 * s + .001, .42 * s + .001, 1); }
+        // とことこ走る
+        if (t >= RUN && t < HIT) { const k = Math.floor((t - RUN) / HOP), w = (t - RUN - k * HOP) / HOP, a = k ? P(path[k - 1]) : start, c = P(path[k]);
+          b.position.lerpVectors(a, c, w); b.position.y = c.y + bell(w) * .32; b.userData.flap(.25 + bell(w) * 1.2); face(b, path[k]); }
+        if (t >= HIT) { b.position.copy(P(tc)); face(b, tc); }
+        // ガシャン → ばねでポーン
+        const sn = seg(t, HIT, 110); o.userData.jaws.forEach((jw, s) => jw.rotation.x = r0[s] + (s ? -1 : 1) * .9 * sn); o.scale.set(1, 1 - .35 * bell(seg(t, HIT, 230)), 1);
+        sp.forEach((s, k) => { const w = seg(t, HIT + 70, 480), a = k / 4 * Math.PI * 2 + .8; s.visible = w > 0 && w < 1; s.rotation.y = V.az; s.position.copy(P(tc)).addScaledVector(right(), Math.cos(a) * .5 * eo(w)); s.position.y += .3 + Math.abs(Math.sin(a)) * .4 * eo(w); s.scale.setScalar(Math.max(.001, 1 - w)); });
+        const f = seg(t, HIT + 110, FLY);
+        if (f > 0) { b.position.lerpVectors(P(tc), nest, f); b.position.y = nest.y + bell(f) * 3.2; b.rotation.z = f < 1 ? f * Math.PI * 4 : 0; face(b, 0); b.rotation.y += Math.PI; b.userData.flap(f < 1 ? .25 + Math.abs(Math.sin(f * 22)) * 1.3 : .25); }
+        const l = seg(t, HIT + 110 + FLY, 220); if (l > 0 && l < 1) b.scale.set(BS * (1 + .14 * bell(l)), BS * (1 - .28 * bell(l)), BS);
+        // カメラ：走っているあいだは鳥を追い、はじかれたら見上げながら引く
+        camTo(b.position.clone().add(lift), ss(f));
+      };
+      // 盤ができた直後は、色の計算の準備や絵の読みこみで重い。先にすませて、最初の姿で少し止めてから動かす
+      step(0, 0); try { R.compile(sc, cam); } catch (e) { }
+      introA = anim(L, step, end, 450);
+    }
+    let lastView = {};
     function play(ev, t, view, cb) {
-      state = t; busy = true;
+      // 始まりの動きの途中に来たできごとは、動きのあとにまとめて反映する
+      if (introA) { state = t; lastView = view || {}; cb && cb(); return; }
+      state = t; lastView = view || {}; busy = true;
       const finish = () => { busy = false; if (state) { placeBirds(state.pos); syncItems(state, view || {}); } kick(); cb && cb(); };
       if (ev.kind === 'move') {
         const i = ev.seat - 1, got = [];
@@ -1858,9 +1959,11 @@ const TB = (() => {
       // 少しはずれても一番近いマス
       const p = new T.Vector3(); rc.ray.intersectPlane(new T.Plane(new T.Vector3(0, 1, 0), -.1), p); let best = -1, bd = .7; tr.cells.forEach((c, k) => { const d = Math.hypot(c.x - p.x, c.z - p.z); if (d < bd) { bd = d; best = k; } }); return best < 0 ? null : best; }
     function screenOf(k, dy = .6) { const v = P(k); v.y += dy; v.project(cam); const r = R.domElement.getBoundingClientRect(); return { x: (v.x + 1) / 2 * r.width, y: (1 - v.y) / 2 * r.height }; }
+    // 動かない物（島・マス・巣・飾り）はまとめて描く（1回に描く命令が大きく減る）
+    merge(sc, [...birds, dyn, ...(deco.mill ? [deco.mill.userData.hub] : [])]);
     let ro = null; try { ro = new ResizeObserver(fit); ro.observe(host); } catch (e) { window.addEventListener('resize', fit); }
     fit();
-    return { el: R.domElement, sync, play, pick, screenOf, fit, resetView, set onTap(f) { tapCb = f; }, get busy() { return busy; },
+    return { el: R.domElement, sync, play, intro, pick, screenOf, fit, resetView, set onTap(f) { tapCb = f; }, get busy() { return busy; },
       dispose() { cancelAnimationFrame(raf); ro && ro.disconnect(); R.dispose(); R.forceContextLoss && R.forceContextLoss(); R.domElement.remove(); } };
   }
   // ── カードの絵（起動時に一度だけ描いて画像にする）
@@ -2431,6 +2534,11 @@ function trPop(c, text, cls, dy) {
   if (!TS.B || !TS.boardEl) return; const p = TS.B.screenOf(c, dy ?? .9);
   const el = h('div', { class: 'tp-pop ' + (cls || ''), style: `left:${p.x}px;top:${p.y}px` }, h('span', null, text)); TS.boardEl.append(el); setTimeout(() => el.remove(), 1700);
 }
+function trStartTitle() {
+  if (!TS.boardEl) return;
+  const el = h('div', { class: 'tp-start', 'aria-hidden': 'true' }, h('div', { class: 'felt' }, h('div', { class: 'st' }, 'チュンチュン大作戦')), h('b', null, 'スタート！'));
+  TS.boardEl.append(el); setTimeout(() => el.remove(), 1900);
+}
 function trBanner(text) { if (!TS.boardEl) return; const el = h('div', { class: 'tp-banner felt' }, h('div', { class: 'st' }, text)); TS.boardEl.append(el); setTimeout(() => el.remove(), 2500); }
 function trEventFx(ev, t) {
   const who = trRole(ev.seat), vs = trViewSeat();
@@ -2469,7 +2577,16 @@ function viewTrapShell() {
     try { TS.B = TB.board(TS.boardEl, theme); } catch (e) { TS.boardEl.prepend(h('div', { class: 'tp-load' }, '3Dを表示できませんでした')); return; }
     TS.boardEl.insertBefore(TS.B.el, TS.dieEl);
     TS.B.onTap = (x, y) => trTap(TS.B.pick(x, y));
-    TS.B.sync(doc.t, trBoardView()); trRender();
+    TS.B.sync(doc.t, trBoardView());
+    // ゲームの最初の1回だけ、始まりの動き（画面をタップでとばせる）→「スタート！」の札
+    const t0 = doc.t;
+    // （始まってすぐ画面が描き直されて盤が作り直されることがあるので、「見おわった」で覚える）
+    if (t0.seq === 0 && TS.introAt !== t0.at) {
+      const B = TS.B, seen = () => { TS.introAt = t0.at; trStartTitle(); };
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) seen();
+      else B.intro(() => { if (TS.B !== B) return; seen(); if (TS.root === root && root.isConnected) trRender(); });
+    }
+    trRender();
   }).catch(e => { const l = TS.boardEl.querySelector('.tp-load'); if (l) l.textContent = '3Dを読みこめませんでした。電波を確かめてページを開き直してください'; });
   return TS.root;
 }

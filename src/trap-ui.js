@@ -87,6 +87,11 @@ function trPop(c, text, cls, dy) {
   if (!TS.B || !TS.boardEl) return; const p = TS.B.screenOf(c, dy ?? .9);
   const el = h('div', { class: 'tp-pop ' + (cls || ''), style: `left:${p.x}px;top:${p.y}px` }, h('span', null, text)); TS.boardEl.append(el); setTimeout(() => el.remove(), 1700);
 }
+function trStartTitle() {
+  if (!TS.boardEl) return;
+  const el = h('div', { class: 'tp-start', 'aria-hidden': 'true' }, h('div', { class: 'felt' }, h('div', { class: 'st' }, 'チュンチュン大作戦')), h('b', null, 'スタート！'));
+  TS.boardEl.append(el); setTimeout(() => el.remove(), 1900);
+}
 function trBanner(text) { if (!TS.boardEl) return; const el = h('div', { class: 'tp-banner felt' }, h('div', { class: 'st' }, text)); TS.boardEl.append(el); setTimeout(() => el.remove(), 2500); }
 function trEventFx(ev, t) {
   const who = trRole(ev.seat), vs = trViewSeat();
@@ -125,7 +130,16 @@ function viewTrapShell() {
     try { TS.B = TB.board(TS.boardEl, theme); } catch (e) { TS.boardEl.prepend(h('div', { class: 'tp-load' }, '3Dを表示できませんでした')); return; }
     TS.boardEl.insertBefore(TS.B.el, TS.dieEl);
     TS.B.onTap = (x, y) => trTap(TS.B.pick(x, y));
-    TS.B.sync(doc.t, trBoardView()); trRender();
+    TS.B.sync(doc.t, trBoardView());
+    // ゲームの最初の1回だけ、始まりの動き（画面をタップでとばせる）→「スタート！」の札
+    const t0 = doc.t;
+    // （始まってすぐ画面が描き直されて盤が作り直されることがあるので、「見おわった」で覚える）
+    if (t0.seq === 0 && TS.introAt !== t0.at) {
+      const B = TS.B, seen = () => { TS.introAt = t0.at; trStartTitle(); };
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) seen();
+      else B.intro(() => { if (TS.B !== B) return; seen(); if (TS.root === root && root.isConnected) trRender(); });
+    }
+    trRender();
   }).catch(e => { const l = TS.boardEl.querySelector('.tp-load'); if (l) l.textContent = '3Dを読みこめませんでした。電波を確かめてページを開き直してください'; });
   return TS.root;
 }
