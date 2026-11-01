@@ -135,9 +135,9 @@ body.board .sheet .btn.soft{background:#fff;color:#141414;border:1px solid #e4e2
 .bg-hist i.on{background:#141414;color:#fff;font-weight:700}
 /* ハブ：アイコンとチケットの絵 */
 .gi-chs{background:linear-gradient(160deg,#4a4d55,#24262b)}
-.gi-chess{color:#fff;font-size:36px;line-height:1;font-family:"Segoe UI Symbol","Apple Symbols","Noto Sans Symbols 2","DejaVu Sans",serif;font-weight:400}
+.gi-chess{color:#fff;font-size:30px;line-height:1;font-family:"Segoe UI Symbol","Apple Symbols","Noto Sans Symbols 2","DejaVu Sans",serif;font-weight:400}
 .gi-bingo{background:linear-gradient(160deg,#ffd0c2,#ff8a6a)}
-.gi-ball{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 55%,#ffe6dd 56%);display:grid;place-items:center;align-content:center;font-size:16px;font-weight:900;color:#141414;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,.15)}
+.gi-ball{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 55%,#ffe6dd 56%);display:grid;place-items:center;align-content:center;font-size:16px;font-weight:900;color:#141414;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,.15)}
 .gi-ball small{font-size:8px;color:#ff5a36}
 .tk-css{display:grid;place-items:center}
 .tk-reversi{background:#e9f4ee}
@@ -162,8 +162,8 @@ body.board .sheet .btn.soft{background:#fff;color:#141414;border:1px solid #e4e2
 .hub-ext{min-height:32px;padding:0 6px;border:0;background:none;color:var(--h-mute);font:inherit;font-size:11px;text-decoration:underline;text-underline-offset:2px}
 /* 6つ並べる */
 .hub-icons{grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
-.gi{gap:8px;width:100%}
-.gi-ic{width:min(100%,56px);height:auto;aspect-ratio:1}
+.gi{gap:5px;width:100%}
+.gi-ic{width:min(100%,50px);height:auto;aspect-ratio:1}
 .gi-ic>svg{width:80%;height:80%}
 .gi-t{font-size:10px;letter-spacing:-.02em}
 .hub-members.many .ava{width:32px;height:32px;font-size:13px}
@@ -176,3 +176,4 @@ body.board .sheet .btn.soft{background:#fff;color:#141414;border:1px solid #e4e2
   .bg-top{padding:6px 10px}
   .bg-card{gap:4px;padding:8px}
 }
+@media (max-height:740px){.gi-ic{width:min(100%,46px)}.gi{gap:4px}}

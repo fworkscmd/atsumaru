@@ -538,7 +538,6 @@ function viewHub() {
   if (host) {
     foot.append(h('div', { class: 'hub-gorow' }, h('button', { class: 'hub-go', disabled: !ok, onclick: () => L ? startLocal() : tear(() => { startGame(); setTimeout(() => { if (doc && doc.status === 'lobby') render(); }, 3000); }) }, 'チケットをきる'), tip));
     foot.append(h('span', { class: 'hub-meta c' + (ok ? '' : ' ng') }, hubFootMsg(pick, cnt, L ? 'プレイヤー1' : nameOf(d.host))));
-    if (!L && !left) foot.append(h('button', { class: 'pill', onclick: extend }, '受付を5分延長'));
   } else foot.append(h('div', { class: 'hub-gorow' }, member ? h('div', { class: 'hub-note c' }, ok ? '部屋主がチケットをきるのを待っています' : hubFootMsg(pick, cnt, nameOf(d.host))) : h('span', { style: 'flex:1' }), tip));
   root.append(foot);
   return root;
