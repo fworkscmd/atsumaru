@@ -177,3 +177,4 @@ body.board .sheet .btn.soft{background:#fff;color:#141414;border:1px solid #e4e2
   .bg-card{gap:4px;padding:8px}
 }
 @media (max-height:740px){.gi-ic{width:min(100%,46px)}.gi{gap:4px}}
+.sheet.bd-sheet{background:rgba(20,20,20,.5)}

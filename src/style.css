@@ -275,7 +275,12 @@ button.ava{border:0;font:inherit;font-weight:900;font-size:15px;padding:0}
 .tk-admit{font-size:10px;font-weight:700;color:var(--h-acc);letter-spacing:.2em}
 .tk-name{font-weight:900;font-size:26px;line-height:1}
 .tk-name.long{font-size:20px}
-.tk-sub{font-size:11px;color:var(--h-mute);text-align:right;line-height:1.4}
+.tk-sub{font-size:11px;color:var(--h-mute);text-align:right;line-height:1.4;max-height:2.8em;overflow:hidden}
+/* チケットの位置をゲームによって動かさない：名前の行は高さを決めて1行、下の案内はいつも2行ぶん取っておく */
+.tk-row{height:44px;flex:none}
+.tk-l{min-width:0}
+.tk-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hub-foot>.hub-meta{height:2.9em;line-height:1.45;overflow:hidden;white-space:pre-line;font-size:11px}`n.hub-gorow>.hub-note{white-space:pre-line}
 .tk-perf{height:0;border-top:2px dashed #d9d6ce;margin:0 14px;transition:opacity .3s}
 .tk-stub{background:var(--h-acc);color:#fff;border-radius:0 0 16px 16px;padding:9px 16px;display:flex;justify-content:space-between;gap:10px;transition:transform .6s cubic-bezier(.3,.6,.4,1),opacity .6s;transform-origin:15% 0;
   -webkit-mask:radial-gradient(circle 12px at 0 0,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 12px at 100% 0,#0000 98%,#000) right/51% 100% no-repeat;
@@ -395,7 +400,7 @@ body.hub .sheet .card{background:#fff}
   .hub-members{min-height:32px}.ava{width:30px;height:30px;font-size:13px}
   .hub-title>span{font-size:19px}
   .hub-vote{padding:5px 10px}
-  .tk-name{font-size:23px}.tk-name.long{font-size:18px}.tk-row{margin-top:6px}
+  .tk-name{font-size:23px}.tk-name.long{font-size:18px}.tk-row{margin-top:6px;height:38px}
   .tk-stub{padding:7px 14px}.tk-stub small{font-size:9px}.tk-stub b{font-size:13px}
   .gi-ic{width:46px;height:46px;border-radius:13px}.gi{gap:4px}
   .hub-go{min-height:48px;font-size:16px}.hub-tip{width:48px;min-height:48px}

@@ -22,6 +22,11 @@ service cloud.firestore {
             && request.resource.data.host == resource.data.host)
         // 終わった卓は、誰でも新しく集合し直せる
         || resource.data.status == 'over'
+        // 30分使われていない卓（前に遊んだまま残っている卓）は、誰でも自分を部屋主にして開き直せる
+        || (resource.data.get('updated', 0) < request.time.toMillis() - 1800000
+            && request.resource.data.host == request.auth.uid
+            && request.resource.data.players == [request.auth.uid]
+            && request.resource.data.status == 'lobby')
       );
 
       allow delete: if false;

@@ -286,7 +286,12 @@ button.ava{border:0;font:inherit;font-weight:900;font-size:15px;padding:0}
 .tk-admit{font-size:10px;font-weight:700;color:var(--h-acc);letter-spacing:.2em}
 .tk-name{font-weight:900;font-size:26px;line-height:1}
 .tk-name.long{font-size:20px}
-.tk-sub{font-size:11px;color:var(--h-mute);text-align:right;line-height:1.4}
+.tk-sub{font-size:11px;color:var(--h-mute);text-align:right;line-height:1.4;max-height:2.8em;overflow:hidden}
+/* チケットの位置をゲームによって動かさない：名前の行は高さを決めて1行、下の案内はいつも2行ぶん取っておく */
+.tk-row{height:44px;flex:none}
+.tk-l{min-width:0}
+.tk-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hub-foot>.hub-meta{height:2.9em;line-height:1.45;overflow:hidden;white-space:pre-line;font-size:11px}`n.hub-gorow>.hub-note{white-space:pre-line}
 .tk-perf{height:0;border-top:2px dashed #d9d6ce;margin:0 14px;transition:opacity .3s}
 .tk-stub{background:var(--h-acc);color:#fff;border-radius:0 0 16px 16px;padding:9px 16px;display:flex;justify-content:space-between;gap:10px;transition:transform .6s cubic-bezier(.3,.6,.4,1),opacity .6s;transform-origin:15% 0;
   -webkit-mask:radial-gradient(circle 12px at 0 0,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 12px at 100% 0,#0000 98%,#000) right/51% 100% no-repeat;
@@ -406,7 +411,7 @@ body.hub .sheet .card{background:#fff}
   .hub-members{min-height:32px}.ava{width:30px;height:30px;font-size:13px}
   .hub-title>span{font-size:19px}
   .hub-vote{padding:5px 10px}
-  .tk-name{font-size:23px}.tk-name.long{font-size:18px}.tk-row{margin-top:6px}
+  .tk-name{font-size:23px}.tk-name.long{font-size:18px}.tk-row{margin-top:6px;height:38px}
   .tk-stub{padding:7px 14px}.tk-stub small{font-size:9px}.tk-stub b{font-size:13px}
   .gi-ic{width:46px;height:46px;border-radius:13px}.gi{gap:4px}
   .hub-go{min-height:48px;font-size:16px}.hub-tip{width:48px;min-height:48px}
@@ -688,6 +693,7 @@ body.board .sheet .btn.soft{background:#fff;color:#141414;border:1px solid #e4e2
   .bg-card{gap:4px;padding:8px}
 }
 @media (max-height:740px){.gi-ic{width:min(100%,46px)}.gi{gap:4px}}
+.sheet.bd-sheet{background:rgba(20,20,20,.5)}
 
 </style>
 
@@ -1894,6 +1900,10 @@ const TB = (() => {
 const ARTIFACT_URL = 'https://claude.ai/artifact/AsSjmSCj2UX5796kW6SCuh';
 const VERSION = 'ver 1.3';
 const shareBase = () => window.claude ? ARTIFACT_URL : location.origin + location.pathname;
+// LINE の中のブラウザだと参加がうまくいかないことがあるので、ふだんのブラウザで開きなおす（LINE の openExternalBrowser）
+try { if (!window.claude && /\bLine\//i.test(navigator.userAgent) && !/openExternalBrowser=1/.test(location.search)) location.replace(location.pathname + '?openExternalBrowser=1' + location.hash); } catch (e) { }
+// しばらく使われていない卓（前に遊んだまま残っている卓）は、開いた人を部屋主にして新しく始める
+const STALE_MS = 30 * 60 * 1000;
 let backend = 'local', wantOnline = false, connectErr = '';
 const clean = v => JSON.parse(JSON.stringify(v));
 // Firestore は「リストの中のリスト」を保存できない（トラッパーの手札 hands など）。保存するときだけ {__a:[…]} に包み、読むときに戻す
@@ -2141,6 +2151,12 @@ function requestJoin() { withLease(d => {
   if (Date.now() - d.openedAt > OPEN_MS || d.players.length >= TABLE_MAX) return null;
   return { ...d, requests: (d.requests || []).concat(me), denied: (d.denied || []).filter(x => x !== me), nicks: myNick ? { ...(d.nicks || {}), [me]: myNick } : (d.nicks || {}) };
 }, true); }
+// 部屋主がメンバーを卓から外す（ロビーのあいだだけ）。外された人は「断られた」扱いになり、自動で参加希望を出しなおさない
+function kick(id) { withLease(d => {
+  if (!d || d.status !== 'lobby' || d.host !== me || id === me || !d.players.includes(id)) return null;
+  const votes = { ...(d.votes || {}) }; delete votes[id];
+  return { ...d, players: d.players.filter(p => p !== id), votes, denied: (d.denied || []).filter(x => x !== id).concat(id) };
+}); }
 function answer(id, ok) { withLease(d => {
   if (!d || d.status !== 'lobby' || d.host !== me) return null;
   const requests = (d.requests || []).filter(x => x !== id);
@@ -2182,13 +2198,20 @@ function openTable(id) {
   tableId = id; doc = null; serverDoc = null; lastRevealKey = '';
   try { if (location.hash.slice(1) !== id) history.replaceState(null, '', '#' + id); } catch (e) { }
   render();
-  let first = true;
+  let first = true, resetTried = false;
   onSnap = async snap => {
     if (tableId !== id) return;
     lastSnapAt = Date.now();
     if (!snap.exists) { if (first) { first = false; withLease(d => d ? null : freshLobby()); } return; }
     first = false;
     const data = snap.data();
+    const stale = d => Date.now() - (d.updated || 0) > STALE_MS;
+    if (!resetTried && stale(data) && !(data.status === 'lobby' && data.host === me && data.players.length === 1)) {
+      resetTried = true;
+      withLease(d => d && stale(d) ? freshLobby() : null, true).then(r => { if (r === 'ok') toast('前に使った卓だったので、新しく始めました'); });
+    }
+    const wasIn = !!doc && (doc.players || []).includes(me);
+    if (wasIn && data.status === 'lobby' && !(data.players || []).includes(me) && (data.denied || []).includes(me)) toast('部屋主に卓から外されました');
     const prevStatus = doc && doc.status;
     doc = JSON.parse(JSON.stringify(data)); serverDoc = doc;
     syncNick();
@@ -2238,6 +2261,13 @@ window.addEventListener('online', () => heal(true));
 window.addEventListener('focus', () => heal(true));
 window.addEventListener('pageshow', e => { if (e.persisted) heal(true); }); // iPhone で戻るボタンなどからページがそのまま復元されたとき
 function leaveTable() {
+  // ロビーで出るときは、卓のメンバーからも外れる（部屋主なら次の人に部屋主をわたす）
+  if (!local && tableId && doc && doc.status === 'lobby' && (doc.players || []).includes(me)) withLease(d => {
+    if (!d || d.status !== 'lobby' || !d.players.includes(me)) return null;
+    const players = d.players.filter(p => p !== me); if (!players.length) return null;
+    const votes = { ...(d.votes || {}) }; delete votes[me];
+    return { ...d, players, votes, host: d.host === me ? players[0] : d.host };
+  }, true);
   if (unsub) unsub(); unsub = null; tableId = null; doc = null; serverDoc = null; onSnap = null;
   try { history.replaceState(null, '', location.pathname); } catch (e) { }
   render();
@@ -3029,7 +3059,11 @@ function viewHub() {
     row.append(h('span', { class: 'hub-lab' }, '人数'), h('div', { class: 'seg' }, [1, 2, 3, 4].map(n =>
       h('button', { class: n === localN ? 'on' : '', 'aria-pressed': String(n === localN), onclick: () => { localN = n; render(); } }, n === 1 ? 'ひとり' : n + '人'))));
   } else {
-    d.players.forEach(id => row.append(h(id === me ? 'button' : 'span', { class: 'ava' + (id === me ? ' me' : ''), title: nameOf(id) + (id === d.host ? '（部屋主）' : ''), 'aria-label': id === me ? `${nameOf(id)}（タップで名前を変える）` : null, onclick: id === me ? () => { nickGate = true; render(); } : null }, avaTxt(id), id === d.host ? h('i', { class: 'crown', 'aria-hidden': 'true' }) : null)));
+    // 自分のアイコンは名前を変える。部屋主は、ほかの人のアイコンをタップで卓から外せる
+    d.players.forEach(id => { const mine = id === me, kickable = host && !mine;
+      row.append(h(mine || kickable ? 'button' : 'span', { class: 'ava' + (mine ? ' me' : ''), title: nameOf(id) + (id === d.host ? '（部屋主）' : ''),
+        'aria-label': mine ? `${nameOf(id)}（タップで名前を変える）` : kickable ? `${nameOf(id)}（タップで卓から外す）` : null,
+        onclick: mine ? () => { nickGate = true; render(); } : kickable ? () => bdConfirm(`${nameOf(id)}を 卓から外しますか？`, '外す', () => kick(id)) : null }, avaTxt(id), id === d.host ? h('i', { class: 'crown', 'aria-hidden': 'true' }) : null)); });
     if (d.players.length === 1 && pick.id !== 'bingo') row.append(h('span', { class: 'ava ghost', title: 'コンピュータ（1人なら参加）' }, 'コ'));
     row.append(h('span', { class: 'hub-names' }, d.players.map(nameOf).join('・')));
   }
@@ -3077,7 +3111,9 @@ function viewHub() {
   root.append(foot);
   return root;
 }
-function hubFootMsg(g, n, hostName) {
+// （ひと言）は2行目に回す。いつも2行までにして、チケットの位置がゲームによって動かないようにする
+const hubFootMsg = (g, n, hostName) => hubFootText(g, n, hostName).replace('（', '\n（');
+function hubFootText(g, n, hostName) {
   if (!fits(g, n)) {
     if (DUEL[g.id]) return `${g.n}は2人で遊ぶゲームです（いま${n}人）`;
     if (n < g.min) return g.id === 'bingo' ? `${g.n}は${g.min}人から（部屋主が回す係になります）` : `${g.n}は${g.min}人から遊べます`;
