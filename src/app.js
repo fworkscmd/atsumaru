@@ -312,8 +312,9 @@ function openTable(id) {
       resetTried = true;
       withLease(d => d && stale(d) ? freshLobby() : null, true).then(r => { if (r === 'ok') toast('前に使った卓だったので、新しく始めました'); });
     }
-    const wasIn = !!doc && (doc.players || []).includes(me);
-    if (wasIn && data.status === 'lobby' && !(data.players || []).includes(me) && (data.denied || []).includes(me)) toast('部屋主に卓から外されました');
+    const wasIn = !!doc && (doc.players || []).includes(me), nowIn = (data.players || []).includes(me);
+    if (wasIn && data.status === 'lobby' && !nowIn && (data.denied || []).includes(me)) toast('部屋主に卓から外されました');
+    if (doc && !wasIn && nowIn && data.status === 'lobby' && data.host !== me) admitAt = Date.now(); // 待つ画面から入れてもらえた
     const prevStatus = doc && doc.status;
     doc = JSON.parse(JSON.stringify(data)); serverDoc = doc;
     syncNick();
@@ -496,11 +497,31 @@ function ticketEl(g, d) {
       c != null ? h('span', null, h('small', null, '票'), h('b', null, `${c} / ${d.players.length}`))
         : h('span', null, h('small', null, '招待コード'), h('b', { class: 'code' }, local ? '1台' : tableId))));
 }
+// 部屋主のOKを待つ画面：自分の名前が書かれた入場券を、部屋主がチェックしている
+let admitAt = 0;
+function viewWait(d, left, ok) {
+  const req = (d.requests || []).includes(me), den = (d.denied || []).includes(me), full = d.players.length >= TABLE_MAX, hostName = (d.nicks || {})[d.host] || nameOf(d.host);
+  const st = ok ? 'ok' : den ? 'no' : req ? 'wait' : !left ? 'closed' : full ? 'full' : 'wait';
+  const dots = h('span', { class: 'wait-dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'));
+  const msg = { ok: '入場OK！', wait: [`${hostName}が きみの名前を `, h('span', { class: 'nw' }, 'チェック中', dots)], no: '今回は 入場できませんでした', closed: '受付は もう終わっています', full: `満員です（${TABLE_MAX}人）` }[st];
+  const sub = { ok: 'ロビーに入ります', wait: 'OKが出たら、自動でロビーに入ります', no: '', closed: `${hostName}に 受付をのばしてもらってね`, full: '' }[st];
+  return h('div', { class: 'hub-wrap' }, hubHead(h('span', { class: 'hub-meta' }, `招待コード ${tableId}`), leaveTable),
+    h('div', { class: 'wait ' + st },
+      h('div', { class: 'wait-tk' }, h('div', { class: 'wait-top' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('b', null, myNick || 'ゲスト')),
+        h('div', { class: 'tk-perf' }), h('div', { class: 'wait-stub' }, h('small', null, '招待コード'), h('b', null, tableId)),
+        st === 'ok' ? h('i', { class: 'wait-stamp' }, 'OK') : null),
+      h('div', { class: 'wait-msg', role: 'status' }, msg),
+      sub ? h('div', { class: 'wait-sub' }, sub) : null),
+    st === 'ok' ? null : h('button', { class: 'pill wait-x', onclick: leaveTable }, st === 'wait' ? 'やめる' : 'ホームにもどる'));
+}
 function viewHub() {
   const L = local, d = L ? localHubDoc() : doc;
   const host = L || d.host === me, member = L || d.players.includes(me), mode = d.mode || 'host';
   const pick = gameById(pickOf(d)), counts = voteCount(d);
   const left = L ? 0 : Math.max(0, OPEN_MS - (Date.now() - d.openedAt));
+  // まだメンバーでない人は、部屋主がOKするまで待つ画面。OKが出たら「入場OK！」を少し見せてからロビーへ
+  if (!L && !member) return viewWait(d, left);
+  if (!L && admitAt && Date.now() - admitAt < 1100) { setTimeout(() => { if (doc && doc.status === 'lobby') render(); }, 1150); return viewWait(d, left, true); }
   const timer = L ? h('span', { class: 'hub-meta' }, '1台で遊ぶ') : h('span', { class: 'hub-meta', id: 'lobbyTimer' }, `招待コード ${tableId} ・ ` + (left ? `あと${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}` : '受付終了'));
   const help = () => {
     const foot = [!L && host ? h('details', { class: 'card' }, h('summary', null, 'コインに書き込むリンク'), h('div', { class: 'linkbox' }, shareBase() + '#' + tableId),
@@ -530,11 +551,6 @@ function viewHub() {
   if (!L) (d.requests || []).forEach(id => root.append(h('div', { class: 'hub-req' },
     h('span', { class: 'ava sm' }, avaTxt(id)), h('span', { class: 't' }, h('b', null, nameOf(id)), ' が参加希望'),
     host ? [h('button', { class: 'pill on', onclick: () => answer(id, true) }, '入れる'), h('button', { class: 'pill', onclick: () => answer(id, false) }, '断る')] : h('span', { class: 'hub-meta' }, '確認中'))));
-  if (!member) {
-    const req = (d.requests || []).includes(me), den = (d.denied || []).includes(me);
-    root.append(h('div', { class: 'hub-note' }, den ? '部屋主に断られました' : req ? '部屋主の承認を待っています…' : !left ? '受付は締め切られています' : d.players.length >= TABLE_MAX ? '満員です' : '参加をお願いしています…',
-      (!req && !den && left && d.players.length < TABLE_MAX) ? h('button', { class: 'pill on', onclick: requestJoin }, 'お願いする') : null));
-  }
 
   // 見出しとモード
   root.append(h('div', { class: 'hub-title' }, h('span', { role: 'heading', 'aria-level': '1' }, 'なにであそぶ？'),

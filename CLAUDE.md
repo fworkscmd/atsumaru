@@ -78,6 +78,7 @@ docs/firebase-setup.md   Firebase の初期設定手順（ver 1.0 当時の READ
 ### 卓ドキュメント
 `v:6, status:'lobby'|'playing'|'over', host, players[], requests[], denied[], openedAt, game:'dwarf'|'trapper'|'bingo'|'reversi'|'shogi'|'chess', mode:'host'|'vote', votes{uid:gameId}, nicks{uid:名前}, updated` ＋ゲームの状態（盤のゲームとビンゴは `b` にまとめる）。
 - ロビーは5分間受付（延長可）。部屋主が「入れる／断る」。卓は最大8人（`TABLE_MAX`）
+- 招待コードで入った人は、部屋主がOKするまで**待つ画面**（`viewWait`）。名前入りの小さな入場券と「〇〇が きみの名前を チェック中…」（〇〇は部屋主のニックネーム、「さん」はつけない）。OKが出たら入場券に「OK」のスタンプ →「入場OK！」を約1秒 → ロビー。断られた・受付終了・満員もこの画面で出す
 - 部屋主はロビーでほかの人のアイコンをタップ → 確認 → 卓から外せる（`kick`。外された人は denied に入り、自動で参加希望を出しなおさない）
 - ロビーで「←」で出ると、メンバーからも外れる。部屋主が出たら次の人が部屋主（`leaveTable`）
 - **30分使われていない卓**（`updated` が古い）は、開いた人を部屋主にして新しく始める（`STALE_MS`）。NFCコインは毎回同じ卓コードなので、前に遊んだ中身が残っておかしくなっていたため

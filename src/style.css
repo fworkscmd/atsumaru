@@ -319,6 +319,27 @@ button.ava{border:0;font:inherit;font-weight:900;font-size:15px;padding:0}
 .hub-tip{width:52px;min-height:52px;flex:none;border-radius:15px;border:1px solid var(--h-line);background:var(--h-card);color:var(--h-ink);display:grid;place-items:center;cursor:pointer}
 .hub-tip:active{transform:translateY(2px)}
 .hub-more{display:flex;flex-direction:column;gap:10px}
+/* 部屋主のOKを待つ画面（viewWait）：名前入りの小さな入場券 */
+.hub-wrap>.wait{flex:1 1 auto}.wait{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;min-height:0}
+.wait-tk{position:relative;width:min(100%,250px);transform:rotate(-2deg);filter:drop-shadow(0 12px 18px rgba(0,0,0,.16))}
+.wait.wait .wait-tk{animation:tk-sway 3.2s ease-in-out infinite}
+.wait-top{background:var(--h-card);border-radius:16px 16px 0 0;padding:16px 16px 14px;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.wait-top b{font-size:26px;font-weight:900;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wait-stub{background:var(--h-acc);color:#fff;border-radius:0 0 16px 16px;padding:9px 16px;display:flex;justify-content:space-between;align-items:baseline}
+.wait-stub small{font-size:10px;opacity:.85}
+.wait-stub b{font-size:14px;letter-spacing:.08em}
+.wait-stamp{position:absolute;right:14px;top:14px;width:58px;height:58px;border-radius:50%;border:3px solid var(--h-acc);color:var(--h-acc);display:grid;place-items:center;font-style:normal;font-weight:900;font-size:18px;transform:rotate(12deg);animation:wait-stamp .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes wait-stamp{from{transform:rotate(12deg) scale(2.2);opacity:0}}
+.wait-msg{font-size:18px;font-weight:900;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere;max-width:300px}.wait-msg .nw{white-space:nowrap}
+.wait.ok .wait-msg{color:var(--h-acc);font-size:24px}
+.wait.no .wait-msg,.wait.closed .wait-msg,.wait.full .wait-msg{color:var(--h-mute)}
+.wait-dots{display:inline-flex;gap:3px;margin-left:4px}
+.wait-dots i{width:5px;height:5px;border-radius:50%;background:var(--h-ink);animation:wait-dot 1.2s ease-in-out infinite}
+.wait-dots i:nth-child(2){animation-delay:.2s}.wait-dots i:nth-child(3){animation-delay:.4s}
+@keyframes wait-dot{0%,60%,100%{opacity:.2;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.wait-sub{font-size:12px;color:var(--h-mute)}
+.wait-x{align-self:center;min-width:140px;margin-bottom:8px}
+@media (prefers-reduced-motion:reduce){.wait-tk,.wait-dots i,.wait-stamp{animation:none}}
 body.hub .card{background:var(--h-card);border:1px solid var(--h-line);color:var(--h-ink)}
 body.hub .cap{color:var(--h-mute)}
 body.hub .linkbox{background:#f6f5f2;border-color:var(--h-line)}
