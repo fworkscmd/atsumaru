@@ -1,0 +1,206 @@
+<title>チュンチュンの遊びかた</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+/* スマホの枠を6つ並べ、それぞれの中で同じ6枚のスライドを別の見せ方でめくる。絵はゲームと同じ3D部品（src/trap-3d.js）で描く */
+:root {
+  --bg: #e6e2d8; --card: #fffdf8; --ink: #2c2a24; --sub: #6e695c; --stitch: #cdc5b2; --accent: #ff5a36;
+  --felt: #8fc46e; --wood: #c99a62; --wood2: #a87a48; --sky1: #cfe6f6; --sky2: #f6f1e2;
+  --round: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "BIZ UDPGothic", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1e1c18; --card: #2b2924; --ink: #f1ede4; --sub: #aaa393; --stitch: #4c473c; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #1e1c18; --card: #2b2924; --ink: #f1ede4; --sub: #aaa393; --stitch: #4c473c; color-scheme: dark }
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--round); }
+.wrap { max-width: 1160px; margin: 0 auto; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 6px; margin-bottom: 20px; }
+h1 { font-size: 26px; font-weight: 900; margin: 0; text-wrap: balance; }
+header p { margin: 0; color: var(--sub); font-size: 14px; line-height: 1.7; }
+.grid { display: grid; gap: 26px 20px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.opt { display: grid; gap: 8px; justify-items: center; }
+.cap { width: 100%; max-width: 330px; display: grid; gap: 2px; }
+.cap .t { display: flex; gap: 8px; align-items: baseline; }
+.no { font-size: 12px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 9px; }
+.cap h2 { margin: 0; font-size: 18px; font-weight: 900; }
+.cap p { margin: 0; font-size: 13px; color: var(--sub); line-height: 1.6; }
+/* スマホの画面（ゲームの「？」から開く大きさ） */
+.phone { width: 100%; max-width: 330px; aspect-ratio: 330 / 600; border-radius: 30px; background: #181614; padding: 8px; box-shadow: 0 10px 28px rgba(30,25,15,.22); }
+.scr { width: 100%; height: 100%; border-radius: 23px; overflow: hidden; position: relative; display: flex; flex-direction: column; user-select: none; touch-action: pan-y; }
+.scr img { display: block; max-width: 100%; pointer-events: none; }
+.scr .art { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; overflow: hidden; }
+.scr .art > img { width: 100%; height: 100%; object-fit: contain; }
+.grid > * { min-width: 0; }
+.x { position: absolute; right: 12px; top: 12px; width: 32px; height: 32px; border-radius: 50%; border: 0; font: 900 15px var(--round); cursor: pointer; z-index: 3; }
+button { font-family: var(--round); }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* 1 フェルトの絵本 */
+.d1 { background: var(--felt) radial-gradient(circle at 30% 20%, rgba(255,255,255,.15), transparent 60%); padding: 52px 14px 16px; gap: 12px; }
+.d1 .x { background: rgba(255,255,255,.85); color: #3b5a2a; }
+.d1 .page { flex: 1; background: #fffaf0; border-radius: 22px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 18px 16px; box-shadow: 0 4px 0 rgba(0,0,0,.12); }
+.d1 .page::after { content: ""; position: absolute; inset: 7px; border: 2.5px dashed #e3cfa8; border-radius: 16px; pointer-events: none; }
+.d1 .art { width: 100%; aspect-ratio: 4 / 3; display: grid; place-items: center; }
+.d1 h3 { margin: 0; font-size: 23px; font-weight: 900; text-align: center; line-height: 1.35; color: #3a3326; text-wrap: balance; }
+.d1 h3 em { font-style: normal; color: #e0563a; }
+.d1 .s { font-size: 14px; color: #7a6e58; text-align: center; font-weight: 700; }
+.d1 .nav { display: flex; align-items: center; justify-content: space-between; }
+.d1 .nav button { width: 46px; height: 46px; border-radius: 50%; border: 0; background: #fffaf0; color: #3a3326; font-size: 18px; font-weight: 900; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,.15); }
+.d1 .dots { display: flex; gap: 7px; } .d1 .dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.5); } .d1 .dots i.on { background: #fff; width: 22px; border-radius: 9px; }
+
+/* 2 ゲームのカード */
+.d2 { background: linear-gradient(#f4ead6, #eadcc0); padding: 52px 18px 16px; gap: 14px; align-items: center; }
+.d2 .x { background: #fff; color: #5a4a30; }
+.d2 .stack { flex: 1; width: 100%; position: relative; }
+.d2 .cd { position: absolute; inset: 0; background: #fff; border-radius: 22px; padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 6px 16px rgba(80,60,30,.18); transition: transform .35s cubic-bezier(.2,.8,.3,1.2), opacity .3s; }
+.d2 .cd.back1 { transform: rotate(4deg) translate(6px, 6px); } .d2 .cd.back2 { transform: rotate(-3deg) translate(-6px, 10px); }
+.d2 .band { border-radius: 14px; padding: 8px 12px; color: #fff; display: flex; align-items: center; justify-content: space-between; font-weight: 900; font-size: 18px; }
+.d2 .band small { font-size: 12px; opacity: .85; }
+.d2 .win { flex: 1; border-radius: 14px; display: grid; place-items: center; overflow: hidden; }
+.d2 .win img { width: 92%; }
+.d2 .txt { background: #fbf6ea; border-radius: 12px; padding: 10px 12px; font-size: 15px; font-weight: 700; line-height: 1.55; color: #4a3f2c; text-align: center; }
+.d2 .go { border: 0; border-radius: 999px; background: #3a3326; color: #fff; font-weight: 900; font-size: 16px; padding: 13px; width: 100%; cursor: pointer; }
+
+/* 3 浮島ジオラマ */
+.d3 { background: linear-gradient(var(--sky1), var(--sky2)); }
+.d3 .x { background: rgba(255,255,255,.8); color: #2e4a5a; }
+.d3 .bar { display: flex; gap: 4px; padding: 14px 54px 0 14px; } .d3 .bar i { flex: 1; height: 4px; border-radius: 4px; background: rgba(40,70,90,.18); } .d3 .bar i.on { background: #2e6a8a; }
+.d3 .art { flex: 1; display: grid; place-items: center; padding: 0 6px; } .d3 .art img { width: 100%; }
+.d3 .tag { margin: 0 16px 16px; background: #ffcf5a; border-radius: 18px; padding: 14px 16px 16px; position: relative; color: #4a3410; box-shadow: 0 4px 0 #d9a63a; }
+.d3 .tag::after { content: ""; position: absolute; inset: 6px; border: 2.5px dashed rgba(255,255,255,.8); border-radius: 13px; pointer-events: none; }
+.d3 .tag h3 { margin: 0 0 4px; font-size: 22px; font-weight: 900; line-height: 1.3; text-wrap: balance; }
+.d3 .tag p { margin: 0; font-size: 14px; font-weight: 700; opacity: .8; }
+.d3 .hint { text-align: center; font-size: 12px; color: #5a7080; padding-bottom: 10px; font-weight: 700; }
+
+/* 4 紙芝居 */
+.d4 { background: #6a4a2e; padding: 48px 12px 14px; gap: 10px; }
+.d4 .x { background: #f2e2c4; color: #5a3a1a; }
+.d4 .frame { flex: 1; background: linear-gradient(var(--wood), var(--wood2)); border-radius: 14px; padding: 12px; display: flex; box-shadow: inset 0 0 0 3px rgba(0,0,0,.12); }
+.d4 .paper { flex: 1; background: #fbf4e4; border-radius: 6px; position: relative; display: flex; flex-direction: column; padding: 14px; gap: 8px; overflow: hidden; }
+.d4 .pg { position: absolute; left: 12px; top: 10px; font-size: 40px; font-weight: 900; color: #e8d6b4; line-height: 1; }
+.d4 .art { flex: 1; display: grid; place-items: center; } .d4 .art img { width: 100%; }
+.d4 h3 { margin: 0; font-size: 22px; font-weight: 900; text-align: center; color: #4a2e14; line-height: 1.35; text-wrap: balance; }
+.d4 .s { margin: 0; text-align: center; font-size: 14px; color: #8a6a48; font-weight: 700; }
+.d4 .go { border: 0; border-radius: 12px; background: #f2e2c4; color: #4a2e14; font-weight: 900; font-size: 16px; padding: 12px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,.25); }
+.d4 .paper.flip { animation: flip .45s ease; } @keyframes flip { from { transform: translateX(40%) rotate(4deg); opacity: 0 } }
+
+/* 5 ホームと同じ 白・黒・朱 */
+.d5 { background: #fff; color: #141414; padding: 16px 18px 18px; gap: 10px; }
+.d5 .x { background: #f1efea; color: #141414; }
+.d5 .bar { display: flex; gap: 4px; padding-right: 40px; height: 32px; align-items: center; } .d5 .bar i { flex: 1; height: 3px; background: #e6e3dc; } .d5 .bar i.on { background: #ff5a36; }
+.d5 .num { font-size: 13px; font-weight: 900; color: #ff5a36; letter-spacing: .08em; margin-top: 8px; }
+.d5 h3 { margin: 0; font-size: 28px; font-weight: 900; line-height: 1.25; letter-spacing: -.01em; text-wrap: balance; }
+.d5 .s { margin: 0; font-size: 14px; color: #77736a; font-weight: 700; }
+.d5 .art { flex: 1; display: grid; place-items: center; background: #f6f4ef; border-radius: 22px; } .d5 .art img { width: 96%; }
+.d5 .nav { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.d5 .nav button { border: 0; border-radius: 16px; padding: 14px; font-weight: 900; font-size: 15px; cursor: pointer; background: #f1efea; color: #141414; }
+.d5 .nav button.on { background: #141414; color: #fff; box-shadow: 0 4px 0 #ff5a36; }
+
+/* 6 1枚にまとめた まんが */
+.d6 { background: #fffaf0; padding: 14px 12px 12px; gap: 8px; }
+.d6 .x { background: #3a3326; color: #fff; }
+.d6 h3 { margin: 4px 0 2px; font-size: 19px; font-weight: 900; color: #3a3326; padding-right: 40px; }
+.d6 .panels { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 1fr); gap: 7px; min-height: 0; }
+.d6 .pn { border-radius: 14px; background: #fff; border: 2px solid #3a3326; display: flex; flex-direction: column; padding: 4px 6px 6px; min-height: 0; position: relative; }
+.d6 .pn b { position: absolute; left: 6px; top: 4px; font-size: 12px; font-weight: 900; color: #fff; background: #e0563a; border-radius: 999px; width: 20px; height: 20px; display: grid; place-items: center; }
+.d6 .pn .art { flex: 1; min-height: 0; display: grid; place-items: center; } 
+.d6 .pn span { font-size: 12px; font-weight: 900; text-align: center; line-height: 1.3; color: #3a3326; }
+.d6 .pn em { font-style: normal; color: #e0563a; }
+.d6 .ok { border: 0; border-radius: 999px; background: #3f7fe0; color: #fff; font-weight: 900; font-size: 16px; padding: 12px; cursor: pointer; }
+
+/* スライド6の手札 */
+.fan { position: relative; width: 82%; aspect-ratio: 4 / 3; margin: 0 auto; }
+.fan img { position: absolute; width: 44%; left: 28%; top: 12%; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,.2); background: #fff; padding: 3px; }
+.d6 .fan { height: 100%; width: auto; max-width: 100%; }
+.load { color: var(--sub); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>チュンチュン大作戦の遊びかた 6案</h1>
+    <p>細かいルールは書かずに、絵とひとことで6枚にしました。中身はどの案も同じで、見せ方だけちがいます。<br>
+      矢印やボタンでめくれます（横にスワイプでも）。気に入った番号を教えてください。ほかのゲームの説明も同じ形にそろえます。</p>
+  </header>
+  <div class="grid" id="grid"><p class="load">絵を描いています…</p></div>
+</div>
+
+<script src="../src/trap-3d.js"></script>
+<script>
+const SL = [
+  { t: '罠士<em>1人</em> VS 鳥<em>3羽</em>', s: '役はランダムで決まるよ', c: '#5f6066', k: 'roles', n: 'だれと戦う？' },
+  { t: '罠士は<em>罠</em>をおく', s: 'サイコロの目の数だけ', c: '#5f6066', k: 'place', n: '罠士の番' },
+  { t: '鳥は<em>サイコロ</em>で すすむ', s: '止まったマスだけが大事', c: '#3f7fe0', k: 'move', n: '鳥の番' },
+  { t: 'エサを<em>5こ</em>とったら 鳥の勝ち', s: '3羽みんなで集めよう', c: '#e0563a', k: 'food', n: '鳥の勝ち' },
+  { t: '<em>4回</em>つかまえたら 罠士の勝ち', s: 'つかまった鳥は巣にもどる', c: '#5f6066', k: 'caught', n: '罠士の勝ち' },
+  { t: '<em>カード</em>で 作戦', s: '1回の番に1枚まで', c: '#d9a63a', k: 'cards', n: 'カード' },
+];
+const plain = s => s.replace(/<[^>]+>/g, '');
+
+TB.load().then(() => {
+  const { T, C, felt, mesh, gloss, paint, slab, stitchTex, bird, apple, trap, star } = TB.parts();
+  const ART = TB.arts(), PI = Math.PI;
+  // ── 絵：透明な背景に3Dで描いて画像にする
+  const R = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); R.setPixelRatio(1); R.setSize(560, 420); R.shadowMap.enabled = true; R.outputEncoding = T.sRGBEncoding; R.setClearColor(0, 0);
+  function shot(build, cam = [0, 2.2, 4.4], look = [0, .4, 0]) {
+    const sc = new T.Scene(); sc.add(new T.HemisphereLight(C('#ffffff'), C('#8a8a7a'), .8));
+    const d = new T.DirectionalLight(C('#fff4e2'), 1.15); d.position.set(-2.5, 6, 4); d.castShadow = true; d.shadow.mapSize.set(1024, 1024); Object.assign(d.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4 }); sc.add(d);
+    const shp = new T.Mesh(new T.PlaneGeometry(10, 10), new T.ShadowMaterial({ opacity: .2 })); shp.rotation.x = -PI / 2; shp.receiveShadow = true; sc.add(shp);
+    build(sc); const c = new T.PerspectiveCamera(30, 4 / 3, .1, 50); c.position.set(...cam); c.lookAt(...look); R.render(sc, c); return R.domElement.toDataURL('image/png');
+  }
+  const tA = stitchTex('#fffaf2', '#d098a8'), tB = stitchTex('#ffe8ee', '#d098a8');
+  function tile(sc, x, z = 0, k = 0) { const g = new T.Group(); g.add(slab(.8, .8, .14, .16, felt(k % 2 ? '#fffaf2' : '#ffe8ee'), .04));
+    const top = new T.Mesh(new T.PlaneGeometry(.74, .74), new T.MeshStandardMaterial({ map: k % 2 ? tA : tB, roughness: 1 })); top.rotation.x = -PI / 2; top.position.y = .141; top.receiveShadow = true; g.add(top); g.position.set(x, 0, z); sc.add(g); }
+  function die(n) { const g = new T.Group(); g.add(slab(.46, .46, .46, .1, felt('#fffaf0'), .06));
+    const L = { 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]] }[n];
+    L.forEach(([a, c]) => { const p = mesh(new T.SphereGeometry(.045, 10, 6), felt('#e04a3a')); p.scale.y = .4; p.position.set(a * .12, .46, c * .12); g.add(p); }); return g; }
+  const put = (sc, o, x, y, z, s = 1, ry = 0) => { o.position.set(x, y, z); o.scale.setScalar(s); o.rotation.y = ry; sc.add(o); return o; };
+  const IMG = {
+    roles: shot(sc => { put(sc, trap(), -1.05, 0, .1, 1.7, .5); put(sc, bird('#e85a4a'), .35, 0, .25, 1.45, -.3); put(sc, bird('#4a86e0'), .95, 0, -.25, 1.45, -.3); put(sc, bird('#f2c23a'), 1.35, 0, .45, 1.45, -.3); }, [.2, 2.3, 5.6], [.15, .35, 0]),
+    place: shot(sc => { tile(sc, -.9, 0, 0); tile(sc, 0, 0, 1); tile(sc, .9, 0, 0); put(sc, trap(), -.9, .14, 0, 1.25, .4); put(sc, trap(), .9, .9, 0, 1.25, -.3); put(sc, die(3), 0, .14, .55, 1, .5); }, [0, 2.4, 4.8], [0, .35, 0]),
+    move: shot(sc => { [-1.2, -.4, .4, 1.2].forEach((x, k) => tile(sc, x, 0, k)); const b = put(sc, bird('#4a86e0'), 0, .55, 0, 1.4, -.3); b.userData.flap(1.2);
+      for (const x of [-.9, -.55, -.2]) { const p = mesh(new T.SphereGeometry(.035, 8, 6), felt('#ffffff')); p.position.set(x, .45 + Math.sin((x + 1) * 2.5) * .25, 0); sc.add(p); }
+      put(sc, die(4), -1.05, .14, .75, 1, .6); }, [0, 2.3, 5.0], [0, .35, 0]),
+    food: shot(sc => { put(sc, bird('#e85a4a'), 0, 0, 0, 1.6, -.3); for (let k = 0; k < 5; k++) { const a = PI * (1.08 - k * .29); put(sc, apple(), Math.cos(a) * 1.15, k % 2 ? .55 : .1, Math.sin(a) * .35 + .3, 1.05, k); } }, [0, 2.0, 5.0], [0, .4, 0]),
+    caught: shot(sc => { const t = trap(); t.userData.jaws.forEach((j, k) => j.rotation.x += (k ? -1 : 1) * .9); put(sc, t, 0, 0, 0, 1.7, .6); const b = put(sc, bird('#f2c23a'), 0, .05, 0, 1.45, -.3); b.rotation.z = .2; b.userData.flap(-.3);
+      for (let k = 0; k < 3; k++) { const s = star('#ffd23a'); s.rotation.x = PI / 2 - .3; const a = k * 2.1 + .3; s.position.set(Math.cos(a) * .42 + .1, 1.0 + k * .03, Math.sin(a) * .3); sc.add(s); } }, [0, 1.9, 4.3], [0, .5, 0]),
+  };
+  const art = k => k === 'cards'
+    ? `<div class="fan">${['flap', 'dash', 'quality'].map((c, i) => `<img src="${ART[c]}" alt="" style="transform:rotate(${(i - 1) * 14}deg) translate(${(i - 1) * 58}%, ${Math.abs(i - 1) * 6}%)">`).join('')}</div>`
+    : `<img src="${IMG[k]}" alt="">`;
+
+  // ── めくる仕組み（ボタン・スワイプ・キーボード）
+  function deck(scr, paint) { let i = 0; const go = d => { const n = Math.max(0, Math.min(SL.length - 1, i + d)); if (n === i && d) return; i = n; paint(i, go); }; paint(0, go);
+    let x0 = null; scr.addEventListener('pointerdown', e => { x0 = e.clientX; }); scr.addEventListener('pointerup', e => { if (x0 == null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1); });
+    scr.tabIndex = 0; scr.addEventListener('keydown', e => { if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(-1); }); }
+  const dots = (i, cls = '') => SL.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
+  const last = i => i === SL.length - 1;
+  const D = [
+    { name: 'フェルトの絵本', d: '草のフェルトの上に、縫い目つきの白いページ。下の矢印でめくる。ゲーム中の雰囲気そのまま。',
+      paint: (el, i, go) => { el.innerHTML = `<button class="x" aria-label="とじる">×</button><div class="page"><div class="art">${art(SL[i].k)}</div><h3>${SL[i].t}</h3><div class="s">${SL[i].s}</div></div>
+        <div class="nav"><button aria-label="もどる" data-d="-1">‹</button><div class="dots">${dots(i)}</div><button aria-label="つぎへ" data-d="1">${last(i) ? '✓' : '›'}</button></div>`; } },
+    { name: 'ゲームのカード', d: '1枚ずつがゲームのカードと同じ作り（色の帯・絵の窓・説明）。うしろにカードが重なっていて、めくると次が出る。',
+      paint: (el, i) => { const s = SL[i]; el.innerHTML = `<button class="x" aria-label="とじる">×</button><div class="stack">${i < SL.length - 2 ? '<div class="cd back2"></div>' : ''}${i < SL.length - 1 ? '<div class="cd back1"></div>' : ''}
+        <div class="cd"><div class="band" style="background:${s.c}">${s.n}<small>${i + 1} / ${SL.length}</small></div><div class="win" style="background:${s.c}1f">${art(s.k)}</div><div class="txt">${plain(s.t)}<br><small style="opacity:.7">${s.s}</small></div></div></div>
+        <button class="go" data-d="1">${last(i) ? 'さあ、はじめよう' : 'つぎのカード'}</button>`; } },
+    { name: '浮島ジオラマ', d: '空の上に絵を大きく。言葉は下の黄色いフェルトの札に。上の線で何枚目かわかる。スワイプでめくる。',
+      paint: (el, i) => { el.innerHTML = `<button class="x" aria-label="とじる">×</button><div class="bar">${dots(i)}</div><div class="art">${art(SL[i].k)}</div>
+        <div class="tag"><h3>${plain(SL[i].t)}</h3><p>${SL[i].s}</p></div><div class="hint">${last(i) ? 'タップでとじる' : '← よこにスワイプ →'}</div>`; } },
+    { name: '紙芝居', d: '木の枠に紙をはさんだ紙芝居。左上に大きなページ番号。「めくる」で紙がすっと入れかわる。',
+      paint: (el, i) => { el.innerHTML = `<button class="x" aria-label="とじる">×</button><div class="frame"><div class="paper flip"><span class="pg">${i + 1}</span><div class="art">${art(SL[i].k)}</div><h3>${SL[i].t.replace(/<\/?em>/g, '')}</h3><p class="s">${SL[i].s}</p></div></div>
+        <button class="go" data-d="1">${last(i) ? 'おしまい' : 'めくる'}</button>`; } },
+    { name: 'ホームと同じ 白・黒・朱', d: 'ゲーム選択の画面と同じ白・黒・朱。文字を大きく先に見せて、絵はその下。上の線で進みぐあい。',
+      paint: (el, i) => { el.innerHTML = `<button class="x" aria-label="とじる">×</button><div class="bar">${dots(i)}</div><div class="num">${String(i + 1).padStart(2, '0')}</div><h3>${plain(SL[i].t)}</h3><p class="s">${SL[i].s}</p>
+        <div class="art">${art(SL[i].k)}</div><div class="nav"><button data-d="-1">もどる</button><button class="on" data-d="1">${last(i) ? 'わかった' : 'つぎへ'}</button></div>`; } },
+    { name: '1枚の まんが', d: 'めくらずに、6コマを1画面にぜんぶ。開いた瞬間に全体がわかる。字はいちばん少ない。',
+      paint: (el) => { el.innerHTML = `<button class="x" aria-label="とじる">×</button><h3>チュンチュン大作戦</h3><div class="panels">${SL.map((s, k) => `<div class="pn"><b>${k + 1}</b><div class="art">${art(s.k)}</div><span>${s.t}</span></div>`).join('')}</div><button class="ok">わかった</button>`; }, still: true },
+  ];
+  const grid = document.getElementById('grid'); grid.replaceChildren();
+  D.forEach((d, n) => {
+    const o = document.createElement('div'); o.className = 'opt';
+    o.innerHTML = `<div class="cap"><div class="t"><span class="no">${n + 1}</span><h2>${d.name}</h2></div><p>${d.d}</p></div><div class="phone"><div class="scr d${n + 1}"></div></div>`;
+    grid.append(o); const scr = o.querySelector('.scr');
+    if (d.still) { d.paint(scr); return; }
+    deck(scr, (i, go) => { d.paint(scr, i, go); scr.querySelectorAll('[data-d]').forEach(b => b.onclick = () => go(+b.dataset.d)); });
+  });
+}).catch(e => { document.getElementById('grid').textContent = '絵を描けませんでした（' + e.message + '）'; });
+</script>

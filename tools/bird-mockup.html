@@ -1,0 +1,337 @@
+<title>トラッパーの鳥</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+/* 縦に並んだ「カード」。窓の中で3羽が回る。PCでは2〜3列 */
+:root {
+  --bg: #e3e9d8; --card: #fffdf8; --ink: #2c3228; --sub: #697263;
+  --stitch: #c3ccb6; --win1: #d9ecf6; --win2: #f3f7ea; --accent: #ff5a36;
+  --round: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "BIZ UDPGothic", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1d231b; --card: #2a3128; --ink: #eef2e8; --sub: #a3ad9a;
+  --stitch: #4a5545; --win1: #2f4252; --win2: #34402f; --accent: #ff7a5a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1d231b; --card: #2a3128; --ink: #eef2e8; --sub: #a3ad9a;
+  --stitch: #4a5545; --win1: #2f4252; --win2: #34402f; --accent: #ff7a5a; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--round); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 6px; margin-bottom: 22px; }
+h1 { font-size: 26px; font-weight: 900; margin: 0; text-wrap: balance; }
+header p { margin: 0; color: var(--sub); font-size: 14px; line-height: 1.7; }
+.grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.card { background: var(--card); border-radius: 18px; padding: 10px; position: relative;
+  box-shadow: 0 2px 0 rgba(0,0,0,.06), 0 8px 22px rgba(40,60,30,.10); display: grid; gap: 8px; }
+.card::after { content: ""; position: absolute; inset: 5px; border: 2px dashed var(--stitch); border-radius: 14px; pointer-events: none; }
+.win { border-radius: 12px; overflow: hidden; background: linear-gradient(var(--win1), var(--win2)); aspect-ratio: 5 / 3; max-width: 100%; }
+.win canvas { width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; }
+.band { display: flex; align-items: baseline; gap: 10px; padding: 2px 8px 0; }
+.no { font-size: 12px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 9px; letter-spacing: .04em; flex: none; }
+.card.now .no { background: var(--sub); }
+.band h2 { margin: 0; font-size: 19px; font-weight: 900; }
+.card p { margin: 0; padding: 0 8px 8px; font-size: 13px; line-height: 1.65; color: var(--sub); font-weight: 500; }
+.load { color: var(--sub); font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>トラッパーの鳥 10案</h1>
+    <p>どれもフェルトのぬいぐるみ・コマとして作っています。絵の上を左右にドラッグすると向きを変えられます。<br>気に入った番号を教えてください（「5の縫い目を1に」のような組み合わせもできます）。</p>
+  </header>
+  <div class="grid" id="grid"><p class="load" id="load">3Dを読みこみ中…</p></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+  const T = THREE, C = c => new T.Color(c);
+  let sd = 11; const rr = () => (sd = sd * 16807 % 2147483647) / 2147483647;
+  const cv = (w, h = w) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; };
+  // ── ゲームと同じフェルトの質感（trap-3d.js から）
+  let FELT = null; const feltRep = {};
+  function feltTex(rep) {
+    if (!FELT) {
+      const [c, g] = cv(256); g.fillStyle = '#ededed'; g.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 2600; i++) { const x = rr() * 256, y = rr() * 256, a = rr() * 6.3, l = 2 + rr() * 6, lt = rr() < .5; g.strokeStyle = lt ? `rgba(255,255,255,${.25 + rr() * .35})` : `rgba(0,0,0,${.08 + rr() * .12})`; g.lineWidth = .6 + rr() * .7; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a + 1) * l / 2, y + Math.sin(a + 1) * l / 2, x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
+      FELT = c;
+    }
+    if (!feltRep[rep]) { const t = new T.CanvasTexture(FELT); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(rep, rep); t.anisotropy = 4; feltRep[rep] = t; }
+    return feltRep[rep];
+  }
+  const mats = {};
+  function felt(col, rep = 1) { const k = col + rep; if (!mats[k]) { const c = C(col).multiplyScalar(1.07); mats[k] = new T.MeshStandardMaterial({ color: c, map: feltTex(rep), bumpMap: feltTex(rep), bumpScale: .02, roughness: 1 }); } return mats[k]; }
+  const mesh = (g, m) => { const o = new T.Mesh(g, m); o.castShadow = o.receiveShadow = true; return o; };
+  const gloss = (col, o = {}) => new T.MeshPhysicalMaterial({ color: C(col), roughness: o.r ?? .25, metalness: o.m ?? 0, clearcoat: o.cc ?? .6, clearcoatRoughness: .2, transparent: !!o.t, opacity: o.t || 1 });
+  const paint = (col, r = .55, m = 0) => new T.MeshStandardMaterial({ color: C(col), roughness: r, metalness: m });
+  function rrect(w, d, r) { const s = new T.Shape(), x = -w / 2, y = -d / 2; s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + d - r); s.quadraticCurveTo(x + w, y + d, x + w - r, y + d); s.lineTo(x + r, y + d); s.quadraticCurveTo(x, y + d, x, y + d - r); s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); return s; }
+  function slab(w, d, h, r, m, bv = .05) { const g = new T.ExtrudeGeometry(rrect(w - 2 * bv, d - 2 * bv, r), { depth: h - 2 * bv, bevelEnabled: true, bevelThickness: bv, bevelSize: bv, bevelSegments: 3, curveSegments: 8 }); g.rotateX(-Math.PI / 2); g.translate(0, bv, 0); return mesh(g, m); }
+
+  // ── 部品
+  const hex = c => '#' + c.getHexString();
+  const shade = (col, k) => hex(C(col).multiplyScalar(k));
+  const tint = (col, k) => hex(C(col).lerp(C('#ffffff'), k));
+  const CREAM = '#fbf1dd', PINK = '#ff9a9a', ORANGE = '#f3a43a';
+  const BLACK = gloss('#121212', { r: .08, cc: 1 }), SHINE = new T.MeshBasicMaterial({ color: 0xffffff });
+  const THREAD = new T.MeshStandardMaterial({ color: C('#fff6e6'), roughness: .9 });
+  const G = () => new T.Group();
+  function S(par, r, m, sc = [1, 1, 1], p = [0, 0, 0], ro = [0, 0, 0], seg = 24) { const o = mesh(new T.SphereGeometry(r, seg, Math.max(8, seg * 2 / 3 | 0)), m); o.scale.set(...sc); o.position.set(...p); o.rotation.set(...ro); par.add(o); return o; }
+  function cone(par, r, h, m, p, ro = [Math.PI / 2, 0, 0], seg = 12) { const o = mesh(new T.ConeGeometry(r, h, seg), m); o.position.set(...p); o.rotation.set(...ro); par.add(o); return o; }
+  function eye(par, x, y, z, r = .04) { S(par, r, BLACK, [1, 1, .6], [x, y, z], [0, x * 3, 0], 16); const h = new T.Mesh(new T.SphereGeometry(r * .3, 8, 6), SHINE); h.position.set(x - r * .25, y + r * .35, z + r * .45); par.add(h); }
+  function dash(par, a, b, m = THREAD, r = .006) { const d = new T.Vector3().subVectors(b, a); const o = new T.Mesh(new T.CylinderGeometry(r, r, d.length(), 5), m); o.position.copy(a).add(b).multiplyScalar(.5); o.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize()); par.add(o); return o; }
+  function feet(par, col = ORANGE, z = .14, x = .09) { for (const s of [-1, 1]) S(par, .05, felt(col), [1, .45, 1.4], [s * x, .025, z], undefined, 12); }
+
+  // ── 0：いまの鳥（そのまま）
+  function d0(col) { const g = G();
+    const body = mesh(new T.SphereGeometry(.25, 32, 24), felt(col)); body.scale.set(1, .92, 1.05); body.position.y = .34; g.add(body);
+    const belly = mesh(new T.SphereGeometry(.2, 24, 16), felt('#fbf1dd')); belly.scale.set(.85, .8, .55); belly.position.set(0, .3, .12); g.add(belly);
+    for (const s of [-1, 1]) { const w = mesh(new T.SphereGeometry(.14, 18, 12), felt(col)); w.scale.set(.35, .7, 1.1); w.position.set(s * .245, .33, -.03); w.rotation.set(.3, 0, s * .25); g.add(w);
+      const e = mesh(new T.SphereGeometry(.042, 16, 12), BLACK); e.scale.z = .55; e.position.set(s * .1, .41, .225); e.rotation.y = s * .4; g.add(e);
+      const foot = mesh(new T.SphereGeometry(.05, 12, 8), felt('#f0a040')); foot.scale.set(1, .4, 1.5); foot.position.set(s * .08, .09, .06); g.add(foot);
+      const ck = mesh(new T.SphereGeometry(.035, 12, 8), felt('#ff9a9a')); ck.scale.z = .3; ck.position.set(s * .16, .34, .2); ck.rotation.y = s * .7; g.add(ck); }
+    const beak = mesh(new T.ConeGeometry(.055, .12, 4), felt('#f3a43a')); beak.rotation.x = Math.PI / 2; beak.rotation.z = Math.PI / 4; beak.scale.set(1, 1, .7); beak.position.set(0, .35, .28); g.add(beak);
+    for (const [x, rz] of [[-.03, .3], [.03, -.2]]) { const tf = mesh(new T.SphereGeometry(.05, 12, 8), felt(col)); tf.scale.set(.5, 1.4, .6); tf.position.set(x, .59, -.02); tf.rotation.z = rz; g.add(tf); }
+    const tail = mesh(new T.SphereGeometry(.1, 14, 10), felt(col)); tail.scale.set(.9, .35, 1.3); tail.position.set(0, .3, -.27); tail.rotation.x = .5; g.add(tail);
+    const stand = mesh(new T.CylinderGeometry(.24, .26, .05, 32), gloss('#ffffff', { r: .05, t: .45, cc: 1 })); stand.position.y = .025; g.add(stand);
+    return g; }
+
+  // ── 1：ころころ
+  function d1(col, i, o = {}) { const g = G();
+    S(g, .3, felt(col), [1, .94, 1], [0, .29, 0], undefined, 32);
+    S(g, .19, felt(CREAM), [.95, .8, .4], [0, .23, .235]);
+    for (const s of [-1, 1]) {
+      S(g, .11, felt(shade(col, .86)), [.32, .72, 1], [s * .285, .27, -.02], [.25, 0, s * .35]);
+      eye(g, s * .105, .34, .262, .036);
+      S(g, .038, felt(PINK), [1, .65, .3], [s * .175, .28, .24], [0, s * .62, 0], 12);
+    }
+    feet(g);
+    cone(g, .04, .085, felt(ORANGE), [0, .295, .31], undefined, 4);
+    if (o.tuft !== false) { const t = mesh(new T.TorusGeometry(.045, .015, 8, 16, Math.PI * 1.5), felt(col)); t.position.set(0, .6, 0); t.rotation.y = Math.PI / 2; g.add(t); }
+    return g; }
+
+  // ── 2：ふくらすずめ
+  function d2(col) { const g = G(), dk = shade(col, .78);
+    S(g, .27, felt(col), [1.08, .88, 1.05], [0, .25, 0], undefined, 32);
+    S(g, .2, felt(CREAM), [1, .8, .5], [0, .22, .17]);
+    S(g, .19, felt(col), [1, .95, 1], [0, .47, .06], undefined, 28);
+    const cap = mesh(new T.SphereGeometry(.195, 28, 12, 0, Math.PI * 2, 0, Math.PI * .38), felt(dk)); cap.position.set(0, .47, .06); cap.rotation.x = -.35; g.add(cap);
+    for (const s of [-1, 1]) {
+      S(g, .075, felt('#ffffff'), [.35, .75, .95], [s * .165, .44, .11], [0, s * .35, 0], 16);
+      S(g, .024, felt('#3a3230'), [.35, 1, 1], [s * .19, .43, .11], [0, s * .35, 0], 10);
+      eye(g, s * .075, .5, .225, .032);
+      S(g, .16, felt(dk), [.36, .7, 1.15], [s * .27, .25, -.05], [.35, 0, s * .18]);
+    }
+    feet(g, ORANGE, .16);
+    cone(g, .035, .07, felt('#5a4a40'), [0, .455, .255], undefined, 8);
+    S(g, .12, felt(dk), [.85, .2, 1.3], [0, .33, -.3], [-.55, 0, 0]);
+    return g; }
+
+  // ── 3：たまご
+  function d3(col) { const g = G(), pts = [];
+    for (let k = 0; k <= 24; k++) { const t = k / 24; pts.push(new T.Vector2(Math.max(.001, .26 * Math.pow(Math.sin(Math.PI * t), .8) * (1 - .18 * t)), t * .62)); }
+    const body = mesh(new T.LatheGeometry(pts, 40), felt(col)); body.position.y = .01; g.add(body);
+    S(g, .17, felt(CREAM), [.85, 1.15, .35], [0, .23, .2]);
+    for (const s of [-1, 1]) {
+      eye(g, s * .08, .43, .172, .034);
+      S(g, .032, felt(PINK), [1, .7, .3], [s * .135, .37, .175], [0, s * .7, 0], 10);
+      S(g, .09, felt(shade(col, .88)), [.35, .8, .75], [s * .235, .26, 0], [0, 0, s * .55]);
+      for (const k of [-1, 0, 1]) S(g, .03, felt(ORANGE), [.55, .35, 1.6], [s * .075 + k * .028, .018, .11], [0, k * .45, 0], 10);
+    }
+    cone(g, .035, .07, felt(ORANGE), [0, .37, .21], undefined, 4);
+    for (const k of [-1, 0, 1]) S(g, .04, felt(col), [.35, 1.25, .5], [k * .03, .66, 0], [0, 0, -k * .55], 12);
+    return g; }
+
+  // ── 4：文鳥
+  function d4(col) { const g = G(), dk = shade(col, .45), lt = tint(col, .35);
+    S(g, .24, felt(col), [1, .92, 1.12], [0, .26, -.02], undefined, 32);
+    S(g, .18, felt(lt), [.9, .75, .5], [0, .22, .13]);
+    const tail = cone(g, .11, .32, felt(dk), [0, .32, -.36], [-Math.PI / 2 + .45, 0, 0], 16); tail.scale.z = .45;
+    S(g, .17, felt(col), [1, 1, 1], [0, .47, .09], undefined, 28);
+    const cap = mesh(new T.SphereGeometry(.175, 28, 12, 0, Math.PI * 2, 0, Math.PI * .42), felt(dk)); cap.position.set(0, .47, .09); cap.rotation.x = -.25; g.add(cap);
+    for (const s of [-1, 1]) {
+      S(g, .09, felt('#ffffff'), [.4, .72, .95], [s * .12, .44, .13], [0, s * .3, 0], 16);
+      eye(g, s * .085, .5, .225, .03);
+      const ring = mesh(new T.TorusGeometry(.034, .009, 8, 20), felt('#ff6a5a')); ring.position.set(s * .085, .5, .228); ring.rotation.y = s * .3; g.add(ring);
+      S(g, .15, felt(shade(col, .8)), [.34, .7, 1.15], [s * .255, .27, -.05], [.3, 0, s * .18]);
+    }
+    feet(g, '#f2a0a0', .12, .08);
+    cone(g, .062, .14, gloss('#ff6f61', { r: .35, cc: .4 }), [0, .44, .29], [Math.PI / 2 + .25, 0, 0], 16);
+    return g; }
+
+  // ── 5：ボタンの目
+  function button(par, x, y, z, ry) { const b = G(); const d = mesh(new T.CylinderGeometry(.045, .045, .018, 24), gloss('#1d1d22', { r: .25, cc: .8 })); d.rotation.x = Math.PI / 2; b.add(d);
+    dash(b, new T.Vector3(-.015, -.015, .011), new T.Vector3(.015, .015, .011), THREAD, .004); dash(b, new T.Vector3(-.015, .015, .011), new T.Vector3(.015, -.015, .011), THREAD, .004);
+    b.position.set(x, y, z); b.rotation.y = ry; par.add(b); }
+  function d5(col) { const g = G(), R = .29, cy = .29, sy = .95;
+    S(g, R, felt(col), [1, sy, 1], [0, cy, 0], undefined, 36);
+    S(g, .18, felt(CREAM), [.95, .8, .38], [0, .22, .235]);
+    const P = a => new T.Vector3(0, cy + R * 1.012 * sy * Math.sin(a), R * 1.012 * Math.cos(a));
+    for (let k = 0; k < 22; k++) { const a = .28 + k * .19; dash(g, P(a), P(a + .1)); }
+    for (const s of [-1, 1]) {
+      button(g, s * .12, .35, .258, s * .45);
+      const wg = G(), sh = new T.Shape(); sh.absellipse(0, 0, .08, .13, 0, Math.PI * 2);
+      const wm = mesh(new T.ExtrudeGeometry(sh, { depth: .02, bevelEnabled: true, bevelThickness: .006, bevelSize: .006, bevelSegments: 2, curveSegments: 24 }), felt(shade(col, .86), 6)); wg.add(wm);
+      for (let k = 0; k < 16; k += 2) { const a1 = k / 16 * Math.PI * 2, a2 = (k + .9) / 16 * Math.PI * 2;
+        dash(wg, new T.Vector3(Math.cos(a1) * .06, Math.sin(a1) * .105, .029), new T.Vector3(Math.cos(a2) * .06, Math.sin(a2) * .105, .029), THREAD, .005); }
+      wg.position.set(s * .275, .27, -.03); wg.rotation.y = s * Math.PI / 2; g.add(wg);
+    }
+    const tri = new T.Shape(); tri.moveTo(-.045, 0); tri.lineTo(.045, 0); tri.lineTo(0, -.07); tri.lineTo(-.045, 0);
+    const bg = new T.ExtrudeGeometry(tri, { depth: .025, bevelEnabled: true, bevelThickness: .006, bevelSize: .006, bevelSegments: 2 }); bg.translate(0, 0, -.012);
+    const bk = mesh(bg, felt(ORANGE, 8)); bk.position.set(0, .315, .29); bk.rotation.x = -.25; g.add(bk);
+    const tag = mesh(new T.BoxGeometry(.05, .07, .006), felt('#ffffff')); tag.position.set(.13, .16, -.222); tag.rotation.set(.3, Math.PI - .5, 0); g.add(tag);
+    const lbl = mesh(new T.BoxGeometry(.05, .018, .008), felt('#e85a4a')); lbl.position.set(.13, .175, -.222); lbl.rotation.set(.3, Math.PI - .5, 0); g.add(lbl);
+    feet(g);
+    return g; }
+
+  // ── 6：ポンポン
+  let FUZZ = null;
+  function d6(col) { const g = G();
+    if (!FUZZ) FUZZ = new T.MeshStandardMaterial({ color: 0xffffff, map: feltTex(1), bumpMap: feltTex(1), bumpScale: .02, roughness: 1 });
+    S(g, .25, felt(col), [1, .95, 1], [0, .29, 0]);
+    const N = 300, im = new T.InstancedMesh(new T.SphereGeometry(.05, 8, 6), FUZZ, N); im.castShadow = im.receiveShadow = true;
+    const m4 = new T.Matrix4(), q = new T.Quaternion(), v = new T.Vector3(), sc = new T.Vector3(), cc = new T.Color(), base = C(col).multiplyScalar(1.07), cr = C(CREAM);
+    for (let k = 0; k < N; k++) { const y = 1 - 2 * (k + .5) / N, rad = Math.sqrt(1 - y * y), a = k * 2.39996, nx = Math.cos(a) * rad, nz = Math.sin(a) * rad, R = .255 + rr() * .025;
+      v.set(nx * R, .29 + y * R * .95, nz * R); const s = .8 + rr() * .5; sc.set(s, s, s); q.setFromEuler(new T.Euler(rr() * 3, rr() * 3, 0)); m4.compose(v, q, sc); im.setMatrixAt(k, m4);
+      cc.copy(nz > .5 && y < .1 ? cr : base).multiplyScalar(.9 + rr() * .18); im.setColorAt(k, cc); }
+    g.add(im);
+    for (const s of [-1, 1]) { eye(g, s * .1, .37, .312, .044);
+      S(g, .02, felt(ORANGE), [1, 1, 1], [s * .08, .045, .07], undefined, 8);
+      dash(g, new T.Vector3(s * .08, .09, .03), new T.Vector3(s * .08, .02, .07), felt(ORANGE), .013);
+      for (const k of [-1, 0, 1]) dash(g, new T.Vector3(s * .08, .02, .07), new T.Vector3(s * .08 + k * .04, .012, .15), felt(ORANGE), .012); }
+    cone(g, .04, .09, felt(ORANGE), [0, .31, .34], undefined, 8);
+    for (const k of [-1, 0, 1]) S(g, .055, felt(col), [1, 1, 1], [k * .045, .58 + (k ? 0 : .02), -.01], undefined, 12);
+    return g; }
+
+  // ── 7：フェルトの切り抜き
+  function silhouette() { const circ = [[0, .25, .2], [.15, .42, .13]], tri = [[-.1, .3], [-.36, .42], [-.1, .17]], P = [0, .3], pts = [];
+    for (let k = 0; k < 160; k++) { const a = k / 160 * Math.PI * 2, dx = Math.cos(a), dy = Math.sin(a); let best = 0;
+      for (const [cx, cy, r] of circ) { const ox = P[0] - cx, oy = P[1] - cy, b = ox * dx + oy * dy, c = ox * ox + oy * oy - r * r, D = b * b - c; if (D >= 0) { const t = -b + Math.sqrt(D); if (t > best) best = t; } }
+      for (let i = 0; i < 3; i++) { const [x1, y1] = tri[i], [x2, y2] = tri[(i + 1) % 3], ex = x2 - x1, ey = y2 - y1, den = dx * ey - dy * ex; if (Math.abs(den) < 1e-9) continue;
+        const t = ((x1 - P[0]) * ey - (y1 - P[1]) * ex) / den, u = ((x1 - P[0]) * dy - (y1 - P[1]) * dx) / den; if (t > 0 && u >= 0 && u <= 1 && t > best) best = t; }
+      pts.push([P[0] + dx * best, P[1] + dy * best]); }
+    return pts; }
+  let SIL = null;
+  function d7(col) { const g = G(), st = G(); if (!SIL) SIL = silhouette();
+    const sh = new T.Shape(); SIL.forEach(([x, y], k) => k ? sh.lineTo(x, y) : sh.moveTo(x, y));
+    const bg = new T.ExtrudeGeometry(sh, { depth: .05, bevelEnabled: true, bevelThickness: .014, bevelSize: .012, bevelSegments: 2 }); bg.translate(0, 0, -.025);
+    st.add(mesh(bg, felt(col, 4)));
+    const F = .039, n = SIL.length;
+    const inset = SIL.map((p, k) => { const a = SIL[(k + n - 1) % n], b = SIL[(k + 1) % n], tx = b[0] - a[0], ty = b[1] - a[1], L = Math.hypot(tx, ty); return [p[0] - ty / L * .024, p[1] + tx / L * .024]; });
+    const flat = (shape, m, f, z0) => { const gg = new T.ExtrudeGeometry(shape, { depth: .008, bevelEnabled: false, curveSegments: 24 }); gg.translate(0, 0, -.004); const o = mesh(gg, m); o.position.z = f * z0; st.add(o); return o; };
+    for (const f of [-1, 1]) {
+      const w = new T.Shape(); w.absellipse(-.05, .24, .11, .065, 0, Math.PI * 2, false, -.25); flat(w, felt(shade(col, .82), 4), f, F + .004);
+      const ck = new T.Shape(); ck.absarc(.21, .39, .025, 0, Math.PI * 2); flat(ck, felt(PINK, 4), f, F + .004);
+      const e = mesh(new T.CylinderGeometry(.028, .028, .012, 20), BLACK); e.rotation.x = Math.PI / 2; e.position.set(.19, .45, f * (F + .006)); st.add(e);
+      const h = new T.Mesh(new T.SphereGeometry(.008, 8, 6), SHINE); h.position.set(.182, .458, f * (F + .013)); st.add(h);
+      for (let k = 0; k < n; k += 4) { const a = inset[k], b = inset[(k + 2) % n]; dash(st, new T.Vector3(a[0], a[1], f * (F + .002)), new T.Vector3(b[0], b[1], f * (F + .002)), THREAD, .005); }
+    }
+    const bt = new T.Shape(); bt.moveTo(.25, .46); bt.lineTo(.36, .42); bt.lineTo(.25, .38); bt.lineTo(.25, .46);
+    const bkg = new T.ExtrudeGeometry(bt, { depth: .03, bevelEnabled: true, bevelThickness: .008, bevelSize: .006, bevelSegments: 2 }); bkg.translate(0, 0, -.015); st.add(mesh(bkg, felt(ORANGE, 6)));
+    st.position.y = -.01; g.add(st);
+    g.add(slab(.36, .16, .05, .05, paint('#d6b085', .75), .015));
+    return g; }
+
+  // ── 8：木のコマ
+  function d8(col) { const g = G(), m = paint(col, .38), dk = paint(shade(col, .8), .38);
+    const pts = [[.001, 0], [.21, 0], [.22, .02], [.22, .05], [.19, .07], [.13, .12], [.1, .2], [.09, .28], [.14, .3], [.145, .32], [.1, .34], [.001, .34]].map(([x, y]) => new T.Vector2(x, y));
+    g.add(mesh(new T.LatheGeometry(pts, 40), m));
+    const ring = mesh(new T.TorusGeometry(.215, .01, 8, 40), paint('#e8c46a', .3, .6)); ring.rotation.x = Math.PI / 2; ring.position.y = .05; g.add(ring);
+    S(g, .15, m, [1, 1, 1], [0, .47, 0], undefined, 32);
+    for (const s of [-1, 1]) { eye(g, s * .065, .5, .13, .025); S(g, .07, dk, [.3, .8, 1.1], [s * .115, .22, 0], [0, 0, s * .25]); }
+    cone(g, .035, .08, paint(ORANGE, .38), [0, .46, .16]);
+    cone(g, .05, .14, dk, [0, .33, -.15], [-Math.PI / 2 + .6, 0, 0]);
+    S(g, .035, m, [.5, 1.3, .8], [0, .63, -.01], [-.3, 0, 0], 12);
+    return g; }
+
+  // ── 9：小物つき
+  function d9(col, i) { const g = d1(col, i, { tuft: false });
+    if (i === 0) { const m = felt('#2f4f8a');
+      const t = mesh(new T.TorusGeometry(.275, .05, 12, 40), m); t.rotation.x = Math.PI / 2 + .12; t.position.y = .2; g.add(t);
+      S(g, .05, m, [.9, 2.2, .45], [.16, .07, .26], [.15, -.4, .25]);
+      for (const y of [-.06, .02]) S(g, .051, felt(CREAM), [.92, .25, .47], [.16 + y * .1, .07 + y, .262], [.15, -.4, .25], 12);
+    } else if (i === 1) { const hat = G(), m = felt('#f4efe4');
+      const cap = mesh(new T.SphereGeometry(.21, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), m); cap.scale.y = .9; hat.add(cap);
+      const rim = mesh(new T.TorusGeometry(.205, .035, 10, 36), m); rim.rotation.x = Math.PI / 2; hat.add(rim);
+      S(hat, .055, felt('#e85a4a'), [1, 1, 1], [0, .22, 0], undefined, 14);
+      hat.position.set(.02, .5, -.01); hat.rotation.z = -.2; g.add(hat);
+    } else { const bow = G(), m = felt('#ff6f91');
+      S(bow, .035, m, [1, 1, .8], [0, 0, 0], undefined, 12);
+      for (const s of [-1, 1]) S(bow, .07, m, [1.2, .7, .35], [s * .07, .01, 0], [0, 0, s * .4], 16);
+      bow.position.set(.08, .58, .03); bow.rotation.z = -.3; g.add(bow); }
+    return g; }
+
+  // ── 10：インコ
+  function d10(col) { const g = G(), dk = shade(col, .75), face = tint(col, .55);
+    S(g, .22, felt(col), [1, 1.35, 1], [0, .32, 0], undefined, 32);
+    S(g, .15, felt(face), [.9, .8, .45], [0, .45, .145]);
+    for (let k = 0; k < 3; k++) S(g, .05, felt(k === 1 ? col : dk), [.35, 1.5, .6], [0, .69 - k * .02, -.02 - k * .05], [-.35 - k * .35, 0, 0], 12);
+    for (const s of [-1, 1]) {
+      S(g, .042, felt('#ff8a3a'), [1, 1, .35], [s * .125, .4, .165], [0, s * .6, 0], 12);
+      eye(g, s * .085, .47, .165, .032);
+      S(g, .13, felt(dk), [.3, .95, 1.05], [s * .2, .3, -.05], [.25, 0, s * .1]);
+      S(g, .05, felt(dk), [.55, .22, 3.2], [s * .025, .14, -.3], [-.55, 0, 0], 12);
+    }
+    cone(g, .04, .1, felt('#e8cfa8'), [0, .42, .215], [Math.PI / 2 + .7, 0, 0]);
+    feet(g, '#d9a0a0', .1, .07);
+    return g; }
+
+  const COLS = ['#e85a4a', '#4a86e0', '#f2c23a'];
+  const DESIGNS = [
+    { no: 'いま', name: 'いまの鳥', b: d0, now: true, text: '比べる用。今のゲームに入っている鳥です。' },
+    { no: '案 1', name: 'ころころ', b: d1, text: 'まんまるの体に、顔をちょこんと。いちばんシンプルで、遠くからでも色が分かります。' },
+    { no: '案 2', name: 'ふくらすずめ', b: d2, text: '冬にふくらんだスズメ。頭と体が分かれていて、白いほっぺと黒い点がポイント。' },
+    { no: '案 3', name: 'たまご', b: d3, text: 'ひよこのような たまご形。すっと立っていて、大きな足がかわいい。' },
+    { no: '案 4', name: '文鳥', b: d4, text: '大きなくちばしと白いほっぺ。しっぽが後ろにのびるので、進む向きが分かりやすい。' },
+    { no: '案 5', name: 'ボタンの目', b: d5, text: 'まん中の縫い目、ボタンの目、ステッチの羽、背中のタグ。いちばん手作りのぬいぐるみらしい。' },
+    { no: '案 6', name: 'ポンポン', b: d6, text: '毛糸のポンポンでできた鳥。もこもこの手ざわりと、モールの足。' },
+    { no: '案 7', name: 'フェルトの切り抜き', b: d7, text: '平たいフェルトを木の台に立てたコマ。縁のステッチがよく見えます。' },
+    { no: '案 8', name: '木のコマ', b: d8, text: 'ボードゲームのコマを鳥にしたもの。つやのある木で、盤の上でも形が分かりやすい。' },
+    { no: '案 9', name: '小物つき', b: d9, text: 'ころころに マフラー・ニット帽・リボン。色だけでなく小物でも見分けられます。' },
+    { no: '案 10', name: 'インコ', b: d10, text: 'たてに長い体、とさか、長いしっぽ。ほっぺのオレンジがアクセント。' },
+  ];
+
+  // ── 描画（1つのレンダラーで、見えているカードだけ順番に描く）
+  const W = 600, H = 360;
+  const R = new T.WebGLRenderer({ antialias: true, alpha: true });
+  R.setPixelRatio(1); R.setSize(W, H); R.shadowMap.enabled = true; R.shadowMap.type = T.PCFSoftShadowMap; R.outputEncoding = T.sRGBEncoding; R.setClearColor(0, 0);
+  const grid = document.getElementById('grid'); document.getElementById('load').remove();
+  const cards = DESIGNS.map(d => {
+    const el = document.createElement('article'); el.className = 'card' + (d.now ? ' now' : '');
+    el.innerHTML = `<div class="win"><canvas width="${W}" height="${H}" aria-label="${d.name}の3D"></canvas></div><div class="band"><span class="no">${d.no}</span><h2>${d.name}</h2></div><p>${d.text}</p>`;
+    grid.append(el);
+    const cvs = el.querySelector('canvas'), ctx = cvs.getContext('2d');
+    const sc = new T.Scene();
+    sc.add(new T.HemisphereLight(C('#eaf4ff'), C('#7a8a5a'), .6));
+    const key = new T.DirectionalLight(C('#fff4e2'), 1.25); key.position.set(-3, 6, 4); key.castShadow = true; key.shadow.mapSize.set(1024, 1024);
+    Object.assign(key.shadow.camera, { left: -2, right: 2, top: 2, bottom: -2, far: 20 }); key.shadow.bias = -.0006; sc.add(key);
+    const rim = new T.DirectionalLight(C('#ffffff'), .35); rim.position.set(5, 4, -6); sc.add(rim);
+    sc.add(slab(2.6, 1.05, .12, .16, felt('#7fb862', 3)));
+    const ed = [[-1.18, -.41], [1.18, -.41], [1.18, .41], [-1.18, .41]];
+    for (let e = 0; e < 4; e++) { const [ax, az] = ed[e], [bx, bz] = ed[(e + 1) % 4], L = Math.hypot(bx - ax, bz - az), n = Math.floor(L / .09);
+      for (let k = 0; k < n; k++) { const t1 = k / n, t2 = t1 + .55 / n; dash(sc, new T.Vector3(ax + (bx - ax) * t1, .122, az + (bz - az) * t1), new T.Vector3(ax + (bx - ax) * t2, .122, az + (bz - az) * t2), THREAD, .008); } }
+    const birds = COLS.map((c, j) => { const b = d.b(c, j); b.position.set((j - 1) * .82, .12, 0); sc.add(b); return b; });
+    const cam = new T.PerspectiveCamera(28, W / H, .1, 50); cam.position.set(0, 1.25, 3.05); cam.lookAt(0, .4, 0);
+    const card = { el, ctx, sc, cam, birds, rot: 0, vis: false, dirty: true };
+    let px = null;
+    cvs.addEventListener('pointerdown', e => { px = e.clientX; cvs.setPointerCapture(e.pointerId); cvs.style.cursor = 'grabbing'; });
+    cvs.addEventListener('pointermove', e => { if (px == null) return; card.rot += (e.clientX - px) * .012; px = e.clientX; card.dirty = true; });
+    const up = () => { px = null; cvs.style.cursor = ''; }; cvs.addEventListener('pointerup', up); cvs.addEventListener('pointercancel', up);
+    return card;
+  });
+  const io = new IntersectionObserver(es => es.forEach(e => { const c = cards.find(k => k.el === e.target); c.vis = e.isIntersecting; c.dirty = true; }), { rootMargin: '80px' });
+  cards.forEach(c => io.observe(c.el));
+  const still = matchMedia('(prefers-reduced-motion: reduce)');
+  function draw(c, t) {
+    c.birds.forEach((b, j) => {
+      b.rotation.y = c.rot + (still.matches ? -.35 : Math.sin(t * .7 + j * .5) * .6);
+      const ph = still.matches ? 9 : (t * .9 + j * .35) % 2.6, hop = ph < .45 ? Math.sin(ph / .45 * Math.PI) : 0;
+      b.position.y = .12 + hop * .12; b.scale.set(1 + hop * .04, 1 - hop * .05 + (ph < .06 ? -.04 : 0), 1 + hop * .04);
+    });
+    R.render(c.sc, c.cam); c.ctx.clearRect(0, 0, W, H); c.ctx.drawImage(R.domElement, 0, 0);
+  }
+  function loop(now) { const t = now / 1000; for (const c of cards) if (c.vis && (c.dirty || !still.matches)) { draw(c, t); c.dirty = false; } requestAnimationFrame(loop); }
+  cards.forEach(c => draw(c, 0));
+  requestAnimationFrame(loop);
+})();
+</script>

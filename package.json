@@ -1,0 +1,12 @@
+{
+  "name": "pitopa",
+  "version": "1.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch",
+    "sim": "node tools/trap-sim.mjs",
+    "test": "node tools/board-test.mjs"
+  }
+}

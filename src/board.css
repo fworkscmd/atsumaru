@@ -1,0 +1,178 @@
+/* ===== 盤のゲーム（リバーシ・チェス・将棋）とビンゴ大会（body.board）：ハブと同じ白・黒・朱。見た目は仮 ===== */
+body.board{height:100vh;height:100dvh;overflow:hidden;background:#f6f5f2;color:#141414;font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  padding:calc(10px + env(safe-area-inset-top,0px)) var(--pad-r) calc(12px + env(safe-area-inset-bottom,0px)) var(--pad-l);
+  --h-ink:#141414;--h-mute:#7d7a72;--h-line:#e4e2dc;--h-soft:#e9e7e1;--h-card:#fff;--h-acc:#ff5a36;--h-acc-d:#c23d1f}
+body.board :focus-visible{outline:2px solid var(--h-acc);outline-offset:2px}
+body.board #app{height:100%}
+.bd{position:relative;height:100%;max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.bd>*{flex:none}
+.bd-head{display:flex;align-items:center;gap:8px}
+.bd-ttl{flex:1;min-width:0;display:flex;flex-direction:column}
+.bd-ttl b{font-weight:900;font-size:22px;line-height:1.15}
+.bd-ttl small{font-size:11px;color:var(--h-mute);font-variant-numeric:tabular-nums}
+/* 席 */
+.bd-pl{display:flex;align-items:center;gap:10px;background:var(--h-card);border:1px solid var(--h-line);border-radius:14px;padding:6px 10px;min-height:48px}
+.bd-pl.now{border-color:var(--h-ink);box-shadow:inset 0 0 0 1px var(--h-ink)}
+.bd-pl .who{display:flex;flex-direction:column;min-width:0;flex:none;max-width:42%}
+.bd-pl .who small{font-size:10px;color:var(--h-mute);font-weight:700}
+.bd-pl.now .who small{color:var(--h-acc-d)}
+.bd-pl .who b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bd-sw{width:22px;height:22px;border-radius:50%;flex:none;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.bd-sw.b{background:#141414}.bd-sw.w{background:#fff;border:1px solid #c9c6be}
+.bd-cnt{margin-left:auto;font-size:24px;font-weight:900;font-variant-numeric:tabular-nums}
+.bd-caps{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 1px;font-size:16px;line-height:1.1;min-width:0}
+.bd-hands{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;min-width:0}
+/* 盤 */
+.bd-stage{flex:1 1 auto!important;min-height:120px;display:grid;place-items:center;overflow:hidden}
+.bd-grid{display:grid;grid-template-columns:repeat(var(--n),1fr);grid-template-rows:repeat(var(--n),1fr);width:100%;aspect-ratio:1;--cell:40px;user-select:none;-webkit-user-select:none}
+.bd-c{position:relative;border:0;padding:0;margin:0;background:none;display:grid;place-items:center;min-width:0;min-height:0}
+.bd-c.last{background-color:rgba(255,90,54,.22)}
+.bd-c.sel{box-shadow:inset 0 0 0 3px var(--h-acc)}
+.bd-c.dot::after{content:"";width:28%;height:28%;border-radius:50%;background:rgba(20,20,20,.28);position:absolute}
+.bd-c.cap::after{content:"";position:absolute;inset:6%;border-radius:50%;border:3px solid rgba(255,90,54,.75)}
+.bd-c.chk{background-image:radial-gradient(circle,rgba(255,60,30,.75),rgba(255,60,30,0) 70%)}
+/* リバーシ */
+.bd-g-reversi{background:#2f8a62;border:3px solid #1f5c41;border-radius:8px;gap:1px;padding:1px;background-clip:padding-box;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.bd-g-reversi .bd-c{background:#3a9a6f}
+.bd-g-reversi .bd-c.last{background:#4fb085}
+.bd-g-reversi .bd-c.dot::after{background:rgba(255,255,255,.45)}
+.disc{width:80%;height:80%;border-radius:50%;box-shadow:0 2px 3px rgba(0,0,0,.35)}
+.disc.b{background:radial-gradient(circle at 35% 30%,#555,#111 60%)}
+.disc.w{background:radial-gradient(circle at 35% 30%,#fff,#ddd 70%)}
+.disc.flip{animation:bd-flip .35s ease}
+@keyframes bd-flip{0%{transform:scaleX(1)}50%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+/* チェス */
+.bd-g-chess{border-radius:6px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.bd-g-chess .lt{background-color:#f1e4cc}.bd-g-chess .dk{background-color:#c49a6c}
+.cp{font-family:"Segoe UI Symbol","Apple Symbols","Noto Sans Symbols 2","DejaVu Sans",serif;line-height:1}
+.bd-grid .cp{font-size:calc(var(--cell) * .8)}
+.cp.w{color:#fff;-webkit-text-stroke:1.2px #141414;paint-order:stroke fill;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.cp.b{color:#141414;text-shadow:0 1px 0 rgba(255,255,255,.25)}
+/* 将棋 */
+.bd-g-shogi{background:#e8c98a;border:3px solid #a8814a;border-radius:4px;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.bd-g-shogi .bd-c{border-right:1px solid rgba(90,60,20,.55);border-bottom:1px solid rgba(90,60,20,.55)}
+.bd-g-shogi .bd-c:nth-child(9n){border-right:0}
+.bd-g-shogi .bd-c:nth-last-child(-n+9){border-bottom:0}
+.koma{display:grid;place-items:center;background:#fff3dc;clip-path:polygon(50% 0,88% 18%,100% 100%,0 100%,12% 18%);color:#141414;font-weight:900;font-family:"Zen Kaku Gothic New","Hiragino Mincho ProN","Yu Mincho",serif;box-sizing:border-box}
+.koma i{font-style:normal;line-height:1}
+.koma.pro{color:#c23d1f}
+.koma.opp{transform:rotate(180deg)}
+.bd-grid .koma{width:82%;height:90%;padding-top:10%;font-size:calc(var(--cell) * .5)}
+.bd-hand{position:relative;width:28px;height:32px;border:0;padding:4px 0 0;font-size:15px}
+.bd-hand.sel{background:var(--h-acc);color:#fff}
+.bd-hand em{position:absolute;right:-1px;bottom:-1px;font-style:normal;font-size:10px;background:var(--h-ink);color:#fff;border-radius:6px;padding:0 3px;line-height:1.4}
+.bd-hand.opp em{transform:rotate(180deg)}
+.bd-sw.koma{width:22px;height:24px;border-radius:0;box-shadow:none;font-size:11px;padding-top:3px;background:#141414;color:#fff}
+.bd-sw.koma.gote{background:#fff;color:#141414;outline:1px solid #c9c6be}
+/* 下の段 */
+.bd-foot{display:flex;align-items:center;gap:10px;min-height:44px}
+.bd-foot.col{flex-direction:column;align-items:stretch;gap:6px}
+.bd-foot.col .pill{align-self:center}
+.bd-info{flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:13px;font-weight:700}
+.bd-foot.col .bd-info{justify-content:center;text-align:center}
+.bd-chk{background:var(--h-acc);color:#fff;border-radius:999px;padding:1px 10px;font-size:13px}
+.hub-go:disabled{opacity:.35;box-shadow:none}
+.hub-meta.ng{color:var(--h-acc-d);font-weight:700}
+/* 結果・ダイアログ */
+.bd-over{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(246,245,242,.72);padding:16px 0;backdrop-filter:blur(2px)}
+.bd-card{width:100%;max-width:340px;background:var(--h-card,#fff);color:#141414;border:1px solid var(--h-line,#e4e2dc);border-radius:18px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 18px 40px rgba(0,0,0,.18);max-height:100%;overflow:auto}
+.bd-card>small{font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--h-acc,#ff5a36)}
+.bd-res{font-size:28px;font-weight:900;line-height:1.2;text-align:center}
+.bd-endbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.bd-endbtns .pill{min-height:48px;font-size:14px}
+.bd-peek{background:none;border:0;color:var(--h-mute,#7d7a72);font-size:12px;text-decoration:underline;padding:4px}
+.bd-peekback{position:absolute;right:0;bottom:0;z-index:5}
+.bd-sheet .inner{align-items:center}
+.bd-sh-t{font-size:18px;font-weight:900}
+.bd-pros{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.bd-pro{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:68px;padding:10px 8px;border-radius:14px;border:1px solid #e4e2dc;background:#f6f5f2;font-size:12px;font-weight:700;color:#141414}
+.bd-pro .cp{font-size:36px}
+.bd-pro .koma{width:40px;height:46px;font-size:22px;padding-top:6px}
+.bd-banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:35;background:#141414;color:#fff;font-weight:900;font-size:20px;padding:12px 22px;border-radius:16px;box-shadow:0 0 0 4px var(--h-acc,#ff5a36),0 16px 40px rgba(0,0,0,.3);white-space:nowrap;pointer-events:none;animation:pop .25s ease}
+body.board .sheet{background:rgba(20,20,20,.45)}
+body.board .sheet .btn.soft{background:#fff;color:#141414;border:1px solid #e4e2dc;font-family:inherit;font-weight:700;font-size:15px}
+/* ビンゴ */
+.bg-tabs{align-self:center;max-width:100%;overflow-x:auto}
+.bg-tabs button{white-space:nowrap}
+.bg-top{display:flex;align-items:center;gap:14px;background:var(--h-card);border:1px solid var(--h-line);border-radius:18px;padding:10px 12px}
+.bg-ball{width:86px;height:86px;flex:none;border-radius:50%;background:radial-gradient(circle,#fff 0 60%,#ff5a36 61%);display:grid;place-items:center;align-content:center;color:#141414;box-shadow:0 6px 14px rgba(255,90,54,.35)}
+.bg-ball small{font-size:12px;font-weight:900;line-height:1;margin-top:-4px}
+.bg-ball b{font-size:34px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.bg-ball small{color:var(--h-acc)}
+.bg-ball>span{font-size:12px;font-weight:900;color:var(--h-mute)}
+.bg-ball.pop{animation:bg-pop .5s cubic-bezier(.3,1.6,.5,1)}
+.bg-ball.spin{animation:bg-spin .6s linear infinite}
+@keyframes bg-pop{0%{transform:scale(.3) rotate(-90deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes bg-spin{to{transform:rotate(360deg)}}
+.bg-recent{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.bg-recent small{font-size:11px;color:var(--h-mute);font-weight:700}
+.bg-recent>div{display:flex;gap:4px;flex-wrap:wrap}
+.bg-recent i{font-style:normal;width:28px;height:28px;border-radius:50%;background:var(--h-soft);display:grid;place-items:center;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.bg-recent .pill{min-height:32px;font-size:12px;padding:0 12px}
+.bg-list{display:flex;flex-direction:column;gap:6px;width:100%;overflow:auto;min-height:0}
+.bd>.bg-list{flex:1 1 auto}
+.bg-row{display:flex;align-items:center;gap:10px;background:var(--h-card,#fff);border:1px solid var(--h-line,#e4e2dc);border-radius:12px;padding:6px 10px;font-size:14px}
+.bg-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bg-row .bg-no{flex:none;color:var(--h-acc-d,#c23d1f)}
+.bg-rk{font-size:12px;font-weight:900;color:#fff;background:var(--h-acc);border-radius:999px;padding:2px 10px}
+.bg-rc{font-size:12px;font-weight:900;color:var(--h-acc-d);border:1.5px solid var(--h-acc);border-radius:999px;padding:1px 9px}
+.bg-ranks{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.bg-ranks span{font-size:12px;font-weight:700;background:var(--h-ink);color:#fff;border-radius:999px;padding:2px 10px}
+.bg-stage{min-height:200px}
+.bg-card{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;width:min(100%,360px);background:#fff;border:1px solid var(--h-line);border-radius:18px;padding:10px;box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.bg-l{text-align:center;font-weight:900;font-size:18px;color:var(--h-acc)}
+.bg-c{aspect-ratio:1;border-radius:50%;border:1.5px solid var(--h-line);background:#f6f5f2;font-size:clamp(14px,5vw,20px);font-weight:900;color:#141414;font-variant-numeric:tabular-nums;padding:0}
+.bg-c.on{background:var(--h-acc);border-color:var(--h-acc);color:#fff;box-shadow:inset 0 3px 0 rgba(0,0,0,.15)}
+.bg-c.free{font-size:11px;letter-spacing:.04em}
+.bg-c.line{background:var(--h-ink);border-color:var(--h-ink)}
+.bg-go{font-size:24px;animation:bg-pulse 1s ease-in-out infinite}
+@keyframes bg-pulse{50%{transform:scale(1.04)}}
+.bg-done{text-align:center;font-size:20px;font-weight:900;color:var(--h-acc-d);padding:8px}
+.bg-hist{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:100%}
+.bg-hist>div{display:flex;flex-direction:column;gap:3px;align-items:center}
+.bg-hist b{color:#ff5a36;font-weight:900}
+.bg-hist i{font-style:normal;font-size:12px;width:30px;height:20px;display:grid;place-items:center;border-radius:6px;color:#b5b2aa}
+.bg-hist i.on{background:#141414;color:#fff;font-weight:700}
+/* ハブ：アイコンとチケットの絵 */
+.gi-chs{background:linear-gradient(160deg,#4a4d55,#24262b)}
+.gi-chess{color:#fff;font-size:36px;line-height:1;font-family:"Segoe UI Symbol","Apple Symbols","Noto Sans Symbols 2","DejaVu Sans",serif;font-weight:400}
+.gi-bingo{background:linear-gradient(160deg,#ffd0c2,#ff8a6a)}
+.gi-ball{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 55%,#ffe6dd 56%);display:grid;place-items:center;align-content:center;font-size:16px;font-weight:900;color:#141414;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,.15)}
+.gi-ball small{font-size:8px;color:#ff5a36}
+.tk-css{display:grid;place-items:center}
+.tk-reversi{background:#e9f4ee}
+.tka-rev{display:grid;grid-template-columns:repeat(8,1fr);gap:1px;height:84%;aspect-ratio:1;background:#1f5c41;padding:1px;border-radius:4px}
+.tka-rev i{background:#3a9a6f;display:grid;place-items:center}
+.tka-rev b{width:78%;height:78%;border-radius:50%}
+.tka-rev b.b{background:#141414}.tka-rev b.w{background:#fff}
+.tk-chess{background:repeating-conic-gradient(#f1e4cc 0 25%,#c49a6c 0 50%) 0 0/25% 50%}
+.tka-chess{display:flex;align-items:flex-end;gap:2px}
+.tka-chess .cp{font-size:58px}
+.tka-chess .cp:first-child{font-size:46px}
+.tk-shogi{background:#e8c98a}
+.tka-shogi{display:flex;align-items:flex-end;gap:10px}
+.tka-shogi .koma{width:44px;height:52px;font-size:24px;padding-top:8px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.2))}
+.tka-shogi .koma.big{width:56px;height:66px;font-size:30px}
+.tk-bingo{background:#fff1ec}
+.tka-bingo{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:6px}
+.tka-bingo span{width:48px;height:48px;border-radius:50%;background:radial-gradient(circle,#fff 0 60%,#ff5a36 61%);box-shadow:0 4px 8px rgba(255,90,54,.3);display:grid;place-items:center;align-content:center;font-weight:900;font-size:18px;line-height:1;color:#141414}
+.tka-bingo small{font-size:9px}
+/* 受付時間の横の小さな「＋5分」 */
+.hub-timer{display:flex;align-items:center;gap:2px;min-width:0}
+.hub-ext{min-height:32px;padding:0 6px;border:0;background:none;color:var(--h-mute);font:inherit;font-size:11px;text-decoration:underline;text-underline-offset:2px}
+/* 6つ並べる */
+.hub-icons{grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.gi{gap:8px;width:100%}
+.gi-ic{width:min(100%,56px);height:auto;aspect-ratio:1}
+.gi-ic>svg{width:80%;height:80%}
+.gi-t{font-size:10px;letter-spacing:-.02em}
+.hub-members.many .ava{width:32px;height:32px;font-size:13px}
+@media (max-height:740px){
+  .bd{gap:6px}
+  .bd-pl{min-height:40px;padding:4px 10px}
+  .bd-ttl b{font-size:19px}
+  .bg-ball{width:68px;height:68px}
+  .bg-ball b{font-size:26px}
+  .bg-top{padding:6px 10px}
+  .bg-card{gap:4px;padding:8px}
+}
