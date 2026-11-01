@@ -203,7 +203,7 @@ const TB = (() => {
     const half = S / 2 + .12, bounds = []; tr.cells.forEach(c => { for (const [dx, dz] of [[-half, -half], [half, -half], [-half, half], [half, half]]) bounds.push(new T.Vector3(c.x + dx, 0, c.z + dz)); bounds.push(new T.Vector3(c.x, .75, c.z)); });
     const dirOf = (az, el) => new T.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
     let W = 1, H = 1;
-    function applyCam() { const tg = TARGET.clone().add(V.pan); cam.position.copy(tg).addScaledVector(dirOf(V.az, V.el), fitDist * V.zoom); cam.lookAt(tg); cam.updateProjectionMatrix(); cam.updateMatrixWorld(); faceAll(); dirty = true; kick(); }
+    function applyCam() { const tg = TARGET.clone().add(V.pan); cam.position.copy(tg).addScaledVector(dirOf(V.az, V.el), fitDist * V.zoom); cam.lookAt(tg); cam.updateProjectionMatrix(); cam.updateMatrixWorld(); faceAll(); dirty = true; draw(); }
     function fit() {
       const r = host.getBoundingClientRect(); W = Math.max(1, r.width); H = Math.max(1, r.height); R.setSize(W, H, false); cam.aspect = W / H;
       const D = dirOf(0, EL0); let lo = 3, hi = 60; for (let it = 0; it < 22; it++) { const d = (lo + hi) / 2; cam.position.copy(TARGET).addScaledVector(D, d); cam.lookAt(TARGET); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
@@ -220,7 +220,8 @@ const TB = (() => {
     el.style.touchAction = 'none';
     const two = () => { const [a, b] = [...ptr.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; };
     function startGesture() { const p = [...ptr.values()]; g0 = { n: p.length, az: V.az, el: V.el, zoom: V.zoom, pan: V.pan.clone(), x: p[0].x, y: p[0].y, t: performance.now(), moved: g0 ? g0.moved : false, ...(p.length > 1 ? two() : {}) }; }
-    el.addEventListener('pointerdown', e => { el.setPointerCapture && el.setPointerCapture(e.pointerId); ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptr.size === 1) g0 = null; startGesture(); });
+    // 指が1本目のときは前の指の記録を捨てる（離した知らせが届かず指が残ったままになると、タップが効かなくなるため）
+    el.addEventListener('pointerdown', e => { if (e.isPrimary) ptr.clear(); try { el.setPointerCapture(e.pointerId); } catch (x) { } ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptr.size === 1) g0 = null; startGesture(); });
     el.addEventListener('pointermove', e => { if (!ptr.has(e.pointerId) || !g0) return; ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (ptr.size === 1) { const p = ptr.get(e.pointerId), dx = p.x - g0.x, dy = p.y - g0.y; if (!g0.moved && Math.hypot(dx, dy) < 8) return; g0.moved = true;
         V.az = g0.az - dx * .009; V.el = Math.min(1.45, Math.max(.42, g0.el + dy * .006)); viewMoved(); }
@@ -230,15 +231,25 @@ const TB = (() => {
     const up = e => { if (!ptr.has(e.pointerId)) return; ptr.delete(e.pointerId);
       if (ptr.size === 0 && g0) { const tap = !g0.moved && g0.n === 1 && performance.now() - g0.t < 500; const now = performance.now();
         if (tap) { if (now - lastTap < 320 && changed()) { lastTap = 0; resetView(); } else { lastTap = now; tapCb && tapCb(e.clientX, e.clientY); } } g0 = null; }
-      else if (ptr.size === 1) startGesture(); };
-    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', e => { ptr.delete(e.pointerId); g0 = null; });
+      else if (ptr.size === 1) startGesture();
+      if (!ptr.size) kick(); };
+    const lost = e => { if (!ptr.delete(e.pointerId)) return; if (ptr.size) { startGesture(); g0.moved = true; } else { g0 = null; kick(); } };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', lost); el.addEventListener('lostpointercapture', lost);
     el.addEventListener('wheel', e => { e.preventDefault(); V.zoom = Math.min(1.25, Math.max(.4, V.zoom * Math.exp(e.deltaY * .0012))); viewMoved(); }, { passive: false });
-    let dirty = true, raf = 0; const anims = [];
+    // 影は光が動かないので、物が動いたときだけ描き直す（視点を動かすだけなら前の影を使う。動かすと重くなるのはここが大きい）
+    // 風車だけが回っているときは、毎フレームではなく1秒に20回くらいに落とす
+    R.shadowMap.autoUpdate = false;
+    let dirty = true, raf = 0, shadowDue = true, lastDraw = 0, millN = 0; const anims = [];
     function frame(now) { raf = 0; let alive = false;
+      if (anims.length) shadowDue = true;
       for (let i = anims.length - 1; i >= 0; i--) { const a = anims[i]; const t = Math.min(1, (now - a.t0) / a.dur); if (t >= 0) a.step(a.ease ? a.ease(t) : t, t); if (t >= 1) { anims.splice(i, 1); a.done && a.done(); } else alive = true; }
-      if (deco.mill) { deco.mill.userData.hub.rotation.z += .01; alive = true; }
-      R.render(sc, cam); dirty = false; if (alive || anims.length) raf = requestAnimationFrame(frame); }
-    const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+      const millOnly = deco.mill && !dirty && !shadowDue && !anims.length;
+      if (millOnly && now - lastDraw < 48) { raf = requestAnimationFrame(frame); return; }
+      if (deco.mill) { deco.mill.userData.hub.rotation.z += .01 * Math.min(4, Math.max(1, (now - lastDraw) / 16.7)); alive = true; if (++millN % 6 === 0) shadowDue = true; }
+      if (shadowDue) { R.shadowMap.needsUpdate = true; shadowDue = false; }
+      R.render(sc, cam); dirty = false; lastDraw = now; if (alive || anims.length) raf = requestAnimationFrame(frame); }
+    const draw = () => { if (!raf) raf = requestAnimationFrame(frame); };
+    const kick = () => { shadowDue = true; draw(); };
     function anim(dur, step, done, delay = 0, ease) { anims.push({ t0: performance.now() + delay, dur, step, done, ease }); kick(); }
     const eo = t => 1 - (1 - t) * (1 - t), eb = t => { const c = 1.7; return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2; };
     // 同じマスに複数の鳥：少しずらす

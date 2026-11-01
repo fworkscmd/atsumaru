@@ -486,7 +486,7 @@ function ticketEl(g, d) {
   if (BD_TITLE[g.id]) bdTicketArt(g.id, art);
   if (g.id === 'trapper') { art.style.background = 'linear-gradient(#cfeaff,#fff4dc)'; if (TB.ready()) art.append(h('img', { class: 'tp-tk', src: TB.arts().ticket, alt: '' })); else TB.load().then(() => { if (art.isConnected) art.append(h('img', { class: 'tp-tk', src: TB.arts().ticket, alt: '' })); }).catch(() => { }); }
   const c = d.mode === 'vote' ? voteCount(d)[g.id] || 0 : null;
-  return h('div', { class: 'ticket', role: 'group', 'aria-label': `えらんだゲーム：${g.n}` },
+  return h('div', { class: 'ticket', style: swayPhase(), role: 'group', 'aria-label': `えらんだゲーム：${g.n}` },
     h('div', { class: 'tk-top' }, art,
       h('div', { class: 'tk-row' }, h('div', { class: 'tk-l' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('span', { class: 'tk-name' + (g.n.length > 6 ? ' long' : '') }, g.n)),
         h('span', { class: 'tk-sub', svg: g.sub || '' }))),
@@ -499,6 +499,8 @@ function ticketEl(g, d) {
 }
 // 部屋主のOKを待つ画面：自分の名前が書かれた入場券を、部屋主がチェックしている
 let admitAt = 0;
+// チケットのゆれは時計に合わせる（画面を描き直しても、ゆれが最初にもどってガクッとしないように）
+const swayPhase = () => `animation-delay:-${Date.now() % 3200}ms`;
 function viewWait(d, left, ok) {
   const req = (d.requests || []).includes(me), den = (d.denied || []).includes(me), full = d.players.length >= TABLE_MAX, hostName = (d.nicks || {})[d.host] || nameOf(d.host);
   const st = ok ? 'ok' : den ? 'no' : req ? 'wait' : !left ? 'closed' : full ? 'full' : 'wait';
@@ -507,7 +509,7 @@ function viewWait(d, left, ok) {
   const sub = { ok: 'ロビーに入ります', wait: 'OKが出たら、自動でロビーに入ります', no: '', closed: `${hostName}に 受付をのばしてもらってね`, full: '' }[st];
   return h('div', { class: 'hub-wrap' }, hubHead(h('span', { class: 'hub-meta' }, `招待コード ${tableId}`), leaveTable),
     h('div', { class: 'wait ' + st },
-      h('div', { class: 'wait-tk' }, h('div', { class: 'wait-top' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('b', null, myNick || 'ゲスト')),
+      h('div', { class: 'wait-tk', style: swayPhase() }, h('div', { class: 'wait-top' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('b', null, myNick || 'ゲスト')),
         h('div', { class: 'tk-perf' }), h('div', { class: 'wait-stub' }, h('small', null, '招待コード'), h('b', null, tableId)),
         st === 'ok' ? h('i', { class: 'wait-stamp' }, 'OK') : null),
       h('div', { class: 'wait-msg', role: 'status' }, msg),

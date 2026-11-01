@@ -28,6 +28,8 @@ function trSend(acts) {
   withLease(d => { if (!d || d.status !== 'playing' || d.game !== 'trapper' || d.t.seq !== seq0) return null; let g = d; for (const a of acts) g = trAct(g, me, a); return g; })
     .then(() => { TS.pending = false; trReset(); if (TS.root && TS.root.isConnected) trRender(); });
 }
+// iPhone で2本指の操作が盤の外にかかると、ページごと拡大されて操作がおかしくなるので止める
+for (const k of ['gesturestart', 'gesturechange']) document.addEventListener(k, e => { if (document.body.classList.contains('trap')) e.preventDefault(); }, { passive: false });
 // NPC（とずっと動かない人）の番を進める。オンラインでは部屋主側の端末だけが進める
 function trDelay(t) { const l = t.last; if (!l) return 1200; if (l.kind === 'move') return 700 + l.path.length * 230 + (l.caught ? 1500 : 300); if (l.kind === 'place') return 900 + l.cells.length * 110; if (l.kind === 'roll') return 1300; return 900; }
 setInterval(() => {
