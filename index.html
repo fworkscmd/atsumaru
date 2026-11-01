@@ -1900,13 +1900,16 @@ async function connectFirebase(cfg) {
   const [App, Auth, F] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-firestore.js')]);
   const app = App.initializeApp(cfg), auth = Auth.getAuth(app);
   const cred = await Auth.signInAnonymously(auth);
-  const fs = F.getFirestore(app);
+  // スマホや回線の機器によっては、ふつうの通り道（ストリーミング）が途中で詰まって知らせが止まる。詰まりにくいロングポーリングに固定する
+  let fs; try { fs = F.initializeFirestore(app, { experimentalForceLongPolling: true }); } catch (e) { fs = F.getFirestore(app); }
   const wrap = s => ({ exists: s.exists(), data: () => unpackArr(s.data()) });
   const doc = p => { const ref = F.doc(fs, p); return {
     get: async () => wrap(await F.getDoc(ref)), fresh: async () => wrap(await F.getDocFromServer(ref)), set: v => F.setDoc(ref, packArr(clean(v))),
     onSnapshot: (cb, e) => F.onSnapshot(ref, s => cb(wrap(s)), e),
     tx: fn => F.runTransaction(fs, async t => { const s = await t.get(ref); const next = fn(s.exists() ? clean(unpackArr(s.data())) : null); if (next) t.set(ref, packArr(clean(next))); return 'ok'; }) }; };
-  return { db: { doc }, uid: cred.user.uid };
+  // 通信をいったん切ってつなぎ直す（更新ボタンを押したのと同じことを、ページを読みなおさずにやる）
+  const kick = async () => { await F.disableNetwork(fs); await F.enableNetwork(fs); };
+  return { db: { doc, kick }, uid: cred.user.uid };
 }
 const HATS = ['#e0503c', '#3f8fe0', '#e8b23a', '#8d8da0'];
 const OPEN_MS = 5 * 60 * 1000;
@@ -2192,22 +2195,35 @@ function listen() {
 // スマホによってはリアルタイムの知らせが止まることがある（画面を消した・アプリを切りかえた・電波が弱いなど）。
 // しばらく知らせが来ないときや画面にもどったときは、自分でサーバーを見にいく。中身がちがえば反映して聞き直す
 // （updated は各スマホの時計なのでずれることがある。比べるのは中身）
+// 見にいく処理には時間切れをつける（返事が来ないまま「見にいっている途中」で止まらないように）。
+// 返事が来ない・失敗したときは、通信をつなぎ直して知らせも聞き直す
 let healing = false;
 const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map(q => [q, x[q]])) : x);
-async function heal() {
+const within = (p, ms) => Promise.race([p, new Promise((_, ng) => setTimeout(() => ng(new Error('timeout')), ms))]);
+async function heal(force) {
   if (local || !db || !tableId || !onSnap || healing || document.hidden) return;
   healing = true; const id = tableId;
   try {
-    const s = await tref().fresh();
+    const s = await within(tref().fresh(), 4000);
     if (id !== tableId || !s.exists) return;
-    const d = s.data();
-    if (!serverDoc || canon(d) !== canon(serverDoc)) { await onSnap(s); listen(); }
-  } catch (e) { } finally { healing = false; }
+    if (!serverDoc || canon(s.data()) !== canon(serverDoc)) { await within(onSnap(s), 4000); listen(); }
+    else if (force) listen();
+  } catch (e) {
+    if (db.kick) try { await within(db.kick(), 4000); } catch (e2) { }
+    if (id === tableId) listen();
+  } finally { healing = false; }
 }
-setInterval(() => { if (tableId && !local && Date.now() - lastSnapAt > 5000) heal(); }, 5000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) heal(); });
-window.addEventListener('online', () => heal());
-window.addEventListener('focus', () => heal());
+// ロビーでは「チケットをきった瞬間」を逃さないよう2秒、ゲーム中は5秒、知らせが来ないときに見にいく
+setInterval(() => {
+  if (!tableId || local) return;
+  const gap = doc && doc.status === 'lobby' ? 2000 : 5000;
+  if (Date.now() - lastSnapAt > gap) heal();
+}, 1000);
+// 画面にもどった・電波がもどったときは、すぐ見にいって知らせも聞き直す
+document.addEventListener('visibilitychange', () => { if (!document.hidden) heal(true); });
+window.addEventListener('online', () => heal(true));
+window.addEventListener('focus', () => heal(true));
+window.addEventListener('pageshow', e => { if (e.persisted) heal(true); }); // iPhone で戻るボタンなどからページがそのまま復元されたとき
 function leaveTable() {
   if (unsub) unsub(); unsub = null; tableId = null; doc = null; serverDoc = null; onSnap = null;
   try { history.replaceState(null, '', location.pathname); } catch (e) { }
