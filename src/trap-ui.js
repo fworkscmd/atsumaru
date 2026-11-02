@@ -91,6 +91,11 @@ function trPop(c, text, cls, dy) {
   if (!TS.B || !TS.boardEl) return; const p = TS.B.screenOf(c, dy ?? .9);
   const el = h('div', { class: 'tp-pop ' + (cls || ''), style: `left:${p.x}px;top:${p.y}px` }, h('span', null, text)); TS.boardEl.append(el); setTimeout(() => el.remove(), 1700);
 }
+// ゲームごとの目印（古い卓は start がないので、席の並びで代わりにする）
+const trGameKey = t => t.start || t.seats.join();
+// 始まりの動きを見せるか：この端末でまだ見ていなくて、まだ鳥がだれも巣を出ていないあいだ
+// （ゲストは盤の読みこみが遅く、そのあいだに部屋主やコンピュータが罠を置くと seq が進むため、seq===0 では見のがす）
+const trIntroDue = t => TS.introAt !== trGameKey(t) && t.round === 1 && t.pos.every(p => p <= 0);
 function trStartTitle() {
   if (!TS.boardEl) return;
   const el = h('div', { class: 'tp-start', 'aria-hidden': 'true' }, h('div', { class: 'felt' }, h('div', { class: 'st' }, 'チュンチュン大作戦')), h('b', null, 'スタート！'));
@@ -102,11 +107,10 @@ function trStartTitle() {
 function trMaybeRole() {
   if (!isTrapDoc() || !TS.B || TS.B.busy || TS.pending || document.querySelector('.tp-spot')) return;
   const t = doc.t;
-  if (t.seq === 0 && TS.roleAt !== t.at) { TS.roleAt = t.at; TS.roleSeen = new Set(); }
-  if (!TS.roleSeen) TS.roleSeen = new Set();
+  if (TS.roleAt !== trGameKey(t)) { TS.roleAt = trGameKey(t); TS.roleSeen = new Set(); }
   const vs = trViewSeat(); if (vs < 0 || trIsNpc(t.seats[vs]) || TS.roleSeen.has(vs)) return;
   // 始まりの動き →「スタート！」の札が消えてから
-  if (t.seq === 0 && TS.introAt !== t.at && !matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (trIntroDue(t) && !matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const wait = (TS.titleUntil || 0) - Date.now(); if (wait > 0) { clearTimeout(TS.roleTimer); TS.roleTimer = setTimeout(() => TS.root && TS.root.isConnected && trMaybeRole(), wait + 50); return; }
   TS.roleSeen.add(vs); trShowRole(vs);
 }
@@ -170,8 +174,8 @@ function viewTrapShell() {
     // ゲームの最初の1回だけ、始まりの動き（画面をタップでとばせる）→「スタート！」の札
     const t0 = doc.t;
     // （始まってすぐ画面が描き直されて盤が作り直されることがあるので、「見おわった」で覚える）
-    if (t0.seq === 0 && TS.introAt !== t0.at) {
-      const B = TS.B, seen = () => { TS.introAt = t0.at; trStartTitle(); };
+    if (trIntroDue(t0)) {
+      const B = TS.B, seen = () => { TS.introAt = trGameKey(t0); trStartTitle(); };
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) seen();
       else B.intro(() => { if (TS.B !== B) return; seen(); if (TS.root === root && root.isConnected) trRender(); });
     }

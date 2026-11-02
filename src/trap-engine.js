@@ -43,7 +43,7 @@ function trNew(humans, rnd = Math.random, now = Date.now()) {
   const t = {
     theme: trPick(TR.THEMES, rnd), seats: ids, round: 1, score: 0, caps: 0,
     pos: [-1, 0, 0, 0], poison: [0, 0, 0, 0], food: {}, traps: [], pits: [], wind: false, boost: null, hands: [[], [], [], []],
-    phase: 'trap', turn: 0, step: 'pre', roll: null, used: null, fx: {}, seq: 0, last: null, at: now, result: null, stats: { eaten: [0, 0, 0, 0], caught: [0, 0, 0, 0], placed: 0 },
+    phase: 'trap', turn: 0, step: 'pre', roll: null, used: null, fx: {}, seq: 0, last: null, at: now, start: now, result: null, stats: { eaten: [0, 0, 0, 0], caught: [0, 0, 0, 0], placed: 0 },
   };
   const deck = kinds => { const d = []; kinds.forEach(k => { for (let i = 0; i < TR.COPIES; i++) d.push(k); }); for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; } return d; };
   const td = deck(TR.TRAP_CARDS), bd = deck(TR.BIRD_CARDS);
