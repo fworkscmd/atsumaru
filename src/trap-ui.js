@@ -35,6 +35,10 @@ function trDelay(t) { const l = t.last; if (!l) return 1200; if (l.kind === 'mov
 setInterval(() => {
   if (!isTrapDoc() || doc.status !== 'playing' || TS.pending || (TS.B && TS.B.busy) || !TS.root || !TS.root.isConnected) return;
   const t = doc.t, id = t.seats[t.turn], idle = Date.now() - t.at, npc = trIsNpc(id);
+  // 「スタート！」と役のお知らせのあいだはコンピュータを動かさない。消えてから3秒待つ（`TS.holdUntil`）
+  if (npc && (Date.now() < (TS.holdUntil || 0) || document.querySelector('.tp-spot'))) return;
+  // 盤を読みこんでいるあいだも待つ（先に動くと、始まりの動きがとばされる）。読みこめないときのために最大15秒
+  if (npc && t.seq === 0 && !TS.B && idle < 15000) return;
   if (local) { if (!npc || idle < trDelay(t)) return; try { doc = trAct(doc, '*', trNpc(doc)); afterChange(); } catch (e) { console.warn(e); } return; }
   if (!isPlayer() || doc.players[0] !== me) return;
   if (!(npc && idle > trDelay(t)) && !(!npc && idle > 90000)) return;
@@ -91,6 +95,38 @@ function trStartTitle() {
   if (!TS.boardEl) return;
   const el = h('div', { class: 'tp-start', 'aria-hidden': 'true' }, h('div', { class: 'felt' }, h('div', { class: 'st' }, 'チュンチュン大作戦')), h('b', null, 'スタート！'));
   TS.boardEl.append(el); setTimeout(() => el.remove(), 1900);
+  TS.titleUntil = Date.now() + 1900; TS.holdUntil = TS.titleUntil + 3000;
+}
+// 役のお知らせ（スポットライト）：まわりを暗くして、自分の席（鳥なら巣にいる自分のコマも）を照らす。案は tools/role-mockup.html の5
+// オンラインは最初に1回。1台で遊ぶときは、それぞれの人が最初に画面を見る番に1回ずつ。タップか約3.6秒で消える
+function trMaybeRole() {
+  if (!isTrapDoc() || !TS.B || TS.B.busy || TS.pending || document.querySelector('.tp-spot')) return;
+  const t = doc.t;
+  if (t.seq === 0 && TS.roleAt !== t.at) { TS.roleAt = t.at; TS.roleSeen = new Set(); }
+  if (!TS.roleSeen) TS.roleSeen = new Set();
+  const vs = trViewSeat(); if (vs < 0 || trIsNpc(t.seats[vs]) || TS.roleSeen.has(vs)) return;
+  // 始まりの動き →「スタート！」の札が消えてから
+  if (t.seq === 0 && TS.introAt !== t.at && !matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const wait = (TS.titleUntil || 0) - Date.now(); if (wait > 0) { clearTimeout(TS.roleTimer); TS.roleTimer = setTimeout(() => TS.root && TS.root.isConnected && trMaybeRole(), wait + 50); return; }
+  TS.roleSeen.add(vs); trShowRole(vs);
+}
+function trShowRole(vs) {
+  const seat = TS.seats && TS.seats.children[vs]; if (!seat) return;
+  const W = innerWidth, H = innerHeight, sr = seat.getBoundingClientRect(), spots = [[sr.left + sr.width / 2, sr.top + sr.height / 2, Math.max(sr.width, sr.height) / 2 + 8]];
+  if (vs > 0) { const p = TS.B.birdScreen(vs - 1); spots.push([p.x, p.y, 36]); }
+  const id = 'tpspot' + Date.now(), col = SEAT_COL[vs];
+  const svg = `<svg width="${W}" height="${H}" aria-hidden="true"><defs><mask id="${id}"><rect width="${W}" height="${H}" fill="#fff"/>${spots.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#000"/>`).join('')}</mask></defs><rect width="${W}" height="${H}" fill="rgba(20,16,10,.62)" mask="url(#${id})"/></svg>`;
+  const tipW = Math.min(300, W - 24), tipL = Math.max(12, Math.min(W - tipW - 12, sr.left + sr.width / 2 - 40)), ax = sr.left + sr.width / 2 - tipL - 9;
+  const goal = vs === 0 ? `罠をしかけて、鳥を${TR.CAPS}回 つかまえよう` : `なかまの鳥と、エサを${TR.GOAL}こ 集めよう`;
+  const who = local ? `${trName(doc.t.seats[vs])}は` : 'これが あなた';
+  const el = h('div', { class: 'tp-spot', role: 'dialog', 'aria-label': `${who} ${trRole(vs)}。${goal}`, style: `--rc:${col}` },
+    h('div', { class: 'dim', svg }),
+    ...spots.map(([x, y, r]) => h('i', { class: 'ring', style: `left:${x - r}px;top:${y - r}px;width:${r * 2}px;height:${r * 2}px` })),
+    h('div', { class: 'felt tip', style: `left:${tipL}px;top:${sr.bottom + 16}px;width:${tipW}px;--ax:${ax}px` },
+      h('div', { class: 'st' }, h('small', null, who), h('b', null, trRole(vs)), h('span', null, goal))));
+  const close = () => { if (!el.isConnected) return; el.classList.add('out'); setTimeout(() => el.remove(), 260); TS.holdUntil = Date.now() + 3000; };
+  el.addEventListener('pointerdown', e => { e.preventDefault(); close(); });
+  document.body.append(el); setTimeout(close, 3600);
 }
 function trBanner(text) { if (!TS.boardEl) return; const el = h('div', { class: 'tp-banner felt' }, h('div', { class: 'st' }, text)); TS.boardEl.append(el); setTimeout(() => el.remove(), 2500); }
 function trEventFx(ev, t) {
@@ -192,6 +228,7 @@ function trRender() {
     else TS.B.sync(t, view);
   }
   if (ev) trEventFx(ev, t);
+  if (!over) trMaybeRole();
   TS.dieEl.replaceChildren(...(t.roll ? t.roll.d.map(d => h('span', null, String(d))) : []));
   TS.dieEl.setAttribute('aria-label', t.roll ? `サイコロ ${t.roll.d.join('と')}` : '');
   // 終わったら、最後の演出を見せてから結果へ

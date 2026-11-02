@@ -44,6 +44,21 @@ body.trap :focus-visible{outline:3px solid #3f7fe0;outline-offset:2px}
 @keyframes tppop{0%{opacity:0;margin-top:10px}15%{opacity:1;margin-top:0}75%{opacity:1}100%{opacity:0;margin-top:-18px}}
 .tp-banner{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:3;pointer-events:none;animation:tppop 2.4s ease forwards;white-space:nowrap}
 .tp-banner .st{padding:4px 14px;font-size:13px;font-weight:900}
+/* 役のお知らせ（スポットライト）：まわりを暗くして、自分の席とコマを照らす */
+.tp-spot{position:fixed;inset:0;z-index:20;cursor:pointer;animation:tpspot .35s ease both}
+.tp-spot.out{animation:tpspotout .25s ease forwards}
+.tp-spot .dim svg{display:block}
+.tp-spot .ring{position:absolute;border-radius:50%;border:3px dashed rgba(255,250,240,.92);box-sizing:border-box;animation:tpring 1.6s ease-in-out infinite}
+.tp-spot .tip{position:absolute;animation:tptip .4s .15s ease both}
+.tp-spot .tip::before{content:"";position:absolute;top:-8px;left:var(--ax);width:18px;height:18px;background:#fffaf0;transform:rotate(45deg)}
+.tp-spot .tip .st{position:relative;display:grid;gap:2px;padding:12px 16px 14px;text-align:left}
+.tp-spot .tip small{font-size:13px;font-weight:700;color:#8a7e68}
+.tp-spot .tip b{font-size:28px;font-weight:900;line-height:1.15;color:var(--rc)}
+.tp-spot .tip span{font-size:15px;font-weight:700;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere}
+@keyframes tpspot{from{opacity:0}}
+@keyframes tpspotout{to{opacity:0}}
+@keyframes tptip{from{opacity:0;transform:translateY(10px)}}
+@keyframes tpring{50%{transform:scale(1.08)}}
 /* 確認用：URL に ?fps をつけたときだけ、1秒に何回描けているかと画質の段階を出す */
 .tp-fps{position:absolute;left:8px;bottom:8px;z-index:5;background:rgba(0,0,0,.62);color:#fff;font:700 11px/1.5 ui-monospace,monospace;padding:2px 7px;border-radius:6px;pointer-events:none;white-space:nowrap}
 /* 始まりの動きのあとの札「チュンチュン大作戦」＋朱の「スタート！」 */
@@ -104,4 +119,4 @@ body.trap .toast{background:#3a3326;color:#fffaf0;top:auto;bottom:calc(240px + e
 .gi-trap{background:linear-gradient(#cfe9ff,#f4e6c8)}
 .gi-trap svg{width:46px;height:46px}
 .tk-art img.tp-tk{display:block;width:100%;height:100%;object-fit:contain;background:linear-gradient(#cfeaff,#fff4dc)}
-@media (prefers-reduced-motion:reduce){.tp-die.spin span,.tp-pop,.tp-banner,.tp-start .felt,.tp-start b{animation:none}}
+@media (prefers-reduced-motion:reduce){.tp-die.spin span,.tp-pop,.tp-banner,.tp-start .felt,.tp-start b,.tp-spot,.tp-spot .ring,.tp-spot .tip{animation:none}}

@@ -263,16 +263,19 @@ const TB = (() => {
     // 風車だけが回っているときは、毎フレームではなく1秒に20回くらいに落とす
     R.shadowMap.autoUpdate = false;
     let dirty = true, raf = 0, shadowDue = true, lastDraw = 0, millN = 0, shadowN = 0; const anims = [];
-    function frame(now) { raf = 0; let alive = false;
+    // 描いている最中に「もう1回描いて」（draw）が来ても、ここで次のコマを二重に予約しない（again で覚えて最後に1回だけ予約）。
+    // 二重に予約すると、1コマごとに描く回数が倍々に増えて、動きのあいだだけひどくカクカクになっていた
+    let inFrame = false, again = false;
+    function frame(now) { raf = 0; inFrame = true; again = false; let alive = false;
       // 始まりの動きのあいだは、影を3回に1回だけ描き直す（動くのは鳥1羽なので、ほとんど気づかない）
       if (anims.length && (!introA || ++shadowN % 3 === 0)) shadowDue = true;
       for (let i = anims.length - 1; i >= 0; i--) { const a = anims[i]; const t = Math.min(1, (now - a.t0) / a.dur); if (t >= 0) a.step(a.ease ? a.ease(t) : t, t); if (t >= 1) { anims.splice(i, 1); a.done && a.done(); } else alive = true; }
       const millOnly = deco.mill && !dirty && !shadowDue && !anims.length;
-      if (millOnly && now - lastDraw < 48) { raf = requestAnimationFrame(frame); return; }
+      if (millOnly && now - lastDraw < 48) { inFrame = false; raf = requestAnimationFrame(frame); return; }
       if (deco.mill) { deco.mill.userData.hub.rotation.z += .01 * Math.min(4, Math.max(1, (now - lastDraw) / 16.7)); alive = true; if (++millN % 6 === 0) shadowDue = true; }
       if (shadowDue) { R.shadowMap.needsUpdate = true; shadowDue = false; }
       const active = dirty || anims.length > 0, dt = now - lastDraw;
-      R.render(sc, cam); dirty = false; lastDraw = now; if (alive || anims.length) raf = requestAnimationFrame(frame);
+      R.render(sc, cam); dirty = false; lastDraw = now; inFrame = false; if (alive || anims.length || again) raf = requestAnimationFrame(frame);
       if (active && dt > 0 && dt < 150) measure(dt);
     }
     // 動いているあいだの1コマの時間を測る。30コマの平均が25ms（1秒に40回）より長ければ画質を1段下げる。最初の12コマは準備で重いので数えない
@@ -290,7 +293,7 @@ const TB = (() => {
       R.setPixelRatio(QS[q].pr); key.shadow.mapSize.set(QS[q].sm, QS[q].sm); if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; }
       warm = 6; fit(); kick();
     }
-    const draw = () => { if (!raf) raf = requestAnimationFrame(frame); };
+    const draw = () => { if (inFrame) again = true; else if (!raf) raf = requestAnimationFrame(frame); };
     const kick = () => { shadowDue = true; draw(); };
     function anim(dur, step, done, delay = 0, ease) { const a = { t0: performance.now() + delay, dur, step, done, ease }; anims.push(a); kick(); return a; }
     const eo = t => 1 - (1 - t) * (1 - t), eb = t => { const c = 1.7; return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2; };
@@ -443,12 +446,14 @@ const TB = (() => {
       const hit = rc.intersectObjects(tops, false)[0]; if (hit) return hit.object.userData.cell;
       // 少しはずれても一番近いマス
       const p = new T.Vector3(); rc.ray.intersectPlane(new T.Plane(new T.Vector3(0, 1, 0), -.1), p); let best = -1, bd = .7; tr.cells.forEach((c, k) => { const d = Math.hypot(c.x - p.x, c.z - p.z); if (d < bd) { bd = d; best = k; } }); return best < 0 ? null : best; }
+    // 鳥のコマの画面上の位置（ページの座標）。役のお知らせで、自分のコマを照らすのに使う
+    function birdScreen(i) { const v = birds[i].position.clone(); v.y += .42; v.project(cam); const r = R.domElement.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }
     function screenOf(k, dy = .6) { const v = P(k); v.y += dy; v.project(cam); const r = R.domElement.getBoundingClientRect(); return { x: (v.x + 1) / 2 * r.width, y: (1 - v.y) / 2 * r.height }; }
     // 動かない物（島・マス・巣・飾り）はまとめて描く（1回に描く命令が大きく減る）
     merge(sc, [...birds, dyn, ...(deco.mill ? [deco.mill.userData.hub] : [])]);
     let ro = null; try { ro = new ResizeObserver(fit); ro.observe(host); } catch (e) { window.addEventListener('resize', fit); }
     fit();
-    return { el: R.domElement, sync, play, intro, pick, screenOf, fit, resetView, set onTap(f) { tapCb = f; }, get busy() { return busy; },
+    return { el: R.domElement, sync, play, intro, pick, screenOf, birdScreen, fit, resetView, set onTap(f) { tapCb = f; }, get busy() { return busy; },
       dispose() { cancelAnimationFrame(raf); ro && ro.disconnect(); R.dispose(); R.forceContextLoss && R.forceContextLoss(); R.domElement.remove(); } };
   }
   // ── カードの絵（起動時に一度だけ描いて画像にする）

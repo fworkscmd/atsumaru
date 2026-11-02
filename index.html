@@ -483,6 +483,21 @@ body.trap :focus-visible{outline:3px solid #3f7fe0;outline-offset:2px}
 @keyframes tppop{0%{opacity:0;margin-top:10px}15%{opacity:1;margin-top:0}75%{opacity:1}100%{opacity:0;margin-top:-18px}}
 .tp-banner{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:3;pointer-events:none;animation:tppop 2.4s ease forwards;white-space:nowrap}
 .tp-banner .st{padding:4px 14px;font-size:13px;font-weight:900}
+/* 役のお知らせ（スポットライト）：まわりを暗くして、自分の席とコマを照らす */
+.tp-spot{position:fixed;inset:0;z-index:20;cursor:pointer;animation:tpspot .35s ease both}
+.tp-spot.out{animation:tpspotout .25s ease forwards}
+.tp-spot .dim svg{display:block}
+.tp-spot .ring{position:absolute;border-radius:50%;border:3px dashed rgba(255,250,240,.92);box-sizing:border-box;animation:tpring 1.6s ease-in-out infinite}
+.tp-spot .tip{position:absolute;animation:tptip .4s .15s ease both}
+.tp-spot .tip::before{content:"";position:absolute;top:-8px;left:var(--ax);width:18px;height:18px;background:#fffaf0;transform:rotate(45deg)}
+.tp-spot .tip .st{position:relative;display:grid;gap:2px;padding:12px 16px 14px;text-align:left}
+.tp-spot .tip small{font-size:13px;font-weight:700;color:#8a7e68}
+.tp-spot .tip b{font-size:28px;font-weight:900;line-height:1.15;color:var(--rc)}
+.tp-spot .tip span{font-size:15px;font-weight:700;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere}
+@keyframes tpspot{from{opacity:0}}
+@keyframes tpspotout{to{opacity:0}}
+@keyframes tptip{from{opacity:0;transform:translateY(10px)}}
+@keyframes tpring{50%{transform:scale(1.08)}}
 /* 確認用：URL に ?fps をつけたときだけ、1秒に何回描けているかと画質の段階を出す */
 .tp-fps{position:absolute;left:8px;bottom:8px;z-index:5;background:rgba(0,0,0,.62);color:#fff;font:700 11px/1.5 ui-monospace,monospace;padding:2px 7px;border-radius:6px;pointer-events:none;white-space:nowrap}
 /* 始まりの動きのあとの札「チュンチュン大作戦」＋朱の「スタート！」 */
@@ -543,7 +558,7 @@ body.trap .toast{background:#3a3326;color:#fffaf0;top:auto;bottom:calc(240px + e
 .gi-trap{background:linear-gradient(#cfe9ff,#f4e6c8)}
 .gi-trap svg{width:46px;height:46px}
 .tk-art img.tp-tk{display:block;width:100%;height:100%;object-fit:contain;background:linear-gradient(#cfeaff,#fff4dc)}
-@media (prefers-reduced-motion:reduce){.tp-die.spin span,.tp-pop,.tp-banner,.tp-start .felt,.tp-start b{animation:none}}
+@media (prefers-reduced-motion:reduce){.tp-die.spin span,.tp-pop,.tp-banner,.tp-start .felt,.tp-start b,.tp-spot,.tp-spot .ring,.tp-spot .tip{animation:none}}
 /* ===== 盤のゲーム（リバーシ・チェス・将棋）とビンゴ大会（body.board）：ハブと同じ白・黒・朱。見た目は仮 ===== */
 body.board{height:100vh;height:100dvh;overflow:hidden;background:#f6f5f2;color:#141414;font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
   padding:calc(10px + env(safe-area-inset-top,0px)) var(--pad-r) calc(12px + env(safe-area-inset-bottom,0px)) var(--pad-l);
@@ -1778,16 +1793,19 @@ const TB = (() => {
     // 風車だけが回っているときは、毎フレームではなく1秒に20回くらいに落とす
     R.shadowMap.autoUpdate = false;
     let dirty = true, raf = 0, shadowDue = true, lastDraw = 0, millN = 0, shadowN = 0; const anims = [];
-    function frame(now) { raf = 0; let alive = false;
+    // 描いている最中に「もう1回描いて」（draw）が来ても、ここで次のコマを二重に予約しない（again で覚えて最後に1回だけ予約）。
+    // 二重に予約すると、1コマごとに描く回数が倍々に増えて、動きのあいだだけひどくカクカクになっていた
+    let inFrame = false, again = false;
+    function frame(now) { raf = 0; inFrame = true; again = false; let alive = false;
       // 始まりの動きのあいだは、影を3回に1回だけ描き直す（動くのは鳥1羽なので、ほとんど気づかない）
       if (anims.length && (!introA || ++shadowN % 3 === 0)) shadowDue = true;
       for (let i = anims.length - 1; i >= 0; i--) { const a = anims[i]; const t = Math.min(1, (now - a.t0) / a.dur); if (t >= 0) a.step(a.ease ? a.ease(t) : t, t); if (t >= 1) { anims.splice(i, 1); a.done && a.done(); } else alive = true; }
       const millOnly = deco.mill && !dirty && !shadowDue && !anims.length;
-      if (millOnly && now - lastDraw < 48) { raf = requestAnimationFrame(frame); return; }
+      if (millOnly && now - lastDraw < 48) { inFrame = false; raf = requestAnimationFrame(frame); return; }
       if (deco.mill) { deco.mill.userData.hub.rotation.z += .01 * Math.min(4, Math.max(1, (now - lastDraw) / 16.7)); alive = true; if (++millN % 6 === 0) shadowDue = true; }
       if (shadowDue) { R.shadowMap.needsUpdate = true; shadowDue = false; }
       const active = dirty || anims.length > 0, dt = now - lastDraw;
-      R.render(sc, cam); dirty = false; lastDraw = now; if (alive || anims.length) raf = requestAnimationFrame(frame);
+      R.render(sc, cam); dirty = false; lastDraw = now; inFrame = false; if (alive || anims.length || again) raf = requestAnimationFrame(frame);
       if (active && dt > 0 && dt < 150) measure(dt);
     }
     // 動いているあいだの1コマの時間を測る。30コマの平均が25ms（1秒に40回）より長ければ画質を1段下げる。最初の12コマは準備で重いので数えない
@@ -1805,7 +1823,7 @@ const TB = (() => {
       R.setPixelRatio(QS[q].pr); key.shadow.mapSize.set(QS[q].sm, QS[q].sm); if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; }
       warm = 6; fit(); kick();
     }
-    const draw = () => { if (!raf) raf = requestAnimationFrame(frame); };
+    const draw = () => { if (inFrame) again = true; else if (!raf) raf = requestAnimationFrame(frame); };
     const kick = () => { shadowDue = true; draw(); };
     function anim(dur, step, done, delay = 0, ease) { const a = { t0: performance.now() + delay, dur, step, done, ease }; anims.push(a); kick(); return a; }
     const eo = t => 1 - (1 - t) * (1 - t), eb = t => { const c = 1.7; return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2; };
@@ -1958,12 +1976,14 @@ const TB = (() => {
       const hit = rc.intersectObjects(tops, false)[0]; if (hit) return hit.object.userData.cell;
       // 少しはずれても一番近いマス
       const p = new T.Vector3(); rc.ray.intersectPlane(new T.Plane(new T.Vector3(0, 1, 0), -.1), p); let best = -1, bd = .7; tr.cells.forEach((c, k) => { const d = Math.hypot(c.x - p.x, c.z - p.z); if (d < bd) { bd = d; best = k; } }); return best < 0 ? null : best; }
+    // 鳥のコマの画面上の位置（ページの座標）。役のお知らせで、自分のコマを照らすのに使う
+    function birdScreen(i) { const v = birds[i].position.clone(); v.y += .42; v.project(cam); const r = R.domElement.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }
     function screenOf(k, dy = .6) { const v = P(k); v.y += dy; v.project(cam); const r = R.domElement.getBoundingClientRect(); return { x: (v.x + 1) / 2 * r.width, y: (1 - v.y) / 2 * r.height }; }
     // 動かない物（島・マス・巣・飾り）はまとめて描く（1回に描く命令が大きく減る）
     merge(sc, [...birds, dyn, ...(deco.mill ? [deco.mill.userData.hub] : [])]);
     let ro = null; try { ro = new ResizeObserver(fit); ro.observe(host); } catch (e) { window.addEventListener('resize', fit); }
     fit();
-    return { el: R.domElement, sync, play, intro, pick, screenOf, fit, resetView, set onTap(f) { tapCb = f; }, get busy() { return busy; },
+    return { el: R.domElement, sync, play, intro, pick, screenOf, birdScreen, fit, resetView, set onTap(f) { tapCb = f; }, get busy() { return busy; },
       dispose() { cancelAnimationFrame(raf); ro && ro.disconnect(); R.dispose(); R.forceContextLoss && R.forceContextLoss(); R.domElement.remove(); } };
   }
   // ── カードの絵（起動時に一度だけ描いて画像にする）
@@ -2482,6 +2502,10 @@ function trDelay(t) { const l = t.last; if (!l) return 1200; if (l.kind === 'mov
 setInterval(() => {
   if (!isTrapDoc() || doc.status !== 'playing' || TS.pending || (TS.B && TS.B.busy) || !TS.root || !TS.root.isConnected) return;
   const t = doc.t, id = t.seats[t.turn], idle = Date.now() - t.at, npc = trIsNpc(id);
+  // 「スタート！」と役のお知らせのあいだはコンピュータを動かさない。消えてから3秒待つ（`TS.holdUntil`）
+  if (npc && (Date.now() < (TS.holdUntil || 0) || document.querySelector('.tp-spot'))) return;
+  // 盤を読みこんでいるあいだも待つ（先に動くと、始まりの動きがとばされる）。読みこめないときのために最大15秒
+  if (npc && t.seq === 0 && !TS.B && idle < 15000) return;
   if (local) { if (!npc || idle < trDelay(t)) return; try { doc = trAct(doc, '*', trNpc(doc)); afterChange(); } catch (e) { console.warn(e); } return; }
   if (!isPlayer() || doc.players[0] !== me) return;
   if (!(npc && idle > trDelay(t)) && !(!npc && idle > 90000)) return;
@@ -2538,6 +2562,38 @@ function trStartTitle() {
   if (!TS.boardEl) return;
   const el = h('div', { class: 'tp-start', 'aria-hidden': 'true' }, h('div', { class: 'felt' }, h('div', { class: 'st' }, 'チュンチュン大作戦')), h('b', null, 'スタート！'));
   TS.boardEl.append(el); setTimeout(() => el.remove(), 1900);
+  TS.titleUntil = Date.now() + 1900; TS.holdUntil = TS.titleUntil + 3000;
+}
+// 役のお知らせ（スポットライト）：まわりを暗くして、自分の席（鳥なら巣にいる自分のコマも）を照らす。案は tools/role-mockup.html の5
+// オンラインは最初に1回。1台で遊ぶときは、それぞれの人が最初に画面を見る番に1回ずつ。タップか約3.6秒で消える
+function trMaybeRole() {
+  if (!isTrapDoc() || !TS.B || TS.B.busy || TS.pending || document.querySelector('.tp-spot')) return;
+  const t = doc.t;
+  if (t.seq === 0 && TS.roleAt !== t.at) { TS.roleAt = t.at; TS.roleSeen = new Set(); }
+  if (!TS.roleSeen) TS.roleSeen = new Set();
+  const vs = trViewSeat(); if (vs < 0 || trIsNpc(t.seats[vs]) || TS.roleSeen.has(vs)) return;
+  // 始まりの動き →「スタート！」の札が消えてから
+  if (t.seq === 0 && TS.introAt !== t.at && !matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const wait = (TS.titleUntil || 0) - Date.now(); if (wait > 0) { clearTimeout(TS.roleTimer); TS.roleTimer = setTimeout(() => TS.root && TS.root.isConnected && trMaybeRole(), wait + 50); return; }
+  TS.roleSeen.add(vs); trShowRole(vs);
+}
+function trShowRole(vs) {
+  const seat = TS.seats && TS.seats.children[vs]; if (!seat) return;
+  const W = innerWidth, H = innerHeight, sr = seat.getBoundingClientRect(), spots = [[sr.left + sr.width / 2, sr.top + sr.height / 2, Math.max(sr.width, sr.height) / 2 + 8]];
+  if (vs > 0) { const p = TS.B.birdScreen(vs - 1); spots.push([p.x, p.y, 36]); }
+  const id = 'tpspot' + Date.now(), col = SEAT_COL[vs];
+  const svg = `<svg width="${W}" height="${H}" aria-hidden="true"><defs><mask id="${id}"><rect width="${W}" height="${H}" fill="#fff"/>${spots.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#000"/>`).join('')}</mask></defs><rect width="${W}" height="${H}" fill="rgba(20,16,10,.62)" mask="url(#${id})"/></svg>`;
+  const tipW = Math.min(300, W - 24), tipL = Math.max(12, Math.min(W - tipW - 12, sr.left + sr.width / 2 - 40)), ax = sr.left + sr.width / 2 - tipL - 9;
+  const goal = vs === 0 ? `罠をしかけて、鳥を${TR.CAPS}回 つかまえよう` : `なかまの鳥と、エサを${TR.GOAL}こ 集めよう`;
+  const who = local ? `${trName(doc.t.seats[vs])}は` : 'これが あなた';
+  const el = h('div', { class: 'tp-spot', role: 'dialog', 'aria-label': `${who} ${trRole(vs)}。${goal}`, style: `--rc:${col}` },
+    h('div', { class: 'dim', svg }),
+    ...spots.map(([x, y, r]) => h('i', { class: 'ring', style: `left:${x - r}px;top:${y - r}px;width:${r * 2}px;height:${r * 2}px` })),
+    h('div', { class: 'felt tip', style: `left:${tipL}px;top:${sr.bottom + 16}px;width:${tipW}px;--ax:${ax}px` },
+      h('div', { class: 'st' }, h('small', null, who), h('b', null, trRole(vs)), h('span', null, goal))));
+  const close = () => { if (!el.isConnected) return; el.classList.add('out'); setTimeout(() => el.remove(), 260); TS.holdUntil = Date.now() + 3000; };
+  el.addEventListener('pointerdown', e => { e.preventDefault(); close(); });
+  document.body.append(el); setTimeout(close, 3600);
 }
 function trBanner(text) { if (!TS.boardEl) return; const el = h('div', { class: 'tp-banner felt' }, h('div', { class: 'st' }, text)); TS.boardEl.append(el); setTimeout(() => el.remove(), 2500); }
 function trEventFx(ev, t) {
@@ -2639,6 +2695,7 @@ function trRender() {
     else TS.B.sync(t, view);
   }
   if (ev) trEventFx(ev, t);
+  if (!over) trMaybeRole();
   TS.dieEl.replaceChildren(...(t.roll ? t.roll.d.map(d => h('span', null, String(d))) : []));
   TS.dieEl.setAttribute('aria-label', t.roll ? `サイコロ ${t.roll.d.join('と')}` : '');
   // 終わったら、最後の演出を見せてから結果へ
