@@ -24,6 +24,9 @@ body.board #app{height:100%}
 .bd-hands{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;min-width:0}
 /* 盤 */
 .bd-stage{flex:1 1 auto!important;min-height:120px;display:grid;place-items:center;overflow:hidden}
+/* 3Dの盤：場所いっぱい（大きさは盤のほうで合わせる。並べ方に影響しないよう重ねて置く） */
+.bd-stage.is3d{position:relative;border-radius:14px;background:#2a1e16}
+.bd-3d{position:absolute;inset:0;display:block;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 .bd-grid{display:grid;grid-template-columns:repeat(var(--n),1fr);grid-template-rows:repeat(var(--n),1fr);width:100%;aspect-ratio:1;--cell:40px;user-select:none;-webkit-user-select:none}
 .bd-c{position:relative;border:0;padding:0;margin:0;background:none;display:grid;place-items:center;min-width:0;min-height:0}
 .bd-c.last{background-color:rgba(255,90,54,.22)}
@@ -161,7 +164,7 @@ body.board .sheet .btn.soft{background:#fff;color:#141414;border:1px solid #e4e2
 .hub-timer{display:flex;align-items:center;gap:2px;min-width:0}
 .hub-ext{min-height:32px;padding:0 6px;border:0;background:none;color:var(--h-mute);font:inherit;font-size:11px;text-decoration:underline;text-underline-offset:2px}
 /* 6つ並べる */
-.hub-icons{grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.hub-icons{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 6px}
 .gi{gap:5px;width:100%}
 .gi-ic{width:min(100%,50px);height:auto;aspect-ratio:1}
 .gi-ic>svg{width:80%;height:80%}
@@ -178,3 +181,43 @@ body.board .sheet .btn.soft{background:#fff;color:#141414;border:1px solid #e4e2
 }
 @media (max-height:740px){.gi-ic{width:min(100%,46px)}.gi{gap:4px}}
 .sheet.bd-sheet{background:rgba(20,20,20,.5)}
+
+/* ===== トランプ（大富豪・ババ抜き）：3Dのテーブル＋白・黒・朱の帯 ===== */
+.cd-stage{position:relative;border-radius:14px;background:#f6f5f2;overflow:hidden;display:block}
+.cd-3d{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.cd-load{position:absolute;inset:0;display:grid;place-items:center;color:var(--h-mute);font-size:13px}
+.cd-look{position:absolute;right:8px;top:8px;min-height:34px;border-radius:999px;border:1px solid var(--h-line);background:rgba(255,255,255,.92);color:var(--h-ink);font:inherit;font-size:12px;font-weight:700;padding:0 12px}
+.cd-look.on{background:var(--h-ink);color:#fff;border-color:var(--h-ink)}
+.cd-cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(246,245,242,.9);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);text-align:center;padding:16px}
+.cd-cover b{font-size:22px;font-weight:900}
+.cd-cover span{font-size:13px;color:var(--h-mute)}
+.cd-info{display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center;min-height:40px;justify-content:center}
+.cd-chips{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+.cd-chips span{font-size:11px;font-weight:700;background:var(--h-ink);color:#fff;border-radius:999px;padding:2px 10px}
+.cd-t{font-size:13px;font-weight:700}
+.cd-acts{display:flex;gap:8px;justify-content:center;min-height:44px}
+.cd-acts .pill{min-width:120px}
+.cd-acts .pill:disabled{opacity:.35;cursor:default}
+.cd-rank{display:flex;flex-direction:column;gap:4px;width:100%;max-width:280px;margin:4px auto}
+.cd-rank div{display:flex;align-items:center;gap:10px;font-size:14px;border-bottom:1px solid var(--h-line);padding:4px 2px}
+.cd-rank b{min-width:56px;font-weight:900}
+.cd-rank span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.cd-rank i{font-style:normal;font-variant-numeric:tabular-nums;color:var(--h-mute)}
+/* ハブのアイコン・チケット・遊びかたの小さなカード */
+.gi-cd{background:linear-gradient(160deg,#3f8f5a,#2f7a4a)}
+.gi-cards{position:relative;width:38px;height:34px}
+.gi-cards i{position:absolute;top:2px;width:20px;height:28px;border-radius:4px;background:#fffdf8;color:#2c3228;font-style:normal;font-size:12px;font-weight:900;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.gi-cards i:first-child{left:3px;transform:rotate(-12deg)}.gi-cards i:last-child{right:3px;transform:rotate(10deg)}
+.gi-cards i.r,.gi-cards i.jk{color:#d9483b}
+.gi-cards i.bk{background:repeating-linear-gradient(45deg,#d9483b 0 3px,#e8705e 3px 6px);border:2px solid #fffdf8;box-sizing:border-box}
+.tk-cards{background:#2f7a4a!important;display:grid;place-items:center}
+.tka-cards{position:relative;width:80%;height:92%}
+.tka-cards span{position:absolute;left:50%;bottom:4%;width:30%;aspect-ratio:.71;border-radius:6px;background:#fffdf8;color:#2c3228;display:grid;place-items:center;font-weight:900;font-size:clamp(14px,5vw,24px);box-shadow:0 2px 6px rgba(0,0,0,.3);transform-origin:50% 120%;transform:translateX(-50%) rotate(calc(var(--i) * 14deg))}
+.tka-cards span.r,.tka-cards span.jk{color:#d9483b}
+.tka-cards span.bk{background:repeating-linear-gradient(45deg,#d9483b 0 4px,#e8705e 4px 8px);border:3px solid #fffdf8;box-sizing:border-box}
+.sla-card{width:40px;height:56px;border-radius:6px;background:#fff;border:1px solid #e4e2dc;display:inline-grid;place-items:center;font-weight:900;font-size:18px;color:#141414;box-shadow:0 2px 4px rgba(0,0,0,.12)}
+.sla-card.r,.sla-card.jk{color:#ff5a36}
+.sla-card.sp::before{content:"♠\FE0E";font-size:12px;margin-right:1px}
+.sla-card.bk{background:repeating-linear-gradient(45deg,#ff5a36 0 4px,#ff8a6a 4px 8px);border:3px solid #fff}
+.sla-card.up{transform:translateY(-10px)}
+.sla-card.big{width:64px;height:90px;font-size:30px}

@@ -1,8 +1,8 @@
 /* =================== 盤のゲーム（リバーシ・チェス・将棋）とビンゴ大会の画面 =================== */
 // app.js の /*__BOARD_UI__*/ の位置に差し込まれる（app.js の変数を共有）
 const BS = { root: null, sel: null, seen: 0, pending: false, tab: null, cache: null, taps: new Set(), peek: false, lastSeat: null, fx: null, ro: null };
-const isBoardDoc = () => !!doc && (doc.game === 'bingo' || !!DUEL[doc.game]) && !!doc.b;
-const BD_TITLE = { reversi: 'リバーシ', chess: 'チェス', shogi: '将棋', bingo: 'ビンゴ大会' };
+const isBoardDoc = () => !!doc && (doc.game === 'bingo' || !!DUEL[doc.game] || !!CARDG[doc.game]) && !!doc.b;
+const BD_TITLE = { reversi: 'リバーシ', chess: 'チェス', shogi: '将棋', bingo: 'ビンゴ大会', daifugo: '大富豪', babanuki: 'ババ抜き' };
 const CHESS_G = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' }, CHESS_N = { Q: 'クイーン', R: 'ルーク', B: 'ビショップ', N: 'ナイト' };
 const chessGlyph = t => CHESS_G[t] + '︎'; // 絵文字にならないように文字として出す
 const SHOGI_K = { K: '玉', R: '飛', B: '角', G: '金', S: '銀', N: '桂', L: '香', P: '歩', D: '龍', H: '馬', Z: '全', M: '圭', Y: '杏', T: 'と' };
@@ -10,6 +10,7 @@ const CHESS_ICON = '<span class="gi-chess">&#9822;&#xFE0E;</span>';
 const BINGO_ICON = '<span class="gi-ball"><small>B</small>7</span>';
 function bdName(id) {
   if (id === NPC) return 'コンピュータ';
+  if (/^npc\d/.test(id)) return 'コンピュータ' + id.slice(3); // トランプは何人もいるので番号つき
   if (local) return 'プレイヤー' + String(id).replace(/\D/g, '');
   const nk = doc && doc.nicks && doc.nicks[id]; if (nk) return nk;
   if (id === me) return myNick || 'あなた';
@@ -29,6 +30,7 @@ const BG_NUMS = [3, 18, 33, 49, 64, 7, 21, 40, 52, 70, 11, 26, 0, 57, 62, 1, 29,
 const slaBingo = (holes, line = []) => h('div', { class: 'sla-bg' }, 'BINGO'.split('').map(L => h('b', null, L)),
   BG_NUMS.map((v, i) => h('i', { class: [holes.includes(i) || i === 12 ? 'h' : '', line.includes(i) ? 'ln' : ''].join(' ') }, i === 12 ? 'FREE' : String(v))));
 function bdSlides(id) {
+  if (CARDG[id]) return cdSlides(id);
   const vsCpu = { t: 'ひとりなら コンピュータが相手', s: '「投了」で いつでも やめられる', art: () => h('div', { class: 'sla-vs' }, h('span', { class: 'sla-av' }, 'あなた'), h('b', null, 'VS'), h('span', { class: 'sla-av cpu' }, 'コンピュータ')) };
   if (id === 'reversi') return [
     { t: 'はさんで ひっくり返す', s: 'あいての石が 自分の色になる', art: () => h('div', { class: 'sla-col' }, slaRev(['nwwb']), slaFlow('↓'), slaRev(['bbbb'])) },
@@ -55,6 +57,7 @@ function bdSlides(id) {
 function bdOpenRules(id, foot) { openSlides(BD_TITLE[id], bdSlides(id), foot); }
 // ハブのチケットの絵
 function bdTicketArt(id, art) {
+  if (CARDG[id]) { cdTicketArt(id, art); return; }
   art.classList.add('tk-css', 'tk-' + id);
   if (id === 'reversi') {
     const on = { 19: 'b', 26: 'w', 27: 'w', 28: 'b', 29: 'w', 34: 'b', 35: 'b', 36: 'w', 37: 'b', 44: 'w', 43: 'b' };
@@ -70,17 +73,26 @@ function viewBoard() {
   BS.root = h('div', { class: 'bd bd-' + doc.game });
   BS.sel = null; BS.seen = doc.b.seq; BS.npcSeq = null; BS.pending = false; BS.peek = false; BS.lastSeat = null; BS.taps.clear();
   try { if (window.ResizeObserver) { BS.ro && BS.ro.disconnect(); BS.ro = new ResizeObserver(bdFit); BS.ro.observe(BS.root); } } catch (e) { }
+  // リバーシ・将棋・チェスは3Dの盤。読みこむまで（読みこめないときも）ふつうの盤で遊べる
+  bd3Drop(); CS.sel.clear(); CS.shown = -1; CS.view = -1; CS.lhover = -1; CS.seen = doc.b.seq;
+  if (CARDG[doc.game]) { const root = BS.root, game = doc.game;
+    CD3.load().then(() => { if (BS.root !== root || !isBoardDoc() || doc.game !== game) return; try { BS.c3 = CD3.table(); } catch (e) { console.warn(e); return; } BS.c3.game = game; BS.c3.onTap = cdTap; bdRender(); }, () => { }); }
+  if (DUEL[doc.game]) { const root = BS.root, game = doc.game;
+    BD3.load().then(() => { if (BS.root !== root || !isBoardDoc() || doc.game !== game) return; try { BS.b3 = BD3.board(game); } catch (e) { console.warn(e); return; } BS.b3.game = game; BS.b3.onTap = bdTap; bdRender(); }, () => { }); }
   return BS.root;
 }
+function bd3Drop() { if (BS.b3) { BS.b3.dispose(); BS.b3 = null; } if (BS.c3) { BS.c3.dispose(); BS.c3 = null; } }
 function bdRender() {
   if (!BS.root || !BS.root.isConnected) { render(); return; }
-  const parts = doc.game === 'bingo' ? bingoView() : duelView();
+  const parts = doc.game === 'bingo' ? bingoView() : CARDG[doc.game] ? cardView() : duelView();
   BS.root.replaceChildren(...[parts].flat(2).filter(Boolean));
   bdFit();
 }
 // 盤は残りの場所に収まるいちばん大きい正方形
 function bdFit() {
   const st = BS.root && BS.root.querySelector('.bd-stage'), gr = st && st.querySelector('.bd-grid');
+  if (st && BS.b3 && BS.b3.el.parentNode === st) { BS.b3.resize(); return; }
+  if (st && BS.c3 && BS.c3.el.parentNode === st) { BS.c3.resize(); return; }
   if (!gr) return;
   const s = Math.floor(Math.min(st.clientWidth, st.clientHeight)), n = +gr.dataset.n;
   if (s <= 0) return;
@@ -110,7 +122,7 @@ function bdOverCard(title, sub, extra) {
     ? h('div', { class: 'bd-endbtns' }, h('button', { class: 'pill', onclick: backToHub }, 'ゲーム選択へ'), h('button', { class: 'pill on', onclick: rematch }, 'もう一度'))
     : h('div', { class: 'hub-meta c' }, '部屋主が次のゲームを選んでいます');
   return h('div', { class: 'bd-over' }, h('div', { class: 'bd-card' }, h('small', null, 'けっか'), h('b', { class: 'bd-res', role: 'heading', 'aria-level': '2' }, title), sub ? h('span', { class: 'hub-meta' }, sub) : null, extra, btns,
-    h('button', { class: 'bd-peek', onclick: () => { BS.peek = true; bdRender(); } }, doc.game === 'bingo' ? 'カードを見る' : '盤を見る')));
+    h('button', { class: 'bd-peek', onclick: () => { BS.peek = true; bdRender(); } }, doc.game === 'bingo' ? 'カードを見る' : CARDG[doc.game] ? 'テーブルを見る' : '盤を見る')));
 }
 
 /* ---- リバーシ・チェス・将棋 ---- */
@@ -148,7 +160,9 @@ function duelView() {
   if (ev && ev.pass != null) bdBanner(`${E.LABEL[ev.pass]}は置ける場所がないのでパス`);
   if (ev && ev.check && !over) bdBanner(g.game === 'chess' ? 'チェック！' : '王手！');
   const head = bdHead(BD_TITLE[g.game], `${local ? '1台で遊ぶ' : '招待コード ' + tableId} ・ ${b.ply}手目`, g.game);
-  const stage = h('div', { class: 'bd-stage' }, duelGrid(flip, view, mine));
+  const b3 = BS.b3 && BS.b3.game === g.game ? BS.b3 : null;
+  const stage = h('div', { class: 'bd-stage' + (b3 ? ' is3d' : '') }, b3 ? b3.el : duelGrid(flip, view, mine));
+  if (b3) bd3Sync(b3, vs, view, mine);
   const foot = over ? null : h('div', { class: 'bd-foot' }, duelInfo(vs, mine), vs >= 0 || local ? h('button', { class: 'pill', onclick: duelResign }, '投了') : null);
   return [head, duelStrip(1 - view, view, false), stage, duelStrip(view, view, true), foot, over ? duelOver(vs) : null];
 }
@@ -181,13 +195,24 @@ function shogiHand(s, view, bottom) {
     h('i', null, SHOGI_K[t]), hand[t] > 1 ? h('em', null, String(hand[t])) : null));
   return h('span', { class: 'bd-hands' }, items.length ? items : h('span', { class: 'hub-meta' }, '持ち駒なし'));
 }
-function duelGrid(flip, view, mine) {
-  const g = doc, b = g.b, game = g.game, E = DUEL[game], N = game === 'shogi' ? 9 : 8, sel = BS.sel;
+// 盤の印：動ける・置けるマス（tg）、さっきの手（lm）、王手の王（chk）
+function bdMarks(mine) {
+  const g = doc, b = g.b, game = g.game, E = DUEL[game], sel = BS.sel;
   const moves = mine && !BS.pending ? bdMoves() : [], tg = new Set();
   if (game === 'reversi') moves.forEach(m => tg.add(m.t));
   else if (sel != null) moves.filter(m => typeof sel === 'string' ? m.d === sel : m.f === sel).forEach(m => tg.add(m.t));
   const lm = b.last && b.last.kind === 'move' ? b.last.m : null;
   const chk = game !== 'reversi' && g.status === 'playing' && E.check(b) ? E.kingAt(b.bd, b.turn) : -1;
+  return { tg, lm, chk, sel };
+}
+// 3Dの盤に今の局面を渡す。手前に来るのは自分の側（1台で遊ぶときは手番の人。リバーシは回さない）
+function bd3Sync(b3, vs, view, mine) {
+  const b = doc.b, game = doc.game, cells = game === 'reversi' ? b.cells : b.bd, { tg, lm, chk, sel } = bdMarks(mine), all = [...tg];
+  b3.sync({ cells, view: game === 'reversi' && local ? 0 : view, ev: b.last, seq: b.seq, dots: all.filter(i => cells[i] === '.'), caps: all.filter(i => cells[i] !== '.'),
+    sel: typeof sel === 'number' ? sel : -1, last: lm ? [lm.f, lm.t] : [], chk });
+}
+function duelGrid(flip, view, mine) {
+  const g = doc, b = g.b, game = g.game, N = game === 'shogi' ? 9 : 8, { tg, lm, chk, sel } = bdMarks(mine);
   const cells = [];
   for (let k = 0; k < N * N; k++) {
     const i = flip ? N * N - 1 - k : k, r = (i / N) | 0, c = i % N, p = game === 'reversi' ? b.cells[i] : b.bd[i];

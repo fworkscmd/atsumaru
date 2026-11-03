@@ -275,7 +275,7 @@ function extend() {
   });
   toast('受付を5分のばしました');
 }
-const newGameFor = (id, humans, host) => id === 'trapper' ? trNew(humans) : id === 'bingo' ? BGO.make(humans, host) : DUEL[id] ? duelNew(id, humans) : newGame(humans);
+const newGameFor = (id, humans, host) => id === 'trapper' ? trNew(humans) : id === 'bingo' ? BGO.make(humans, host) : DUEL[id] ? duelNew(id, humans) : CARDG[id] ? CARDG[id].make(humans) : newGame(humans);
 const fits = (g, n) => n >= g.min && n <= g.max;
 const gameDoc = d => {
   const g = gameById(pickOf(d)), id = g.id, humans = d.players.filter(p => p !== NPC);
@@ -433,6 +433,8 @@ const GAMES = [
   { id: 'reversi', n: 'リバーシ', sub: 'はさんで<br>ひっくり返す', ppl: '1〜2人', time: '約10分', ok: true, min: 1, max: 2, cls: 'gi-rev', icon: '<span class="gi-discs"><i class="b"></i><i class="w"></i><i class="w"></i><i class="b"></i></span>' },
   { id: 'shogi', n: '将棋', sub: '玉を詰ませたら<br>勝ち', ppl: '1〜2人', time: '約30分', ok: true, min: 1, max: 2, cls: 'gi-shogi', icon: '<span class="gi-koma">王</span>' },
   { id: 'chess', n: 'チェス', sub: 'キングを<br>追いつめる', ppl: '1〜2人', time: '約30分', ok: true, min: 1, max: 2, cls: 'gi-chs', icon: CHESS_ICON },
+  { id: 'daifugo', n: '大富豪', sub: '強いカードを出して<br>先に上がる', ppl: '1〜8人', time: '約20分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-cd', icon: '<span class="gi-cards"><i>A</i><i class="r">2</i></span>' },
+  { id: 'babanuki', n: 'ババ抜き', sub: 'ジョーカーを<br>最後まで持たない', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-cd', icon: '<span class="gi-cards"><i class="bk"></i><i class="jk">★</i></span>' },
 ];
 const gameById = id => GAMES.find(g => g.id === id && g.ok) || GAMES[0];
 function voteCount(d) { const c = {}; Object.entries(d.votes || {}).forEach(([u, v]) => { if (d.players.includes(u)) c[v] = (c[v] || 0) + 1; }); return c; }
@@ -599,6 +601,7 @@ function hubFootText(g, n, hostName) {
   // どのゲームも「○人で△をはじめます（ひと言）」の形
   const note = g.id === 'bingo' ? `回す係は${hostName}`
     : g.id === 'trapper' ? (n < 4 ? '足りない席はコンピュータ' : '')
+    : CARDG[g.id] ? (n < 3 ? 'コンピュータも入ります' : '')
     : n === 1 ? '相手はコンピュータ' : '';
   return `${n}人で${g.n}をはじめます${note ? `（${note}）` : ''}`;
 }
@@ -669,13 +672,15 @@ function viewGameShell() {
   G.depth = h('div', { class: 'depthtag' }); G.heat = h('div', { class: 'heat', 'aria-hidden': 'true' }, h('i'));
   G.heatLbl = h('div', { class: 'heatlbl' }); G.boom = h('div', { class: 'boom', hidden: true }, 'ドボン！');
   G.jp = h('div', { class: 'jptag' });
-  G.board = h('div', { class: 'board' }, G.cv, G.depth, G.jp, G.heat, G.heatLbl, G.boom);
+  G.tip = h('div', { class: 'dw-tip', hidden: true, role: 'status' }, h('b', null, '進む？ 帰る？'), 'マグマゲージを見て、いい塩梅で持ち帰ろう！');
+  G.board = h('div', { class: 'board' }, G.cv, G.depth, G.jp, G.heat, G.heatLbl, G.boom, G.tip);
+  G.board.addEventListener('pointerdown', introSkip);
   G.reveal = h('div', { class: 'reveal', hidden: true, role: 'status', onclick: hideReveal });
   G.sum = h('div', { class: 'reveal sum', hidden: true, role: 'status' });
   G.rad = h('div', { class: 'radov', hidden: true });
   G.board.append(G.sum, G.rad, G.reveal);
   G.panel = h('div', { class: 'tray' });
-  try { if (window.ResizeObserver) { G.ro && G.ro.disconnect(); G.ro = new ResizeObserver(() => { if (doc && doc.status === 'playing' && G.cv && G.cv.isConnected && !digActive()) drawShaft(G.cv, doc, { boom: Date.now() >= boomFrom && Date.now() < boomUntil, burnt: boomBurnt, sides: boomSides, who: boomWho, me: local ? localActor() : me, vh: boardVh() }); }); G.ro.observe(G.board); } } catch (e) { }
+  try { if (window.ResizeObserver) { G.ro && G.ro.disconnect(); G.ro = new ResizeObserver(() => { if (doc && doc.status === 'playing' && G.cv && G.cv.isConnected && !digActive() && !introMoving()) drawShaft(G.cv, doc, { boom: Date.now() >= boomFrom && Date.now() < boomUntil, burnt: boomBurnt, sides: boomSides, who: boomWho, me: local ? localActor() : me, vh: boardVh() }); }); G.ro.observe(G.board); } } catch (e) { }
   return h('div', { class: 'gscreen' }, G.bar, G.crew, G.board, G.panel);
 }
 function boardVh() {
@@ -724,13 +729,77 @@ function digLoop() {
   if (Date.now() >= G.dig.end) { G.dig = null; G.cv.style.transform = ''; if (doc && doc.status === 'playing' && !isTrapDoc() && !isBoardDoc()) renderGame(); return; }
   drawDig(G.cv, G.dig, Date.now()); requestAnimationFrame(digLoop);
 }
+/* ---- 始まりの動き：画面の外からとことこ → ぴょんとツルハシをかまえる → 3回ふって入口の穴をあける → 「進む？帰る？」のふきだし。案は tools/dwarf-intro-mockup.html の1 ---- */
+const IN_WALK = 1700, IN_READY = 450, IN_MOVE = IN_WALK + IN_READY + DIG_MS, IN_TIP = 3400;
+const dwGameKey = g => g.startedAt || g.players.join();
+// この端末でまだ見ていなくて、最初の探検のまだだれも掘っていないあいだ
+const dwIntroDue = g => G.introAt !== dwGameKey(g) && g.exp === 1 && g.depth === 0 && g.phase === 'choose' && !g.reveal && !(g.history || []).length;
+const introMoving = () => !!G.intro && Date.now() < G.intro.start + IN_MOVE;
+const introTip = () => !!G.intro && !introMoving() && Date.now() < G.intro.start + IN_MOVE + IN_TIP;
+function drawIntro(cv, g, now) {
+  const p = now - G.intro.start, u = (p - IN_WALK - IN_READY) / DIG_MS, open = u > .68;
+  drawShaft(cv, { ...g, inside: [], phase: 'dig' }, { vh: boardVh() });
+  const c = cv.getContext('2d'), meId = local ? null : me, ids = g.inside, n = ids.length, gap = 120;
+  if (!open) { // まだ穴があいていない地面。カツンのたびにひびがのびる
+    digPx(c, SX, TOP - 3, SW, 4, '#4f8a3a'); digPx(c, SX, TOP + 1, SW, 1, '#2f5a26');
+    if (u > 0) {
+      const hit = Math.floor(u / .2), ph = (u / .2) % 1, k = Math.floor(10 * Math.min(1, (Math.min(hit, 3) + (u < .6 && ph > .5 ? (ph - .5) * 2 : 0)) / 3));
+      let x = SX + SW / 2, y = TOP - 2;
+      for (let i = 0; i < k; i++) { digPx(c, x, y, 1, 1, '#f2c84b'); digPx(c, SX + SW - (x - SX), y, 1, 1, '#f2c84b'); x -= 1.7; y += i % 2 ? 1 : -1; }
+    }
+  }
+  const swing = u >= 0 && u < .6, ph = (u / .2) % 1, down = swing && ph > .5;
+  G.cv.style.transform = u >= .6 && !open ? `translate(${(Math.random() - .5) * 2}px,0)` : '';
+  ids.forEach((id, k) => {
+    const j = n - 1 - k, xe = SX + 8 + k * 8, xs = -8 - j * 12, t = Math.min(1, Math.max(0, (p - j * gap) / (IN_WALK - (n - 1) * gap)));
+    let x = xs + (xe - xs) * t, y = TOP - 3, up = false;
+    if (t > 0 && t < 1) y -= Math.floor((p - j * gap) / 110) % 2; // とことこ
+    if (p >= IN_WALK && u < 0) { const v = (p - IN_WALK) / IN_READY; if (v < .45) y -= Math.round(Math.sin(v / .45 * Math.PI) * 3); else up = true; }
+    if (open) { const v = Math.min(1, (u - .68) / .25); y = TOP - 2 - Math.round(Math.sin(Math.PI * v) * 4); } // ぴょんと穴へ
+    sprite(c, x, y, pIndex(id), id === NPC, id === meId);
+    if (up || swing) digPick(c, x, y, down);
+  });
+  if (down) { const r = rng(Math.floor(u / .2) * 7 + 3), v = (ph - .5) * 2; for (let i = 0; i < 8; i++) { const vx = (r() - .5) * 40, vy = -20 - r() * 25; digPx(c, SX + SW / 2 + vx * v, TOP - 3 + vy * v + 60 * v * v, 1 + (r() < .3 ? 1 : 0), 1, r() < .25 ? '#ffd23a' : '#8a6a4a'); } }
+  if (open && u < .9) { const v = (u - .68) / .22, r = rng(9); for (let i = 0; i < 8; i++) digPx(c, SX + 4 + r() * (SW - 8), TOP - 3 + v * v * 30 + r() * 4, 3, 2, '#5a4030'); }
+}
+function introLoop() {
+  if (!G.intro || !G.cv || !G.cv.isConnected || !doc || doc.status !== 'playing' || isTrapDoc() || isBoardDoc()) return;
+  if (!introMoving()) { G.cv.style.transform = ''; renderGame(); return; }
+  drawIntro(G.cv, doc, Date.now()); requestAnimationFrame(introLoop);
+}
+// 動きのおわり・ふきだしのおわりに画面を合わせる
+function introPlan() {
+  clearTimeout(G.introT1); clearTimeout(G.introT2); if (!G.intro) return;
+  const now = Date.now(), m = G.intro.start + IN_MOVE - now, e = m + IN_TIP;
+  G.lockUntil = G.intro.start + IN_MOVE; clearTimeout(G.lockT);
+  const sync = () => { if (!G.tip || !G.tip.isConnected) return; const on = introTip(); G.tip.hidden = !on; G.heat.classList.toggle('glow', on); if (!on && !introMoving()) G.intro = null; renderPanel(); };
+  if (m > 0) G.introT1 = setTimeout(sync, m + 20); else sync();
+  if (e > 0) G.introT2 = setTimeout(sync, e + 20);
+}
+// 盤をタップ：動きのあいだならふきだしまでとばす。ふきだしならとじる
+function introSkip() {
+  if (!G.intro) return;
+  if (introMoving()) G.intro.start = Date.now() - IN_MOVE;
+  else if (introTip()) G.intro.start = Date.now() - IN_MOVE - IN_TIP;
+  else return;
+  introPlan(); if (doc && G.cv && G.cv.isConnected) { G.cv.style.transform = ''; renderGame(); }
+}
 function renderGame() {
   const d = doc;
+  if (G.intro && (d.exp !== 1 || d.depth !== 0 || d.reveal)) { G.intro = null; introPlan(); }
+  if (dwIntroDue(d)) {
+    G.introAt = dwGameKey(d);
+    let reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { }
+    G.intro = { start: Date.now() - (reduce ? IN_MOVE : 0) }; // 動きを減らす設定なら、ふきだしだけ
+    introPlan(); if (!reduce) requestAnimationFrame(introLoop);
+  }
   // 新しい結果が届いたら、掘る演出を始める
   const rv = d.reveal, key = rv ? d.exp + ':' + rv.depth + ':' + JSON.stringify(rv.picks) : '';
   if (rv && key !== lastRevealKey) {
     lastRevealKey = key;
-    const from = G.lastDoc && G.lastDoc.exp === d.exp && G.lastDoc.phase === 'choose' && G.lastDoc.depth === rv.depth - 1 ? G.lastDoc : null;
+    // 掘る前の様子（ふつうは1つ前に届いた卓）。知らせがおくれて途中をとばしたときも、同じ探検を見ていたなら掘る演出を出す
+    const L = G.lastDoc, seen = L && L.exp === d.exp && L.depth < rv.depth;
+    const from = !seen ? null : L.phase === 'choose' && L.depth === rv.depth - 1 ? L : { ...L, depth: rv.depth - 1, phase: 'choose' };
     const stay = Object.values(rv.sides).flatMap(r => r.who);
     const burnt = [], bs = [], bw = {}; for (const sd in rv.sides) if (rv.sides[sd].magma) { burnt.push(...rv.sides[sd].who); bs.push(sd); rv.sides[sd].who.forEach(id => bw[id] = sd); }
     let reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { }
@@ -771,6 +840,7 @@ function renderGame() {
   g.players.forEach(id => { G.prevBag[id] = g.inside.includes(id) ? g.bag[id] || 0 : 0; G.prevHome[id] = !!(g.out[id] && g.out[id].result === 'home'); });
   const now = Date.now(), boom = !anim && now >= boomFrom && now < boomUntil;
   if (anim) drawDig(G.cv, anim, now);
+  else if (introMoving()) drawIntro(G.cv, d, now);
   else drawShaft(G.cv, g, { boom, burnt: boomBurnt, sides: boomSides, who: boomWho, me: meId, vh: boardVh() });
   if (boom) { G.boom.textContent = boomSides.includes('main') || boomSides.length > 1 ? 'ドボン！' : (boomSides[0] === 'left' ? '左が' : '右が') + 'ドボン！'; G.boom.className = 'boom'; G.boom.hidden = false; } else if (G.boom.className === 'boom') G.boom.hidden = true;
   G.jp.textContent = `大鉱脈チャンス ${Math.round(jackpotRate(g.exp) * 100)}%`;
@@ -779,7 +849,8 @@ function renderGame() {
   G.depth.textContent = `深さ ${g.depth}`;
   G.heat.firstChild.style.height = Math.min(100, p / 60 * 100) + '%';
   G.heatLbl.textContent = g.phase === 'choose' ? `次の段 マグマ ${p}%` : '';
-  G.heatLbl.hidden = g.phase !== 'choose';
+  G.heatLbl.hidden = g.phase !== 'choose' || introMoving();
+  G.tip.hidden = !introTip(); G.heat.classList.toggle('glow', introTip());
   renderPanel();
 }
 // 公開の合図は「せーの！」の文字だけ。中身（＋いくつ・帰還・マグマ）は上の席の数字と盤の「ドボン！」で見せる
@@ -831,7 +902,7 @@ function renderPanel() {
     const opts = options(g);
     // 決めたら全部グレー。結果が出て次の段になるまで押せない
     out.push(h('div', { class: 'choices', style: `grid-template-columns:repeat(${opts.length},minmax(0,1fr))` }, opts.map(c => h('button', {
-      class: 'btn choice ' + (c === 'back' ? 'soft' : '') + (chosen === c ? ' picked' : chosen ? ' dim' : ''), 'aria-pressed': String(chosen === c), disabled: !!chosen || locked,
+      class: 'btn choice ' + (c === 'back' ? 'soft' : '') + (chosen === c ? ' picked' : chosen ? ' dim' : '') + (!chosen && introTip() ? ' glow' : ''), 'aria-pressed': String(chosen === c), disabled: !!chosen || locked,
       onclick: () => (local ? play({ t: 'choose', c }) : choose({ t: 'choose', c }))
     }, CH[c]))));
     const waiting = needChoice(g).filter(p => !g.choice[p]).map(nameOf);
@@ -919,11 +990,15 @@ function render() {
   const hubby = !tableId || !doc || doc.status === 'lobby' || nickGate || !myNick && !local;
   document.body.className = inGame === 'board' ? 'board' : inGame === 'trap' || inGame === 'trapover' ? 'trap' : inGame || (doc && doc.status === 'over' && !hubby) ? 'ingame' : hubby ? 'hub' : 'page';
   if (inGame !== 'trap') TS.root = null;
+  if (inGame !== 'board') bd3Drop();
   $('app').replaceChildren(v);
   if (inGame === true) renderGame();
   else if (inGame === 'trap') trRender();
   else if (inGame === 'board') bdRender();
   if (inGame !== 'trap' && doc && doc.status === 'lobby' && pickOf(doc) === 'trapper' || !tableId && local && localGame === 'trapper') TB.load().catch(() => { });
+  // 盤のゲームを選んでいたら、3Dの盤も先に読んでおく
+  if (doc && doc.status === 'lobby' && DUEL[pickOf(doc)] || !tableId && local && DUEL[localGame]) BD3.load().catch(() => { });
+  if (doc && doc.status === 'lobby' && CARDG[pickOf(doc)] || !tableId && local && CARDG[localGame]) CD3.load().catch(() => { });
 }
 setInterval(() => {
   if (doc && doc.status === 'lobby') { const t = $('lobbyTimer'); const left = Math.max(0, OPEN_MS - (Date.now() - doc.openedAt)); if (t) t.textContent = `招待コード ${tableId} ・ ` + (left ? `あと${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}` : '受付終了'); if (!left && t && !t.dataset.closed) { t.dataset.closed = '1'; render(); } }

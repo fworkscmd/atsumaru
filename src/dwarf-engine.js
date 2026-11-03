@@ -23,7 +23,7 @@ function addLog(g, text) { g.log = (g.log || []).concat(text).slice(-6); }
 
 function newGame(humans, rnd = Math.random, now = Date.now()) {
   const players = humans.slice(0, 4); if (players.length < 2) players.push(NPC);
-  const g = { v: 6, status: 'playing', players, bank: {}, radar: {}, gone: {}, exp: 0, log: [], history: [] };
+  const g = { v: 6, status: 'playing', players, bank: {}, radar: {}, gone: {}, exp: 0, log: [], history: [], startedAt: now };
   players.forEach(id => { g.bank[id] = 0; g.radar[id] = 1; });
   return startExpedition(g, rnd, now);
 }

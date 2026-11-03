@@ -517,6 +517,6 @@ const TB = (() => {
     board(host, theme) { this.init(); return Board(host, theme); },
     arts() { this.init(); return cardArts(); },
     // モックアップ用（tools/motion-mockup.html）。コマや飾りの部品をそのまま使う
-    parts() { this.init(); return { T, C, felt, mesh, gloss, paint, slab, stitchTex, bird, apple, trap, star }; },
+    parts() { this.init(); return { T, C, felt, mesh, gloss, paint, slab, stitchTex, bird, apple, trap, star, merge, pine, blob, mush, snowman, palm, umbrella, hut, flower, windmill, rock }; },
   };
 })();
