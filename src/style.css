@@ -281,7 +281,7 @@ button.ava{border:0;font:inherit;font-weight:900;font-size:15px;padding:0}
 .tk-admit{font-size:10px;font-weight:700;color:var(--h-acc);letter-spacing:.2em}
 .tk-name{font-weight:900;font-size:26px;line-height:1}
 .tk-name.long{font-size:20px}
-.tk-sub{font-size:11px;color:var(--h-mute);text-align:right;line-height:1.4;max-height:2.8em;overflow:hidden}
+.tk-sub{flex:none;white-space:nowrap;font-size:11px;color:var(--h-mute);text-align:right;line-height:1.4;max-height:2.8em;overflow:hidden}
 /* チケットの位置をゲームによって動かさない：名前の行は高さを決めて1行、下の案内はいつも2行ぶん取っておく */
 .tk-row{height:44px;flex:none}
 .tk-l{min-width:0}
@@ -329,7 +329,7 @@ button.ava{border:0;font:inherit;font-weight:900;font-size:15px;padding:0}
 .gsheet-in{width:100%;max-width:480px;max-height:calc(100% - 40px);overflow-y:auto;background:#f6f5f2;border-radius:22px 22px 0 0;padding:10px max(16px,var(--pad-r)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,var(--pad-l));box-sizing:border-box;transform:translateY(100%);transition:transform .25s cubic-bezier(.3,.8,.4,1)}
 .gsheet.on .gsheet-in{transform:none}
 .gsheet-grab{display:block;width:40px;height:4px;border-radius:2px;background:#d6d3cb;margin:0 auto 10px}
-.gsheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.gsheet-h{display:flex;align-items:center;justify-content:flex-end;margin-bottom:4px}
 .gsheet-h b{font-size:17px;font-weight:900}
 .gsheet-x{width:36px;height:36px;border-radius:11px;border:1px solid var(--h-line);background:var(--h-card);color:var(--h-ink);display:grid;place-items:center;padding:0}
 .gsheet-gen{padding:10px 0 6px}

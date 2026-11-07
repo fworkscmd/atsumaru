@@ -58,6 +58,10 @@ function h(tag, props, ...kids) {
 const ICON = {
   bulb: '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3"/><path d="M12 3.5a5.8 5.8 0 0 0-3.5 10.4c.7.6 1 1.3 1 2.1v.4h5V16c0-.8.3-1.5 1-2.1A5.8 5.8 0 0 0 12 3.5z"/><path d="M12 8v3" stroke="#ff5a36"/></svg>',
   up: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg>',
+  gear: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="3.4" stroke-dasharray="3.22 3.22"/><circle cx="12" cy="12" r="5.6" stroke-width="2.4"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
+  pen: '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
   close: '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   back:'<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   radar: '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="11" cy="11" r="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M11 11l6-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
@@ -78,6 +82,44 @@ function syncNick() {
   withLease(d => d && ((d.players || []).includes(me) || (d.requests || []).includes(me)) && (d.nicks || {})[me] !== myNick ? { ...d, nicks: { ...(d.nicks || {}), [me]: myNick } } : null, true);
 }
 
+// 見た目：ライト／ダーク。端末に覚える（localStorage atsumaru.theme）
+let theme = 'light';
+try { theme = localStorage.getItem('atsumaru.theme') === 'dark' ? 'dark' : 'light'; } catch (e) { }
+function applyTheme() {
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = theme === 'dark' ? '#141311' : '#f6f5f2';
+}
+applyTheme();
+function setTheme(t) { theme = t; try { localStorage.setItem('atsumaru.theme', t); } catch (e) { } applyTheme(); }
+// 設定：入場券の形。名前の欄を書きかえ、朱の半券でライト／ダーク。外をタップでとじる
+function openSettings() {
+  if (document.querySelector('.set-ov')) return;
+  const inp = h('input', { id: 'setNick', maxlength: '10', value: myNick || '', placeholder: 'ニックネーム', autocomplete: 'nickname', enterkeyhint: 'done', 'aria-label': 'ニックネーム' });
+  const keep = () => {
+    const v = inp.value.replace(/\s+/g, ' ').trim().slice(0, 10);
+    if (!v) { inp.value = myNick || ''; return; }
+    if (v === myNick) return;
+    saveNick(v); inp.value = v;
+    if (doc) syncNick();
+    if (tableId) render();
+    toast('名前を「' + v + '」にしました');
+  };
+  inp.addEventListener('change', keep);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+  const btn = (t, label, icon) => h('button', { class: theme === t ? 'on' : '', 'aria-pressed': String(theme === t), onclick: () => { setTheme(t); stub.querySelectorAll('button').forEach((b, i) => { const on = (i ? 'dark' : 'light') === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); }, svg: icon }, label);
+  const stub = h('div', { class: 'tk-stub', role: 'group', 'aria-label': '見た目' }, btn('light', 'ライト', ICON.sun), btn('dark', 'ダーク', ICON.moon));
+  const tk = h('div', { class: 'set-tk', role: 'dialog', 'aria-modal': 'true', 'aria-label': '設定' },
+    h('div', { class: 'tk-top' }, h('span', { class: 'tk-admit' }, 'SETTINGS ・ 設定'), h('span', { class: 'set-lab' }, 'ニックネーム'),
+      h('div', { class: 'set-name' }, inp, h('label', { for: 'setNick', 'aria-label': '名前を書きかえる', svg: ICON.pen })),
+      h('span', { class: 'set-note' }, '10文字まで。みんなの画面に出ます')),
+    h('div', { class: 'tk-perf' }), stub);
+  const ov = h('div', { class: 'set-ov' }, h('div', { class: 'set-in' }, tk));
+  const close = () => { keep(); document.removeEventListener('keydown', esc); ov.classList.remove('on'); setTimeout(() => ov.remove(), 200); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  ov.addEventListener('click', e => { if (!tk.contains(e.target)) close(); });
+  document.addEventListener('keydown', esc);
+  document.body.append(ov); requestAnimationFrame(() => ov.classList.add('on'));
+}
 function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2300); }
 async function resolveNames(ids) {
   ids = [...new Set(ids)].filter(id => id && id !== NPC && !(id in names) && !local);
@@ -492,6 +534,7 @@ function startLocal() {
 function hubHead(right, back, help) {
   return h('div', { class: 'hub-head' }, right, h('span', { style: 'flex:1' }),
     help ? h('button', { class: 'hub-ib', 'aria-label': '遊びかたとコインのリンク', onclick: help }, '?') : null,
+    h('button', { class: 'hub-ib', 'aria-label': '設定', onclick: openSettings, svg: ICON.gear }),
     back ? h('button', { class: 'hub-ib', 'aria-label': '卓から出る', onclick: back, svg: ICON.back }) : null);
 }
 function ticketEl(g, d) {
@@ -553,11 +596,11 @@ function viewHub() {
     row.append(h('span', { class: 'hub-lab' }, '人数'), h('div', { class: 'seg' }, [1, 2, 3, 4].map(n =>
       h('button', { class: n === localN ? 'on' : '', 'aria-pressed': String(n === localN), onclick: () => { localN = n; render(); } }, n === 1 ? 'ひとり' : n + '人'))));
   } else {
-    // 自分のアイコンは名前を変える。部屋主は、ほかの人のアイコンをタップで卓から外せる
+    // 部屋主は、ほかの人のアイコンをタップで卓から外せる（名前を変えるのは右上の設定から）
     d.players.forEach(id => { const mine = id === me, kickable = host && !mine;
-      row.append(h(mine || kickable ? 'button' : 'span', { class: 'ava' + (mine ? ' me' : ''), title: nameOf(id) + (id === d.host ? '（部屋主）' : ''),
-        'aria-label': mine ? `${nameOf(id)}（タップで名前を変える）` : kickable ? `${nameOf(id)}（タップで卓から外す）` : null,
-        onclick: mine ? () => { nickGate = true; render(); } : kickable ? () => bdConfirm(`${nameOf(id)}を 卓から外しますか？`, '外す', () => kick(id)) : null }, avaTxt(id), id === d.host ? h('i', { class: 'crown', 'aria-hidden': 'true' }) : null)); });
+      row.append(h(kickable ? 'button' : 'span', { class: 'ava' + (mine ? ' me' : ''), title: nameOf(id) + (id === d.host ? '（部屋主）' : ''),
+        'aria-label': kickable ? `${nameOf(id)}（タップで卓から外す）` : null,
+        onclick: kickable ? () => bdConfirm(`${nameOf(id)}を 卓から外しますか？`, '外す', () => kick(id)) : null }, avaTxt(id), id === d.host ? h('i', { class: 'crown', 'aria-hidden': 'true' }) : null)); });
     if (d.players.length === 1 && pick.id !== 'bingo') row.append(h('span', { class: 'ava ghost', title: 'コンピュータ（1人なら参加）' }, 'コ'));
     row.append(h('span', { class: 'hub-names' }, d.players.map(nameOf).join('・')));
   }
@@ -580,7 +623,7 @@ function viewHub() {
   if (hubSheet) {
     const sh = h('div', { class: 'gsheet' + (hubSheet === 1 ? '' : ' on'), onclick: e => { if (e.target === e.currentTarget) hubDrawer(false); } },
       h('div', { class: 'gsheet-in', role: 'dialog', 'aria-label': 'ゲームを選ぶ' }, h('i', { class: 'gsheet-grab' }),
-        h('div', { class: 'gsheet-h' }, h('b', null, 'なにであそぶ？'), h('button', { class: 'gsheet-x', 'aria-label': '閉じる', onclick: () => hubDrawer(false), svg: ICON.close })),
+        h('div', { class: 'gsheet-h' }, h('button', { class: 'gsheet-x', 'aria-label': '閉じる', onclick: () => hubDrawer(false), svg: ICON.close })),
         GENRES.map(([name, ids]) => h('div', { class: 'gsheet-gen' }, h('span', { class: 'gsheet-gl' }, name), h('div', { class: 'gsheet-row', onscroll: e => { hubScroll[name] = e.currentTarget.scrollLeft; } }, ids.map(id => {
           if (SOON[id]) return h('button', { class: 'gi soon', 'aria-label': `${SOON[id]}（じゅんび中）`, onclick: () => toast(`${SOON[id]}は じゅんび中です`) }, h('span', { class: 'gi-ic gi-secret' }, SOON[id]), h('span', { class: 'gi-t' }, 'じゅんび中'));
           const g = gameById(id), sel = g.id === pick.id;
@@ -808,12 +851,16 @@ function renderGame() {
     introPlan(); if (!reduce) requestAnimationFrame(introLoop);
   }
   // 新しい結果が届いたら、掘る演出を始める
-  const rv = d.reveal, key = rv ? d.exp + ':' + rv.depth + ':' + JSON.stringify(rv.picks) : '';
-  if (rv && key !== lastRevealKey) {
-    lastRevealKey = key;
-    // 掘る前の様子（ふつうは1つ前に届いた卓）。知らせがおくれて途中をとばしたときも、同じ探検を見ていたなら掘る演出を出す
-    const L = G.lastDoc, seen = L && L.exp === d.exp && L.depth < rv.depth;
-    const from = !seen ? null : L.phase === 'choose' && L.depth === rv.depth - 1 ? L : { ...L, depth: rv.depth - 1, phase: 'choose' };
+  // 目印は「ゲーム・探検・深さ」だけ。前は選んだ中身（picks）の文字列も入れていて、届くたびに並び順が変わると同じ結果でも「せーの！」がまた出ていた
+  const rv = d.reveal, key = rv ? dwGameKey(d) + ':' + d.exp + ':' + rv.depth : '';
+  // 掘る前の様子（ふつうは1つ前に届いた卓）。知らせがおくれて途中をとばしたときも、同じ探検を見ていたなら掘る演出を出す
+  const L = G.lastDoc, seen = !!rv && !!L && dwGameKey(L) === dwGameKey(d) && L.exp === d.exp && L.depth < rv.depth;
+  // 掘る前を見ていない結果（開き直した直後・古い卓が届いて前にもどったとき）は、「せーの！」も演出も出さずに覚えるだけ
+  // 一度覚えた結果は二度と出さない（古い卓が届いて前にもどり、また新しい卓が届いたときに「せーの！」が2回出ないように）
+  const shown = G.revKeys || (G.revKeys = new Set()), fresh = !!rv && !shown.has(key);
+  if (fresh) { shown.add(key); lastRevealKey = key; }
+  if (fresh && seen) {
+    const from = L.phase === 'choose' && L.depth === rv.depth - 1 ? L : { ...L, depth: rv.depth - 1, phase: 'choose' };
     const stay = Object.values(rv.sides).flatMap(r => r.who);
     const burnt = [], bs = [], bw = {}; for (const sd in rv.sides) if (rv.sides[sd].magma) { burnt.push(...rv.sides[sd].who); bs.push(sd); rv.sides[sd].who.forEach(id => bw[id] = sd); }
     let reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { }
@@ -988,6 +1035,16 @@ function dwarfSlides() {
 function slaRank(rows) { return h('div', { class: 'sla-rank' }, rows.map(([a, b], k) => h('div', { class: k ? null : 'win' }, h('b', null, a), h('i', null, `プレイヤー${k + 1}`), h('span', null, b)))); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { const el = $('sheet'); el.hidden = true; el.replaceChildren(); if (hubSheet) hubDrawer(false); } });
 
+// チケットのゲーム名：入りきらないときは字を小さくして1行に収める（…で切らない）
+function fitTk() {
+  document.querySelectorAll('.tk-name').forEach(el => {
+    el.style.fontSize = '';
+    let s = parseFloat(getComputedStyle(el).fontSize) || 26;
+    while (el.scrollWidth > el.clientWidth + 1 && s > 12) { s -= 1; el.style.fontSize = s + 'px'; }
+  });
+}
+try { document.fonts && document.fonts.ready.then(fitTk); } catch (e) { }
+window.addEventListener('resize', fitTk);
 function render() {
   if (TS.B) { TS.B.dispose(); TS.B = null; } TS.root = null;
   let v, inGame = false;
@@ -1006,6 +1063,7 @@ function render() {
   if (inGame !== 'trap') TS.root = null;
   if (inGame !== 'board') bd3Drop();
   $('app').replaceChildren(v);
+  fitTk();
   if (inGame === true) renderGame();
   else if (inGame === 'trap') trRender();
   else if (inGame === 'board') bdRender();

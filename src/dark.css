@@ -1,0 +1,65 @@
+/* ===== 設定（入場券の形。案は tools/settings-mockup.html の2） ===== */
+.set-ov{position:fixed;inset:0;z-index:38;background:rgba(10,10,10,.55);display:flex;justify-content:center;align-items:center;padding:0 28px 12vh;opacity:0;transition:opacity .2s;font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;color:var(--h-ink)}
+.set-ov.on{opacity:1}
+.set-in{width:100%;display:flex;flex-direction:column;align-items:center}
+.set-tk{width:min(100%,300px);display:flex;flex-direction:column;transform:rotate(-1.5deg) translateY(16px);transition:transform .25s cubic-bezier(.3,1.4,.5,1);filter:drop-shadow(0 14px 22px rgba(0,0,0,.3))}
+.set-ov.on .set-tk{transform:rotate(-1.5deg)}
+.set-tk .tk-top{padding:16px 18px 22px;gap:6px}
+.set-lab{font-size:11px;font-weight:700;color:var(--h-mute);margin-top:6px}
+.set-name{display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--h-ink);padding-bottom:2px}
+.set-name input{flex:1;min-width:0;border:0;background:none;padding:0;font:inherit;font-size:26px;font-weight:900;color:var(--h-ink);outline:none;border-radius:0}
+.set-name input::placeholder{color:var(--h-line)}
+.set-name label{width:22px;height:22px;flex:none;color:var(--h-mute);display:grid;place-items:center;cursor:pointer}
+.set-note{font-size:11px;color:var(--h-mute)}
+.set-tk .tk-stub{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 14px 12px}
+.set-tk .tk-stub button{min-height:42px;border:0;border-radius:10px;background:none;color:rgba(255,255,255,.75);font:inherit;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.set-tk .tk-stub button.on{background:rgba(255,255,255,.25);color:#fff}
+.set-tk .tk-stub svg{width:17px;height:17px}
+@media (prefers-reduced-motion:reduce){.set-ov,.set-tk{transition:none}}
+
+/* ===== ダークモード（あたたかい黒。ホーム・ロビー・遊びかた・盤のゲームとビンゴ・トランプのまわり） ===== */
+html.dark{background:#141311}
+html.dark body.hub,html.dark body.board{background:#141311;color:#f3f1ec;
+  --h-ink:#f3f1ec;--h-mute:#9a968d;--h-line:#34322e;--h-soft:#2a2825;--h-card:#201f1c;--h-acc:#ff5a36;--h-acc-d:#ff7a5c;--h-pg:#141311}
+html.dark .set-ov{--h-ink:#f3f1ec;--h-mute:#9a968d;--h-line:#3a3834;--h-card:#201f1c}
+html.dark .hub-go{color:#141311}
+html.dark .ava.me{color:#141311}
+html.dark .ava .crown{border-color:#141311}
+html.dark .ava.ghost{border-color:#4a4741;color:#6f6b63}
+html.dark .gi.sel .gi-ic{box-shadow:0 0 0 3px #141311,0 0 0 5px var(--h-acc)}
+html.dark .gi-secret{border-color:#4a4741;color:#6f6b63}
+html.dark .gsheet{background:rgba(0,0,0,.5)}
+html.dark .gsheet-in{background:#141311}
+html.dark .gsheet-grab{background:#3a3834}
+html.dark .tk-perf{border-top-color:#3a3834}
+html.dark .hub-field input,html.dark body.hub .linkbox{background:#141311}
+html.dark .hub-note.warn{background:#3a1d14;border-color:#6a2f1f;color:#ffb9a3}
+html.dark body.hub .sheet .card{background:var(--h-card)}
+html.dark .seg button.on{box-shadow:0 1px 2px rgba(0,0,0,.5)}
+html.dark .wait-dots i{background:var(--h-ink)}
+/* 遊びかたのスライド（絵の中の見本はそのまま） */
+html.dark .sl{background:#201f1c;color:#f3f1ec}
+html.dark .sl-bar i{background:#3a3834}
+html.dark .sl-bar i.on{background:#ff5a36}
+html.dark .sl-x,html.dark .sl-nav button{background:#2e2c28;color:#f3f1ec}
+html.dark .sl-nav button.on{background:#f3f1ec;color:#141311}
+html.dark .sl-s,html.dark .sl-foot .cap{color:#9a968d}
+html.dark .sl-art{background:#2a2825}
+html.dark .sl-foot .card{background:#2a2825;color:#f3f1ec}
+html.dark .sheet.slides{background:rgba(0,0,0,.6)}
+/* 盤のゲーム・ビンゴ・トランプのまわり */
+html.dark body.board .quit-card{background:#201f1c;border-color:#34322e;color:#f3f1ec}
+html.dark body.board .quit-card span{color:#9a968d}
+html.dark body.board .quit-no{border-color:#34322e;color:#f3f1ec}
+html.dark .bd-card{color:#f3f1ec}
+html.dark .bd-pro{background:#141311;border-color:#34322e;color:#f3f1ec}
+html.dark .bd-hand em,html.dark .bg-ranks span,html.dark .cd-chips span{color:#141311}
+html.dark body.board .sheet .btn.soft{background:#201f1c;color:#f3f1ec;border-color:#34322e}
+html.dark .bg-card{background:#201f1c}
+html.dark .bg-c{background:#141311;color:#f3f1ec}
+html.dark .bg-c.on{background:var(--h-acc);color:#fff}
+html.dark .bg-hist i.on{background:#f3f1ec;color:#141311}
+html.dark .bd-sw.w{border-color:#5a5750}
+html.dark .cd-cover{background:rgba(20,19,17,.92)}
+html.dark .bd-over{background:rgba(20,19,17,.72)}
+html.dark .bd-banner{box-shadow:0 0 0 4px var(--h-acc),0 16px 40px rgba(0,0,0,.5)}
