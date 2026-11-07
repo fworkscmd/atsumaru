@@ -32,17 +32,59 @@ function cdSubOf(s) {
   return b.out.includes(s) ? 'あがり' : '';
 }
 const cdNow = s => { const g = doc, b = g.b; if (g.status !== 'playing') return false; if (g.game === 'daifugo') return b.phase === 'play' ? b.turn === s : b.phase === 'exchange' && !!(b.give && b.give[s]); return b.turn === s; };
-function cdSync(t, view, act, hidden) {
-  const g = doc, b = g.b, dfg = g.game === 'daifugo', myId = b.seats[view];
-  let hand = b.hands[myId] || [], sel = CS.sel, target = null, hover = null;
-  if (!dfg) {
-    const from = OLD.from(b);
-    if (act === view && g.status === 'playing') target = { seat: from, n: b.hands[b.seats[from]].length, hover: local ? CS.lhover : (b.hover && b.hover.seat === view ? b.hover.i : -1) };
-    else if (b.hover && g.status === 'playing') { if (from === view) sel = new Set([hand[b.hover.i]]); else hover = { target: from, i: b.hover.i }; } // ほかの人が、だれかのカードをさわっている
+/* ---- 卓：緑のフェルトを真上から（tools/cards2d-mockup.html の1）。上にほかの人、まん中に場、下に自分の手札 ---- */
+const CD_SUIT = { S: '♠︎', H: '♥︎', D: '♦︎', C: '♣︎' };
+function cdFace(c, cls, tap) {
+  if (c === 'JK') return h('div', { class: 'cf jk ' + (cls || ''), onclick: tap }, h('b', null, 'JK'), h('em', null, '★'));
+  const r = c[1] === 'T' ? '10' : c[1], s = CD_SUIT[c[0]];
+  return h('div', { class: 'cf' + (c[0] === 'H' || c[0] === 'D' ? ' r ' : ' ') + (cls || ''), onclick: tap }, h('b', null, r), h('i', null, s), h('em', null, s));
+}
+const cdBack = (cls, tap) => h('div', { class: 'cf bk ' + (cls || ''), onclick: tap });
+// 横1列に重ねて並べる（枚数が多いほど重なりを深くして、幅に収める）
+function cdRow(els, W, avail, arc) {
+  const n = els.length, step = n > 1 ? Math.min(W * 1.06, (avail - W) / (n - 1)) : 0;
+  els.forEach((el, i) => { const k = n > 1 ? (i - (n - 1) / 2) / ((n - 1) / 2) : 0; el.style.left = (i * step) + 'px'; el.style.setProperty('--k', k.toFixed(3)); el.style.setProperty('--a', arc); });
+  return h('div', { class: 'cd-row', style: `width:${Math.ceil(W + step * Math.max(0, n - 1))}px;--w:${W}px` }, els);
+}
+// ほかの人：裏向きの扇と名札
+function cdOpp(s, hov) {
+  const b = doc.b, id = b.seats[s], n = b.hands[id].length, k = Math.min(n, 7), sub = cdSubOf(s);
+  const fan = h('div', { class: 'cd-fan' }, Array.from({ length: k }, (_, i) => { const el = cdBack(hov != null && Math.round(hov * (k - 1) / Math.max(1, n - 1)) === i ? 'hov' : ''); el.style.setProperty('--k', (i - (k - 1) / 2).toFixed(2)); return el; }));
+  return h('div', { class: 'cd-op' + (b.out.includes(s) ? ' done' : '') }, fan, h('span', { class: 'cd-tag' + (cdNow(s) ? ' now' : '') }, h('b', null, bdName(id)), h('small', null, n ? `${n}枚` : ''), sub ? h('i', null, sub) : null));
+}
+function cdTable(view, act, hidden) {
+  const g = doc, b = g.b, dfg = g.game === 'daifugo', n = b.seats.length, playing = g.status === 'playing';
+  const small = innerHeight <= 740, avail = Math.min(520, (BS.root && BS.root.clientWidth) || innerWidth) - 24;
+  const from = dfg ? -1 : OLD.from(b), pulling = !dfg && playing && act === view && act >= 0;
+  // ほかの人がだれかのカードをさわっている（ババ抜き）
+  const hov = !dfg && playing && b.hover && !pulling ? b.hover : null;
+  const others = Array.from({ length: n - 1 }, (_, i) => (view + 1 + i) % n);
+  const opps = h('div', { class: 'cd-opps' + (others.length > 4 ? ' many' : '') }, others.map(s => cdOpp(s, hov && from === s && from !== view ? hov.i : null)));
+  let mid;
+  if (dfg) {
+    const f = b.field, key = f ? b.seq : '';
+    mid = h('div', { class: 'cd-mid' }, h('div', { class: 'cd-field' + (f ? '' : ' empty') },
+      f ? h('span', { class: 'cd-who' }, `${bdName(b.seats[f.by])}が 出した`) : h('span', { class: 'cd-who' }, '場は空いています'),
+      f ? f.cards.map(c => cdFace(c, CS.fieldKey !== key ? 'drop' : '')) : null));
+    CS.fieldKey = key;
+  } else {
+    const total = b.seats.reduce((x, id) => x + b.hands[id].length, 0), pile = 53 - total;
+    let pull = null;
+    if (pulling) {
+      const cnt = b.hands[b.seats[from]].length, cur = local ? CS.lhover : (b.hover && b.hover.seat === view ? b.hover.i : -1), W = small ? 40 : 46;
+      pull = h('div', { class: 'cd-pull' }, h('span', { class: 'cd-who' }, `${bdName(b.seats[from])}の手札`),
+        cdRow(Array.from({ length: cnt }, (_, i) => cdBack(i === cur ? 'hov' : '', () => cdTap({ target: i }))), W, avail - 20, 7));
+    }
+    mid = h('div', { class: 'cd-mid' }, pull, h('div', { class: 'cd-pile' }, Array.from({ length: Math.min(6, Math.ceil(pile / 2)) }, (_, i) => h('div', { class: 'cf bk', style: `--r:${[-14, 9, -4, 17, -21, 4][i]}deg;--x:${[-8, 7, -2, 10, -12, 3][i]}px;--y:${[-3, 2, 5, -5, 6, -1][i]}px` })),
+      h('span', null, pile ? `すてたペア ${pile / 2 | 0}組` : 'すてたペア')));
   }
-  const total = b.seats.reduce((x, id) => x + b.hands[id].length, 0);
-  t.sync({ n: b.seats.length, me: view, seats: b.seats.map((id, s) => ({ name: bdName(id), count: b.hands[id].length, sub: cdSubOf(s), now: cdNow(s) })),
-    hand, sel, hidden, field: dfg ? (b.field ? b.field.cards : []) : null, pile: dfg ? null : 53 - total, target, hover, ev: b.last, seq: b.seq });
+  // 自分の手札
+  const myId = b.seats[view], hand = b.hands[myId] || [], W = small ? 40 : 46;
+  let sel = CS.sel; if (!dfg && hov && from === view) sel = new Set([hand[hov.i]]);
+  const mine = hidden ? hand.map(() => cdBack()) : hand.map((c, i) => cdFace(c, sel.has(c) ? 'up' : '', dfg ? () => cdTap({ hand: i }) : null));
+  const me = h('div', { class: 'cd-me' }, hand.length ? cdRow(mine, W, avail, 3) : h('span', { class: 'cd-who' }, b.out.includes(view) ? 'あがり！' : ''),
+    h('span', { class: 'cd-tag me' + (cdNow(view) ? ' now' : '') }, h('b', null, local ? bdName(myId) : 'あなた'), h('small', null, `${hand.length}枚`), cdSubOf(view) ? h('i', null, cdSubOf(view)) : null));
+  return [opps, mid, me];
 }
 // 起きたこと（8切り・革命など）を大きく知らせる
 function cdEvents() {
@@ -64,12 +106,10 @@ function cardView() {
   const cover = local && cdHumans() > 1 && act >= 0 && CS.shown !== act && !over;
   if (!cover && act >= 0) CS.shown = act;
   const head = bdHead(BD_TITLE[g.game], `${local ? '1台で遊ぶ' : '招待コード ' + tableId}${dfg ? ` ・ ${b.round} / ${DFG.ROUNDS}回戦` : ''}`, g.game);
-  const t = BS.c3 && BS.c3.game === g.game ? BS.c3 : null;
-  const look = t ? h('button', { class: 'cd-look' + (t.gyroOn() ? ' on' : ''), onclick: async () => { const ok = await t.gyro(!t.gyroOn()); if (!ok && !t.gyroOn()) toast('画面を指で引っぱっても見わたせます'); bdRender(); } }, t.gyroOn() ? '傾き：オン' : '傾きで見わたす') : null;
   const coverEl = cover ? h('div', { class: 'cd-cover' }, h('b', null, `${bdName(b.seats[act])}の番です`), h('span', null, 'ほかの人は 画面を見ないでね'), h('button', { class: 'pill on', onclick: () => { CS.shown = act; CS.sel.clear(); CS.lhover = -1; bdRender(); } }, '手札を見る')) : null;
-  const stage = h('div', { class: 'bd-stage cd-stage' }, t ? t.el : h('div', { class: 'cd-load' }, 'テーブルをならべています…'), look, coverEl);
-  if (t) cdSync(t, view, act, cover || (local && cdHumans() > 1 && act < 0)); // 1台を回しているあいだは手札をふせる
-  return [head, stage, over ? null : cdInfo(act, view), over ? null : cdActs(act, view, cover), over ? cdOver(view) : dfg && b.phase === 'result' ? cdRound() : null];
+  // 1台を回しているあいだは手札をふせる
+  const stage = h('div', { class: 'cd-stage' }, cdTable(view, act, cover || (local && cdHumans() > 1 && act < 0)), over ? null : cdInfo(act, view), over ? null : cdActs(act, view, cover), coverEl);
+  return [head, stage, over ? cdOver(view) : dfg && b.phase === 'result' ? cdRound() : null];
 }
 function cdInfo(act, view) {
   const g = doc, b = g.b, chips = [];

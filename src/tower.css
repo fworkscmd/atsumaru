@@ -1,0 +1,40 @@
+/* ===== ぐらぐらタワー ===== */
+.bd-tower{position:fixed;inset:0;max-width:none;margin:0;display:block;background:#23262b}
+.tw{position:relative;height:100%;max-width:480px;margin:0 auto;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.tw canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tw-hud{position:absolute;inset:0;pointer-events:none;color:#1d3a57}
+.tw-hud button{pointer-events:auto}
+.tw-top{position:absolute;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top,0px));display:flex;gap:5px;align-items:flex-start}
+.tw-seats{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px}
+.tw-seat{flex:1 1 28%;min-width:0;background:rgba(255,255,255,.92);border-radius:8px;padding:3px 7px;box-sizing:border-box}
+.tw-seat.on{background:#3f6fb5;color:#fff}
+.tw-seat.out{opacity:.45}
+.tw-seat b{display:block;font-size:12px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tw-seat span{display:flex;gap:2px;height:10px}
+.tw-seat i{width:10px;height:10px;background:#e8402a;clip-path:polygon(50% 100%,0 40%,12% 10%,35% 4%,50% 20%,65% 4%,88% 10%,100% 40%)}
+.tw-seat.on i{background:#fff}
+.tw-ib{flex:none;min-width:38px;height:38px;border:0;border-radius:8px;background:rgba(255,255,255,.92);color:#1d3a57;font:inherit;font-size:12.5px;font-weight:900;padding:0 7px}
+.tw-hint{position:absolute;left:0;right:0;top:calc(62px + env(safe-area-inset-top,0px));text-align:center;font-family:"Zen Maru Gothic",sans-serif;font-size:17px;font-weight:900;text-shadow:0 1px 0 #fff,0 0 5px #fff}
+.tw-hi,.tw-yen{position:absolute;top:calc(92px + env(safe-area-inset-top,0px));font-size:23px;font-weight:900;line-height:1.05;text-shadow:0 1px 0 #fff,0 0 5px #fff}
+.tw-hi{right:12px;text-align:right}.tw-yen{left:12px}
+.tw-hi small,.tw-yen small{display:block;font-size:11px;font-weight:700}
+.tw-big{position:absolute;left:0;right:0;top:26%;text-align:center;font-family:"Zen Maru Gothic",sans-serif;font-size:46px;font-weight:900;color:#e8402a;text-shadow:0 3px 0 #fff;animation:tw-big .3s cubic-bezier(.3,1.7,.5,1)}
+.tw-big small{display:block;font-size:17px;color:#1d3a57}
+@keyframes tw-big{from{transform:scale(1.8);opacity:0}}
+.tw-row{position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:8px}
+.tw-back{flex:1;min-height:52px;border:0;border-radius:10px;background:#fff;color:#1d3a57;font:inherit;font-size:17px;font-weight:900;box-shadow:0 3px 0 rgba(0,0,0,.2)}
+.tw-go{flex:1.6;min-height:52px;border:0;border-radius:10px;background:#3f6fb5;color:#fff;font:inherit;font-size:17px;font-weight:900;box-shadow:0 3px 0 #2c4f8a}
+.tw-note{position:absolute;left:0;right:0;bottom:24px;text-align:center;font-size:14px;font-weight:700;text-shadow:0 0 5px #fff}
+.tw .bd-over{pointer-events:auto;background:rgba(20,30,44,.5)}
+.tw-sla{width:130px;height:auto;max-height:130px;object-fit:contain}
+.gi-tower{background:linear-gradient(160deg,#9ad0ec,#3f7fb5)}
+.gi-dfg{background:linear-gradient(160deg,#7a5ac0,#4a2f88)}
+.gi-old{background:linear-gradient(160deg,#c04a60,#7f1f36)}
+.gi-chs{background:linear-gradient(160deg,#4a4d55,#24262b)}
+.tka-ic{position:absolute;left:50%;top:50%;height:96%;transform:translate(-50%,-50%)}
+.gi-img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hub-stack .gi-ic>.gi-img{transform:none}
+.gi-towi{display:block;position:relative;width:46%;height:62%;background:linear-gradient(#e8eef0 0 48%,#c8573f 48%);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
+.tk-tower{background:linear-gradient(160deg,#9ad0ec,#3f7fb5);position:relative}
+.tka-tower{position:absolute;left:50%;top:50%;height:88%;transform:translate(-50%,-50%)}
+@media (prefers-reduced-motion:reduce){.tw-big{animation:none}}

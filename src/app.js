@@ -57,6 +57,8 @@ function h(tag, props, ...kids) {
 }
 const ICON = {
   bulb: '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3"/><path d="M12 3.5a5.8 5.8 0 0 0-3.5 10.4c.7.6 1 1.3 1 2.1v.4h5V16c0-.8.3-1.5 1-2.1A5.8 5.8 0 0 0 12 3.5z"/><path d="M12 8v3" stroke="#ff5a36"/></svg>',
+  up: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg>',
+  close: '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   back:'<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   radar: '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="11" cy="11" r="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M11 11l6-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
 };
@@ -247,7 +249,7 @@ function choose(a) {
   // 見た目はすぐ反映（決めたらボタンはグレーになる）
   try { const g = act(doc, me, a); doc = g; afterChange(); } catch (e) { toast(e.message); }
 }
-const freshLobby = () => ({ v: 6, status: 'lobby', host: me, players: [me], requests: [], denied: [], openedAt: Date.now(), game: 'dwarf', mode: 'host', votes: {}, nicks: myNick ? { [me]: myNick } : {}, updated: Date.now() });
+const freshLobby = () => ({ v: 6, status: 'lobby', host: me, players: [me], requests: [], denied: [], openedAt: Date.now(), game: 'dwarf', nicks: myNick ? { [me]: myNick } : {}, updated: Date.now() });
 function requestJoin() { withLease(d => {
   if (!d || d.status !== 'lobby' || d.players.includes(me) || (d.requests || []).includes(me)) return null;
   if (Date.now() - d.openedAt > OPEN_MS || d.players.length >= TABLE_MAX) return null;
@@ -256,8 +258,7 @@ function requestJoin() { withLease(d => {
 // 部屋主がメンバーを卓から外す（ロビーのあいだだけ）。外された人は「断られた」扱いになり、自動で参加希望を出しなおさない
 function kick(id) { withLease(d => {
   if (!d || d.status !== 'lobby' || d.host !== me || id === me || !d.players.includes(id)) return null;
-  const votes = { ...(d.votes || {}) }; delete votes[id];
-  return { ...d, players: d.players.filter(p => p !== id), votes, denied: (d.denied || []).filter(x => x !== id).concat(id) };
+  return { ...d, players: d.players.filter(p => p !== id), denied: (d.denied || []).filter(x => x !== id).concat(id) };
 }); }
 function answer(id, ok) { withLease(d => {
   if (!d || d.status !== 'lobby' || d.host !== me) return null;
@@ -275,14 +276,15 @@ function extend() {
   });
   toast('受付を5分のばしました');
 }
-const newGameFor = (id, humans, host) => id === 'trapper' ? trNew(humans) : id === 'bingo' ? BGO.make(humans, host) : DUEL[id] ? duelNew(id, humans) : CARDG[id] ? CARDG[id].make(humans) : newGame(humans);
+const newGameFor = (id, humans, host) => id === 'tower' ? TWR.make(humans) : id === 'bomb' ? BMB.make(humans) : id === 'alchemy' ? ALC.make(humans) : id === 'trapper' ? trNew(humans) : id === 'bingo' ? BGO.make(humans, host) : DUEL[id] ? duelNew(id, humans) : CARDG[id] ? CARDG[id].make(humans) : newGame(humans);
 const fits = (g, n) => n >= g.min && n <= g.max;
-const gameDoc = d => {
-  const g = gameById(pickOf(d)), id = g.id, humans = d.players.filter(p => p !== NPC);
+// id：始めるゲーム。もう一度のときは前と同じゲーム、ロビーからは部屋主の端末で選んでいるゲーム
+const gameDoc = (d, pick = d.game || 'dwarf') => {
+  const g = gameById(pick), id = g.id, humans = d.players.filter(p => p !== NPC);
   if (!fits(g, humans.length)) return null;
   return { host: d.host, nicks: d.nicks || {}, game: id, openedAt: d.openedAt, requests: [], denied: [], ...newGameFor(id, humans, d.host), game: id };
 };
-function startGame() { withLease(d => d && d.status === 'lobby' && d.host === me ? gameDoc(d) : null); }
+function startGame() { const id = hubPick(doc); withLease(d => d && d.status === 'lobby' && d.host === me ? gameDoc(d, id) : null); }
 function regather() { withLease(d => (!d || d.status === 'over' || d.v !== 6) ? freshLobby() : null); }
 function rematch() {
   if (local) { const id = doc.game || 'dwarf'; doc = newGameFor(id, doc.players.filter(p => p !== NPC), 'p1'); if (id === 'dwarf') doc = autoLocal(doc); render(); return; }
@@ -368,10 +370,9 @@ function leaveTable() {
   if (!local && tableId && doc && doc.status === 'lobby' && (doc.players || []).includes(me)) withLease(d => {
     if (!d || d.status !== 'lobby' || !d.players.includes(me)) return null;
     const players = d.players.filter(p => p !== me); if (!players.length) return null;
-    const votes = { ...(d.votes || {}) }; delete votes[me];
-    return { ...d, players, votes, host: d.host === me ? players[0] : d.host };
+    return { ...d, players, host: d.host === me ? players[0] : d.host };
   }, true);
-  if (unsub) unsub(); unsub = null; tableId = null; doc = null; serverDoc = null; onSnap = null;
+  if (unsub) unsub(); unsub = null; tableId = null; doc = null; serverDoc = null; onSnap = null; hubSel = null; hubSheet = 0;
   try { history.replaceState(null, '', location.pathname); } catch (e) { }
   render();
 }
@@ -425,27 +426,42 @@ function heroArt() {
   return h('div', { class: 'sky' }, cv);
 }
 /* =================== HUB（ゲーム選択：チケット） =================== */
-const DWARF_SVG = '<svg width="100%" height="100%" viewBox="0 0 10 10" shape-rendering="crispEdges" aria-hidden="true"><rect x="2" y="0" width="6" height="1" fill="#e0533d"/><rect x="1" y="1" width="8" height="2" fill="#e0533d"/><rect x="4" y="1" width="2" height="1" fill="#fff3c4"/><rect x="2" y="3" width="6" height="2" fill="#e8b48a"/><rect x="3" y="3" width="1" height="1" fill="#2a1d14"/><rect x="6" y="3" width="1" height="1" fill="#2a1d14"/><rect x="1" y="5" width="8" height="2" fill="#fff3e0"/><rect x="3" y="7" width="4" height="1" fill="#fff3e0"/><rect x="2" y="8" width="6" height="2" fill="#5a4636"/></svg>';
+// ドワーフのアイコン：坑道の中（ゲームと同じ色・ランプの光・はしご・鉱石）に、ツルハシをかまえた1人をまん中に描く。案は tools/dwarf-icon-mockup.html の4
+const DWARF_ART = (() => {
+  try {
+    const o = document.createElement('canvas'); o.width = o.height = 22; const c = o.getContext('2d');
+    c.fillStyle = '#1a120e'; c.fillRect(0, 0, 22, 22);
+    const lg = c.createRadialGradient(11, 12, 1, 11, 12, 15); lg.addColorStop(0, 'rgba(242,165,65,.5)'); lg.addColorStop(1, 'rgba(242,165,65,0)'); c.fillStyle = lg; c.fillRect(0, 0, 22, 22);
+    c.fillStyle = '#7a5a32'; c.fillRect(18, 0, 1, 18); c.fillRect(21, 0, 1, 18); for (let y = 1; y < 18; y += 4) c.fillRect(18, y, 4, 1);
+    c.fillStyle = '#3a2a20'; c.fillRect(0, 18, 22, 2); c.fillStyle = '#4a3a30'; c.fillRect(0, 20, 22, 2);
+    [[2, 16, '#ffd23a'], [4, 17, '#e6eef6'], [17, 16, '#e8843a']].forEach(([x, y, col]) => { c.fillStyle = col; c.fillRect(x, y, 2, 2); });
+    sprite(c, 10, 18, 0, false, false); digPick(c, 10, 18, false);
+    return o.toDataURL('image/png');
+  } catch (e) { return ''; }
+})();
 const GAMES = [
-  { id: 'dwarf', n: 'ドワーフ', sub: '深掘り<br>チキンレース', ppl: '2〜4人', time: '約10分', ok: true, min: 1, max: 4, cls: 'gi-dwarf', icon: '<span class="gi-px">' + DWARF_SVG + '</span>' },
+  { id: 'dwarf', n: 'ドワーフ', sub: '深掘り<br>チキンレース', ppl: '2〜4人', time: '約10分', ok: true, min: 1, max: 4, cls: 'gi-dwarf', icon: '<img class="gi-img gi-pxl" src="' + DWARF_ART + '" alt="">' },
   { id: 'trapper', n: 'チュンチュン大作戦', short: 'チュンチュン', sub: '罠士 VS 鳥3羽<br>1対3のすごろく', ppl: '1〜4人', time: '約15分', ok: true, min: 1, max: 4, cls: 'gi-trap', icon: TRAP_ICON },
   { id: 'bingo', n: 'ビンゴ大会', short: 'ビンゴ', sub: '部屋主が回して<br>みんなで穴あけ', ppl: '2〜8人', time: '約15分', ok: true, min: 2, max: TABLE_MAX, cls: 'gi-bingo', icon: BINGO_ICON },
-  { id: 'reversi', n: 'リバーシ', sub: 'はさんで<br>ひっくり返す', ppl: '1〜2人', time: '約10分', ok: true, min: 1, max: 2, cls: 'gi-rev', icon: '<span class="gi-discs"><i class="b"></i><i class="w"></i><i class="w"></i><i class="b"></i></span>' },
-  { id: 'shogi', n: '将棋', sub: '玉を詰ませたら<br>勝ち', ppl: '1〜2人', time: '約30分', ok: true, min: 1, max: 2, cls: 'gi-shogi', icon: '<span class="gi-koma">王</span>' },
-  { id: 'chess', n: 'チェス', sub: 'キングを<br>追いつめる', ppl: '1〜2人', time: '約30分', ok: true, min: 1, max: 2, cls: 'gi-chs', icon: CHESS_ICON },
-  { id: 'daifugo', n: '大富豪', sub: '強いカードを出して<br>先に上がる', ppl: '1〜8人', time: '約20分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-cd', icon: '<span class="gi-cards"><i>A</i><i class="r">2</i></span>' },
-  { id: 'babanuki', n: 'ババ抜き', sub: 'ジョーカーを<br>最後まで持たない', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-cd', icon: '<span class="gi-cards"><i class="bk"></i><i class="jk">★</i></span>' },
+  { id: 'reversi', n: 'リバーシ', sub: 'はさんで<br>ひっくり返す', ppl: '1〜2人', time: '約10分', ok: true, min: 1, max: 2, cls: 'gi-rev', icon: '<img class="gi-img" src="' + ICON_ART.reversi + '" alt="">' },
+  { id: 'shogi', n: '将棋', sub: '玉を詰ませたら<br>勝ち', ppl: '1〜2人', time: '約30分', ok: true, min: 1, max: 2, cls: 'gi-shogi', icon: '<img class="gi-img" src="' + ICON_ART.shogi + '" alt="">' },
+  { id: 'chess', n: 'チェス', sub: 'キングを<br>追いつめる', ppl: '1〜2人', time: '約30分', ok: true, min: 1, max: 2, cls: 'gi-chs', icon: '<img class="gi-img" src="' + ICON_ART.chess + '" alt="">' },
+  { id: 'daifugo', n: '大富豪', sub: '強いカードを出して<br>先に上がる', ppl: '1〜8人', time: '約20分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-dfg', icon: '<img class="gi-img" src="' + ICON_ART.daifugo + '" alt="">' },
+  { id: 'babanuki', n: 'ババ抜き', sub: 'ジョーカーを<br>最後まで持たない', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-old', icon: '<img class="gi-img" src="' + ICON_ART.babanuki + '" alt="">' },
+  { id: 'tower', n: 'ぐらぐらタワー', sub: '順番に積んで<br>くずしたら負け', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-tower', icon: '<img class="gi-img" src="' + ICON_ART.tower + '" alt="">' },
+  { id: 'bomb', n: 'ばくだんパス', sub: 'お題に答えて<br>爆弾を次の人へ', ppl: '1〜8人', time: '約5分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-bomb', icon: '<img class="gi-img" src="' + ICON_ART.bomb + '" alt="">' },
+  { id: 'alchemy', n: '月夜の錬金市場', short: '錬金市場', sub: '昼に薬を作り<br>夜にいっせいに売る', ppl: '1〜4人', time: '約30分', ok: false, min: 1, max: 4, cls: 'gi-alm', icon: '<svg viewBox="0 0 40 48" aria-hidden="true"><rect x="14" y="2" width="12" height="5" rx="2" fill="#c9975a"/><path d="M16 7h8v8.5a15 15 0 1 1-8 0z" fill="#fff"/><path d="M5.6 28a14.6 14.6 0 0 0 28.8 0z" fill="#2fa37a"/></svg>' },
 ];
 const gameById = id => GAMES.find(g => g.id === id && g.ok) || GAMES[0];
-function voteCount(d) { const c = {}; Object.entries(d.votes || {}).forEach(([u, v]) => { if (d.players.includes(u)) c[v] = (c[v] || 0) + 1; }); return c; }
-function pickOf(d) {
-  if (d.mode !== 'vote') return d.game || 'dwarf';
-  const c = voteCount(d); let best = d.game || 'dwarf', bn = c[best] || 0;
-  for (const k in c) if (c[k] > bn) { best = k; bn = c[k]; }
-  return best;
-}
+// ゲーム選択の引き出しのジャンル。'wolf' はまだ遊べない（じゅんび中の枠）
+const GENRES = [['定番', ['daifugo', 'babanuki', 'reversi', 'shogi', 'chess', 'bingo']], ['みんなでワイワイ', ['tower', 'bomb', 'dwarf', 'trapper']]];
+const SOON = { wolf: '人狼' };
+// 選んでいるゲームは端末ごと（部屋主と画面は合わせない）。まだ選んでいなければ卓の前のゲーム
+const hubScroll = {}; // 引き出しの横スクロールの位置（描き直しても動かないように）
+let hubSel = null, hubSheet = 0; // hubSheet：引き出し 0=閉じている 1=今あけた（動かす） 2=あいている
+const hubPick = d => local ? localGame : hubSel || (d && d.game) || 'dwarf';
 let localN = 2, localGame = 'dwarf';
-function localHubDoc() { return { host: 'h0', players: Array.from({ length: localN }, (_, i) => 'h' + i), requests: [], denied: [], game: localGame, mode: 'host', votes: {}, openedAt: Date.now() }; }
+function localHubDoc() { return { host: 'h0', players: Array.from({ length: localN }, (_, i) => 'h' + i), requests: [], denied: [], game: localGame, openedAt: Date.now() }; }
 const avaTxt = id => id === NPC ? 'コ' : local ? String(pIndex(id) + 1) : nameOf(id).slice(0, 1);
 // スタート：半券をちぎってから進む
 function tear(then) {
@@ -456,20 +472,12 @@ function tear(then) {
   setTimeout(then, 700);
 }
 function pickGame(id) {
-  withLease(d => d && d.status === 'lobby' && d.host === me && d.mode !== 'vote' ? { ...d, game: id } : null);
-  doc = { ...doc, game: id }; render();
+  if (local) localGame = id; else hubSel = id;
+  hubSheet = 0; render();
 }
-function setMode(m) {
-  if (!doc || doc.host !== me || (doc.mode || 'host') === m) return;
-  withLease(d => d && d.status === 'lobby' && d.host === me ? { ...d, mode: m, votes: {} } : null);
-  doc = { ...doc, mode: m, votes: {} }; render();
-}
-function vote(id) {
-  withLease(d => d && d.status === 'lobby' && d.mode === 'vote' && d.players.includes(me) ? { ...d, votes: { ...(d.votes || {}), [me]: id } } : null);
-  doc = { ...doc, votes: { ...(doc.votes || {}), [me]: id } }; render();
-}
+const hubDrawer = v => { hubSheet = v ? 1 : 0; render(); };
 // 同じメンバーのまま、ゲーム選択（ロビー）にもどした卓
-const lobbyFrom = d => ({ v: 6, status: 'lobby', host: d.host, players: d.players.filter(p => p !== NPC), requests: [], denied: [], openedAt: Date.now(), game: d.game || 'dwarf', mode: 'host', votes: {}, nicks: d.nicks || {}, updated: Date.now() });
+const lobbyFrom = d => ({ v: 6, status: 'lobby', host: d.host, players: d.players.filter(p => p !== NPC), requests: [], denied: [], openedAt: Date.now(), game: d.game || 'dwarf', nicks: d.nicks || {}, updated: Date.now() });
 function backToHub() {
   if (local) { doc = null; tableId = null; render(); return; }
   withLease(d => d && d.status === 'over' && d.host === me ? lobbyFrom(d) : null);
@@ -487,7 +495,6 @@ function ticketEl(g, d) {
   if (g.id === 'dwarf') { const cv = document.createElement('canvas'); drawShaft(cv, { depth: 4, phase: 'choose', next: { fork: false }, pot: 3, inside: ['h0', 'h1', 'h2'], players: [], out: {} }); art.append(cv); }
   if (BD_TITLE[g.id]) bdTicketArt(g.id, art);
   if (g.id === 'trapper') { art.style.background = 'linear-gradient(#cfeaff,#fff4dc)'; if (TB.ready()) art.append(h('img', { class: 'tp-tk', src: TB.arts().ticket, alt: '' })); else TB.load().then(() => { if (art.isConnected) art.append(h('img', { class: 'tp-tk', src: TB.arts().ticket, alt: '' })); }).catch(() => { }); }
-  const c = d.mode === 'vote' ? voteCount(d)[g.id] || 0 : null;
   return h('div', { class: 'ticket', style: swayPhase(), role: 'group', 'aria-label': `えらんだゲーム：${g.n}` },
     h('div', { class: 'tk-top' }, art,
       h('div', { class: 'tk-row' }, h('div', { class: 'tk-l' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('span', { class: 'tk-name' + (g.n.length > 6 ? ' long' : '') }, g.n)),
@@ -496,8 +503,7 @@ function ticketEl(g, d) {
     h('div', { class: 'tk-stub' },
       h('span', null, h('small', null, '人数'), h('b', null, g.ppl)),
       h('span', null, h('small', null, '時間'), h('b', null, g.time)),
-      c != null ? h('span', null, h('small', null, '票'), h('b', null, `${c} / ${d.players.length}`))
-        : h('span', null, h('small', null, '招待コード'), h('b', { class: 'code' }, local ? '1台' : tableId))));
+      h('span', null, h('small', null, '招待コード'), h('b', { class: 'code' }, local ? '1台' : tableId))));
 }
 // 部屋主のOKを待つ画面：自分の名前が書かれた入場券を、部屋主がチェックしている
 let admitAt = 0;
@@ -520,8 +526,8 @@ function viewWait(d, left, ok) {
 }
 function viewHub() {
   const L = local, d = L ? localHubDoc() : doc;
-  const host = L || d.host === me, member = L || d.players.includes(me), mode = d.mode || 'host';
-  const pick = gameById(pickOf(d)), counts = voteCount(d);
+  const host = L || d.host === me, member = L || d.players.includes(me);
+  const pick = gameById(hubPick(d));
   const left = L ? 0 : Math.max(0, OPEN_MS - (Date.now() - d.openedAt));
   // まだメンバーでない人は、部屋主がOKするまで待つ画面。OKが出たら「入場OK！」を少し見せてからロビーへ
   if (!L && !member) return viewWait(d, left);
@@ -556,37 +562,39 @@ function viewHub() {
     h('span', { class: 'ava sm' }, avaTxt(id)), h('span', { class: 't' }, h('b', null, nameOf(id)), ' が参加希望'),
     host ? [h('button', { class: 'pill on', onclick: () => answer(id, true) }, '入れる'), h('button', { class: 'pill', onclick: () => answer(id, false) }, '断る')] : h('span', { class: 'hub-meta' }, '確認中'))));
 
-  // 見出しとモード
-  root.append(h('div', { class: 'hub-title' }, h('span', { role: 'heading', 'aria-level': '1' }, 'なにであそぶ？'),
-    L ? null : h('div', { class: 'seg sm' + (host ? '' : ' ro') }, [['host', '部屋主'], ['vote', '投票']].map(([m, t]) =>
-      h('button', { class: mode === m ? 'on' : '', 'aria-pressed': String(mode === m), disabled: !host, onclick: () => setMode(m) }, t)))));
-  // 部屋主が選ぶときも同じ場所に1行出して、投票に切りかえてもチケットが動かないようにする
-  if (mode === 'vote') root.append(h('div', { class: 'hub-vote' }, host ? 'みんなが下のアイコンに投票中。決まったらチケットをきってね' : member ? (d.votes || {})[me] ? '投票しました。変えたいときは別のアイコンをタップ' : '投票タイム！遊びたいゲームのアイコンをタップ' : '投票中です'));
-  else if (!L) root.append(h('div', { class: 'hub-vote calm' }, host ? '遊ぶゲームを下のアイコンから選んでね' : '部屋主がゲームを選んでいます'));
+  // 見出し
+  root.append(h('div', { class: 'hub-title' }, h('span', { role: 'heading', 'aria-level': '1' }, 'なにであそぶ？')));
 
   // チケット
   root.append(h('div', { class: 'tk-stage' }, ticketEl(pick, d)));
 
-  // ほかのゲーム
-  root.append(h('div', { class: 'hub-icons' }, GAMES.map(g => {
-    const sel = g.id === pick.id, mine = mode === 'vote' && (d.votes || {})[me] === g.id, n = counts[g.id];
-    const label = g.ok ? g.n : g.id === 'secret' ? 'ひみつ' : '近日公開';
-    return h('button', { class: 'gi' + (sel ? ' sel' : '') + (g.ok ? '' : ' soon') + (mine ? ' mine' : ''), 'aria-label': `${g.n}${g.ok ? '' : '（近日公開）'}`, 'aria-pressed': String(sel), onclick: () => {
-      if (!g.ok) { toast(g.id === 'secret' ? 'ひみつ。次のゲームをおたのしみに' : `${g.n}は近日公開です`); return; }
-      if (L) { localGame = g.id; render(); return; }
-      if (mode === 'vote') { if (member) vote(g.id); else toast('参加している人だけ投票できます'); return; }
-      if (host) pickGame(g.id); else toast('部屋主がえらんでいます');
-    } }, h('span', { class: 'gi-ic ' + g.cls, svg: g.icon }, mode === 'vote' && n ? h('i', { class: 'gi-n' }, String(n)) : null), h('span', { class: 'gi-t' }, g.ok ? g.short || label : label));
-  })));
+  // ほかのゲーム：ふだんは1行。タップで下から引き出し（ジャンルごと）
+  const icon = g => h('span', { class: 'gi-ic ' + g.cls, svg: g.icon });
+  root.append(h('button', { class: 'hub-bar', 'aria-label': 'ほかのゲームを見る', onclick: () => hubDrawer(true) },
+    h('span', { class: 'hub-stack' }, GAMES.filter(g => g.ok && g.id !== pick.id).slice(0, 4).map(icon)),
+    h('b', null, 'ほかのゲーム'), h('small', null, `${GENRES.length}ジャンル・${GAMES.filter(g => g.ok).length}つ`), h('i', { svg: ICON.up })));
+  if (hubSheet) {
+    const sh = h('div', { class: 'gsheet' + (hubSheet === 1 ? '' : ' on'), onclick: e => { if (e.target === e.currentTarget) hubDrawer(false); } },
+      h('div', { class: 'gsheet-in', role: 'dialog', 'aria-label': 'ゲームを選ぶ' }, h('i', { class: 'gsheet-grab' }),
+        h('div', { class: 'gsheet-h' }, h('b', null, 'なにであそぶ？'), h('button', { class: 'gsheet-x', 'aria-label': '閉じる', onclick: () => hubDrawer(false), svg: ICON.close })),
+        GENRES.map(([name, ids]) => h('div', { class: 'gsheet-gen' }, h('span', { class: 'gsheet-gl' }, name), h('div', { class: 'gsheet-row', onscroll: e => { hubScroll[name] = e.currentTarget.scrollLeft; } }, ids.map(id => {
+          if (SOON[id]) return h('button', { class: 'gi soon', 'aria-label': `${SOON[id]}（じゅんび中）`, onclick: () => toast(`${SOON[id]}は じゅんび中です`) }, h('span', { class: 'gi-ic gi-secret' }, SOON[id]), h('span', { class: 'gi-t' }, 'じゅんび中'));
+          const g = gameById(id), sel = g.id === pick.id;
+          return h('button', { class: 'gi' + (sel ? ' sel' : ''), 'aria-label': g.n, 'aria-pressed': String(sel), onclick: () => pickGame(g.id) }, icon(g), h('span', { class: 'gi-t' }, g.short || g.n));
+        }))))));
+    root.append(sh);
+    requestAnimationFrame(() => sh.querySelectorAll('.gsheet-row').forEach((r, i) => { r.scrollLeft = hubScroll[GENRES[i][0]] || 0; }));
+    if (hubSheet === 1) { hubSheet = 2; requestAnimationFrame(() => requestAnimationFrame(() => sh.classList.add('on'))); }
+  }
 
   // スタート（人数がゲームに合わないときは押せない）
   const foot = h('div', { class: 'hub-foot' }), cnt = L ? localN : d.players.length, ok = fits(pick, cnt);
   // 遊びかたは「チケットをきる」の右の豆電球
   const tip = h('button', { class: 'hub-tip', 'aria-label': `${pick.n}の遊びかた`, onclick: help, svg: ICON.bulb });
-  if (host) {
-    foot.append(h('div', { class: 'hub-gorow' }, h('button', { class: 'hub-go', disabled: !ok, onclick: () => L ? startLocal() : tear(() => { startGame(); setTimeout(() => { if (doc && doc.status === 'lobby') render(); }, 3000); }) }, 'チケットをきる'), tip));
-    foot.append(h('span', { class: 'hub-meta c' + (ok ? '' : ' ng') }, hubFootMsg(pick, cnt, L ? 'プレイヤー1' : nameOf(d.host))));
-  } else foot.append(h('div', { class: 'hub-gorow' }, member ? h('div', { class: 'hub-note c' }, ok ? '部屋主がチケットをきるのを待っています' : hubFootMsg(pick, cnt, nameOf(d.host))) : h('span', { style: 'flex:1' }), tip));
+  // ゲストもゲームを見て回れるが、チケットをきれるのは部屋主だけ（ボタンはグレー）
+  foot.append(h('div', { class: 'hub-gorow' }, h('button', { class: 'hub-go', disabled: !host || !ok, onclick: () => L ? startLocal() : tear(() => { startGame(); setTimeout(() => { if (doc && doc.status === 'lobby') render(); }, 3000); }) }, 'チケットをきる'), tip));
+  const hostName = L ? 'プレイヤー1' : nameOf(d.host);
+  foot.append(h('span', { class: 'hub-meta c' + (ok || !host ? '' : ' ng') }, host ? hubFootMsg(pick, cnt, hostName) : `チケットは${hostName}がきります\n（遊ぶゲームも${hostName}が選びます）`));
   root.append(foot);
   return root;
 }
@@ -601,6 +609,8 @@ function hubFootText(g, n, hostName) {
   // どのゲームも「○人で△をはじめます（ひと言）」の形
   const note = g.id === 'bingo' ? `回す係は${hostName}`
     : g.id === 'trapper' ? (n < 4 ? '足りない席はコンピュータ' : '')
+    : g.id === 'bomb' || g.id === 'tower' ? (n < 3 ? 'コンピュータも入ります' : '')
+    : g.id === 'alchemy' ? (n < 4 ? '足りない席はコンピュータ' : '')
     : CARDG[g.id] ? (n < 3 ? 'コンピュータも入ります' : '')
     : n === 1 ? '相手はコンピュータ' : '';
   return `${n}人で${g.n}をはじめます${note ? `（${note}）` : ''}`;
@@ -972,7 +982,7 @@ function dwarfSlides() {
   ];
 }
 function slaRank(rows) { return h('div', { class: 'sla-rank' }, rows.map(([a, b], k) => h('div', { class: k ? null : 'win' }, h('b', null, a), h('i', null, `プレイヤー${k + 1}`), h('span', null, b)))); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { const el = $('sheet'); el.hidden = true; el.replaceChildren(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { const el = $('sheet'); el.hidden = true; el.replaceChildren(); if (hubSheet) hubDrawer(false); } });
 
 function render() {
   if (TS.B) { TS.B.dispose(); TS.B = null; } TS.root = null;
@@ -995,10 +1005,12 @@ function render() {
   if (inGame === true) renderGame();
   else if (inGame === 'trap') trRender();
   else if (inGame === 'board') bdRender();
-  if (inGame !== 'trap' && doc && doc.status === 'lobby' && pickOf(doc) === 'trapper' || !tableId && local && localGame === 'trapper') TB.load().catch(() => { });
+  if (inGame !== 'trap' && doc && doc.status === 'lobby' && hubPick(doc) === 'trapper' || !tableId && local && localGame === 'trapper') TB.load().catch(() => { });
   // 盤のゲームを選んでいたら、3Dの盤も先に読んでおく
-  if (doc && doc.status === 'lobby' && DUEL[pickOf(doc)] || !tableId && local && DUEL[localGame]) BD3.load().catch(() => { });
-  if (doc && doc.status === 'lobby' && CARDG[pickOf(doc)] || !tableId && local && CARDG[localGame]) CD3.load().catch(() => { });
+  if (doc && doc.status === 'lobby' && DUEL[hubPick(doc)] || !tableId && local && DUEL[localGame]) BD3.load().catch(() => { });
+  if (doc && doc.status === 'lobby' && hubPick(doc) === 'alchemy' || !tableId && local && localGame === 'alchemy') AL3.load().catch(() => { });
+  if (doc && doc.status === 'lobby' && hubPick(doc) === 'bomb' || !tableId && local && localGame === 'bomb') bmLoad().catch(() => { });
+  if (doc && doc.status === 'lobby' && hubPick(doc) === 'tower' || !tableId && local && localGame === 'tower') twLoad().catch(() => { });
 }
 setInterval(() => {
   if (doc && doc.status === 'lobby') { const t = $('lobbyTimer'); const left = Math.max(0, OPEN_MS - (Date.now() - doc.openedAt)); if (t) t.textContent = `招待コード ${tableId} ・ ` + (left ? `あと${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}` : '受付終了'); if (!left && t && !t.dataset.closed) { t.dataset.closed = '1'; render(); } }

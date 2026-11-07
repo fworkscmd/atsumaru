@@ -1,8 +1,8 @@
 /* =================== 盤のゲーム（リバーシ・チェス・将棋）とビンゴ大会の画面 =================== */
 // app.js の /*__BOARD_UI__*/ の位置に差し込まれる（app.js の変数を共有）
 const BS = { root: null, sel: null, seen: 0, pending: false, tab: null, cache: null, taps: new Set(), peek: false, lastSeat: null, fx: null, ro: null };
-const isBoardDoc = () => !!doc && (doc.game === 'bingo' || !!DUEL[doc.game] || !!CARDG[doc.game]) && !!doc.b;
-const BD_TITLE = { reversi: 'リバーシ', chess: 'チェス', shogi: '将棋', bingo: 'ビンゴ大会', daifugo: '大富豪', babanuki: 'ババ抜き' };
+const isBoardDoc = () => !!doc && (doc.game === 'bingo' || doc.game === 'alchemy' || doc.game === 'bomb' || doc.game === 'tower' || !!DUEL[doc.game] || !!CARDG[doc.game]) && !!doc.b;
+const BD_TITLE = { reversi: 'リバーシ', chess: 'チェス', shogi: '将棋', bingo: 'ビンゴ大会', daifugo: '大富豪', babanuki: 'ババ抜き', alchemy: '月夜の錬金市場', bomb: 'ばくだんパス', tower: 'ぐらぐらタワー' };
 const CHESS_G = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' }, CHESS_N = { Q: 'クイーン', R: 'ルーク', B: 'ビショップ', N: 'ナイト' };
 const chessGlyph = t => CHESS_G[t] + '︎'; // 絵文字にならないように文字として出す
 const SHOGI_K = { K: '玉', R: '飛', B: '角', G: '金', S: '銀', N: '桂', L: '香', P: '歩', D: '龍', H: '馬', Z: '全', M: '圭', Y: '杏', T: 'と' };
@@ -30,6 +30,9 @@ const BG_NUMS = [3, 18, 33, 49, 64, 7, 21, 40, 52, 70, 11, 26, 0, 57, 62, 1, 29,
 const slaBingo = (holes, line = []) => h('div', { class: 'sla-bg' }, 'BINGO'.split('').map(L => h('b', null, L)),
   BG_NUMS.map((v, i) => h('i', { class: [holes.includes(i) || i === 12 ? 'h' : '', line.includes(i) ? 'ln' : ''].join(' ') }, i === 12 ? 'FREE' : String(v))));
 function bdSlides(id) {
+  if (id === 'alchemy') return alSlides();
+  if (id === 'bomb') return bmSlides();
+  if (id === 'tower') return twSlides();
   if (CARDG[id]) return cdSlides(id);
   const vsCpu = { t: 'ひとりなら コンピュータが相手', s: '「投了」で いつでも やめられる', art: () => h('div', { class: 'sla-vs' }, h('span', { class: 'sla-av' }, 'あなた'), h('b', null, 'VS'), h('span', { class: 'sla-av cpu' }, 'コンピュータ')) };
   if (id === 'reversi') return [
@@ -56,7 +59,13 @@ function bdSlides(id) {
 }
 function bdOpenRules(id, foot) { openSlides(BD_TITLE[id], bdSlides(id), foot); }
 // ハブのチケットの絵
+// チケットの絵はアイコンと同じ
+const TK_BG = { daifugo: 'linear-gradient(160deg,#7a5ac0,#4a2f88)', babanuki: 'linear-gradient(160deg,#c04a60,#7f1f36)', reversi: 'linear-gradient(160deg,#2f8a62,#1f6b4a)', shogi: 'linear-gradient(160deg,#6b4a30,#3a2618)', chess: 'linear-gradient(160deg,#4a4d55,#24262b)' };
 function bdTicketArt(id, art) {
+  if (TK_BG[id]) { art.classList.add('tk-css'); art.style.background = TK_BG[id]; art.style.position = 'relative'; art.append(h('img', { class: 'tka-ic', src: ICON_ART[id], alt: '' })); return; }
+  if (id === 'alchemy') { alTicketArt(art); return; }
+  if (id === 'bomb') { bmTicketArt(art); return; }
+  if (id === 'tower') { twTicketArt(art); return; }
   if (CARDG[id]) { cdTicketArt(id, art); return; }
   art.classList.add('tk-css', 'tk-' + id);
   if (id === 'reversi') {
@@ -74,9 +83,10 @@ function viewBoard() {
   BS.sel = null; BS.seen = doc.b.seq; BS.npcSeq = null; BS.pending = false; BS.peek = false; BS.lastSeat = null; BS.taps.clear();
   try { if (window.ResizeObserver) { BS.ro && BS.ro.disconnect(); BS.ro = new ResizeObserver(bdFit); BS.ro.observe(BS.root); } } catch (e) { }
   // リバーシ・将棋・チェスは3Dの盤。読みこむまで（読みこめないときも）ふつうの盤で遊べる
-  bd3Drop(); CS.sel.clear(); CS.shown = -1; CS.view = -1; CS.lhover = -1; CS.seen = doc.b.seq;
-  if (CARDG[doc.game]) { const root = BS.root, game = doc.game;
-    CD3.load().then(() => { if (BS.root !== root || !isBoardDoc() || doc.game !== game) return; try { BS.c3 = CD3.table(); } catch (e) { console.warn(e); return; } BS.c3.game = game; BS.c3.onTap = cdTap; bdRender(); }, () => { }); }
+  bd3Drop(); CS.sel.clear(); CS.shown = -1; CS.view = -1; CS.lhover = -1; CS.seen = doc.b.seq; CS.fieldKey = doc.b.field ? doc.b.seq : '';
+  if (doc.game === 'tower') { const root = BS.root; twLoad().then(() => { if (BS.root === root && isTowerDoc()) bdRender(); }, () => toast('読みこめませんでした')); }
+  if (doc.game === 'bomb') { const root = BS.root; bmLoad().then(() => { if (BS.root === root && isBombDoc()) bdRender(); }, () => { }); }
+  if (doc.game === 'alchemy') { const root = BS.root; AL3.load().then(() => { if (BS.root === root && isAlcDoc()) bdRender(); }, () => { }); }
   if (DUEL[doc.game]) { const root = BS.root, game = doc.game;
     BD3.load().then(() => { if (BS.root !== root || !isBoardDoc() || doc.game !== game) return; try { BS.b3 = BD3.board(game); } catch (e) { console.warn(e); return; } BS.b3.game = game; BS.b3.onTap = bdTap; bdRender(); }, () => { }); }
   return BS.root;
@@ -84,7 +94,7 @@ function viewBoard() {
 function bd3Drop() { if (BS.b3) { BS.b3.dispose(); BS.b3 = null; } if (BS.c3) { BS.c3.dispose(); BS.c3 = null; } }
 function bdRender() {
   if (!BS.root || !BS.root.isConnected) { render(); return; }
-  const parts = doc.game === 'bingo' ? bingoView() : CARDG[doc.game] ? cardView() : duelView();
+  const parts = doc.game === 'tower' ? towerView() : doc.game === 'bomb' ? bombView() : doc.game === 'alchemy' ? alcView() : doc.game === 'bingo' ? bingoView() : CARDG[doc.game] ? cardView() : duelView();
   BS.root.replaceChildren(...[parts].flat(2).filter(Boolean));
   bdFit();
 }

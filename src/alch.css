@@ -1,0 +1,123 @@
+/* ===== 月夜の錬金市場：ボクセルの場面の上に、暗い札とカード ===== */
+.bd-alchemy{position:fixed;inset:0;max-width:none;margin:0;display:block;background:#3e4a4c}
+.al{position:relative;height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:7px;box-sizing:border-box;padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px));overflow:hidden;color:#fff;font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  background:conic-gradient(#4b5855 25%,#55625f 0 50%,#4b5855 0 75%,#55625f 0) 0 0/64px 64px}
+.al.night{background:conic-gradient(#20263f 25%,#262d48 0 50%,#20263f 0 75%,#262d48 0) 0 0/64px 64px}
+.al>*{flex:none;position:relative;z-index:2}
+.al button{font:inherit;border:0;padding:0;background:none;color:inherit;cursor:pointer}
+.al>.al-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.al-bar{display:flex;gap:6px;height:42px;align-items:stretch}
+.al-bar>div{background:rgba(30,36,38,.84);border-radius:6px;padding:3px 10px;display:flex;flex-direction:column;justify-content:center;line-height:1.1}
+.al-bar>.d{background:#ffc53d;color:#2a2410;clip-path:polygon(0 0,100% 0,88% 100%,0 100%);padding-right:22px}
+.al-bar .sp{flex:1}
+.al-bar small{font-size:10px;font-weight:700;opacity:.85}
+.al-bar b{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums}
+.al .al-ib{min-width:40px;padding:0 8px;background:rgba(30,36,38,.84);border-radius:6px;font-size:13px;font-weight:900}
+.al-steps{display:flex;gap:4px}
+.al .al-steps button{flex:1;font-size:13px;font-weight:900;padding:7px 0;border-radius:6px;background:rgba(30,36,38,.7);color:#a9b4b2}
+.al .al-steps button.on{background:#fff;color:#22282a}.al .al-steps button.ok{color:#8fe0a0}
+.al-ttl{font-family:"Zen Maru Gothic",var(--f,sans-serif);font-size:20px;font-weight:900;line-height:1.3;text-shadow:0 2px 5px rgba(0,0,0,.6)}
+.al-ttl.c{text-align:center}
+.al-ttl small{display:block;font-family:"Zen Kaku Gothic New",sans-serif;font-size:13px;font-weight:700;opacity:.92}
+.al>.al-mid{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.al>.al-mid.s{justify-content:flex-start;align-items:stretch;overflow-y:auto;overflow-x:hidden;width:100%}
+.al-mid.e{justify-content:flex-end;align-items:stretch;gap:5px}
+.al .al-go{flex:1;min-height:48px;border-radius:7px;background:#fff;color:#22282a;font-weight:900;font-size:16px;box-shadow:0 3px 0 #ffc53d}
+.al>.al-go{flex:none;height:48px}
+.al .al-sub{flex:1;min-height:48px;border-radius:7px;background:rgba(30,36,38,.88);color:#fff;font-weight:900;font-size:14px}
+.al .al-sub:disabled{opacity:.5}
+.al-row{display:flex;gap:7px}
+.al-noimg{display:block;background:rgba(255,255,255,.12);border-radius:6px}
+.al-tg{position:absolute!important;transform:translate(-50%,-100%);background:#fff;color:#22282a;border-radius:4px;padding:1px 6px;font-weight:900;font-size:14px;box-shadow:0 2px 0 rgba(0,0,0,.35);white-space:nowrap;z-index:1!important}
+.al-tg small{font-size:10px;font-weight:700;margin-right:3px}
+.al-tg::after{content:"";position:absolute;left:50%;top:100%;width:2px;height:9px;background:inherit}
+.al-tg.hot{background:#e8402a;color:#fff}
+.al-note{background:rgba(30,36,38,.86);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;text-align:center}
+.al-note.big{font-family:"Zen Maru Gothic",sans-serif;font-size:21px;font-weight:900;padding:14px 18px}
+.al-note small{display:block;font-size:13px;font-weight:700;margin-top:3px}
+/* カード */
+.al-cd{position:relative;width:172px;height:240px;flex:none;background:var(--d);border-radius:14px;box-shadow:0 0 0 2px #1d1426,0 6px 0 #1d1426,0 12px 16px rgba(0,0,0,.4);padding:7px;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;font-family:"Zen Maru Gothic",sans-serif;color:#fff}
+.al-cd .win{position:relative;flex:1 1 auto;min-height:0;border-radius:9px;overflow:hidden;background:radial-gradient(circle at 55% 52%,var(--l) 0 18%,var(--c) 58%,var(--d2));box-shadow:inset 0 0 0 2px rgba(255,255,255,.28)}
+.al-cd .win::before{content:"";position:absolute;inset:-40%;background:repeating-conic-gradient(from 8deg at 55% 52%,rgba(255,255,255,.17) 0 9deg,transparent 9deg 24deg)}
+.al-cd .al-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.al-cd .rb{position:absolute;left:30px;right:6px;top:9px;height:25px;background:var(--c);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;text-shadow:0 1px 0 rgba(0,0,0,.35);clip-path:polygon(0 0,100% 0,94% 50%,100% 100%,0 100%);z-index:2}
+.al-cd .co{position:absolute;left:3px;top:3px;width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a0,#f0b52c 65%,#c8862a);box-shadow:0 0 0 2.5px #1d1426;display:grid;place-items:center;color:#3a2606;font-weight:900;font-size:20px;z-index:3}
+.al-cd .tx{flex:none;height:27%;background:rgba(10,6,20,.42);border-radius:7px;padding:5px 9px;display:flex;align-items:center;font-family:"Zen Kaku Gothic New",sans-serif;font-size:13px;font-weight:700;line-height:1.35;box-sizing:border-box}
+/* 小さいカード */
+.al-hand{display:flex;gap:6px;padding-top:10px}
+.al-strip{display:flex;gap:6px;overflow-x:auto;padding:10px 4px 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.al-strip::-webkit-scrollbar{display:none}
+.al .al-th{position:relative;flex:1;min-width:0;height:96px;background:var(--d);border-radius:9px;box-shadow:0 0 0 1.5px #1d1426,0 3px 0 #1d1426;padding:3px;box-sizing:border-box;display:flex;flex-direction:column;gap:2px;font-family:"Zen Maru Gothic",sans-serif;color:#fff;transition:transform .15s}
+.al-strip .al-th{flex:0 0 66px}
+.al-th .w2{position:relative;flex:1;min-height:0;display:block;border-radius:6px;overflow:hidden;background:radial-gradient(circle at 50% 50%,var(--l) 0 22%,var(--c) 75%,var(--d2))}
+.al-th .al-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.al-th b{font-size:11.5px;font-weight:900;text-align:center;line-height:1.25;white-space:nowrap;overflow:hidden}
+.al-th .c2{position:absolute;left:-4px;top:-5px;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a0,#f0b52c 65%);box-shadow:0 0 0 1.5px #1d1426;color:#3a2606;font-size:13px;font-weight:900;display:grid;place-items:center;z-index:2}
+.al .al-th.on{transform:translateY(-8px);box-shadow:0 0 0 2.5px #fff,0 3px 0 #1d1426}
+.al .al-th.off{opacity:.55}
+/* つくる */
+.al-pot{flex:1 1 auto;min-height:0;max-height:220px;width:auto;max-width:100%;object-fit:contain}
+.al-shelf{display:flex;gap:8px;border-bottom:5px solid #c98c4e;padding:0 10px 2px}
+.al-shelf span{width:44px;height:44px;display:block}
+.al-shelf span.e{border:1.5px dashed rgba(255,255,255,.35);border-radius:8px;box-sizing:border-box;height:40px;align-self:flex-end}
+.al-shelf .b{width:44px;height:44px;display:block}
+.al-recs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.al .al-rc{display:flex;align-items:center;gap:3px;background:rgba(30,36,38,.86);border-radius:99px;padding:3px 11px 3px 3px;font-size:13px;font-weight:900;color:#a9b4b2}
+.al .al-rc.ok{background:#fff;color:#22282a;box-shadow:0 0 0 2px #ffc53d}
+.al-rc .b{width:28px;height:28px}
+/* うる */
+.al-ods{display:flex;gap:5px;flex:none;width:100%;min-width:0}
+.al .al-od{flex:1;min-width:0;background:rgba(30,36,38,.86);border-radius:8px;padding:4px 5px;display:flex;flex-direction:column;align-items:center;gap:1px;color:#c9d2d0}
+.al .al-od.ok{color:#fff;box-shadow:0 0 0 1.5px #ffc53d}
+.al .al-od.on{background:#ffc53d;color:#2a2410}
+.al-od .n{display:flex}
+.al-od .b{width:24px;height:24px}
+.al-od small{font-size:10.5px;font-weight:700;white-space:nowrap}
+.al-od b{font-size:12.5px;font-weight:900}
+.al-sl{display:flex;align-items:center;gap:7px;box-sizing:border-box;width:100%;min-width:0;background:rgba(30,36,38,.86);border-radius:9px;padding:6px 8px}
+.al-sl .b{width:46px;height:46px;flex:none}
+.al-sl .m{flex:1;min-width:0;line-height:1.3}
+.al-sl .m b{display:block;font-size:15px;font-weight:900}
+.al-sl .m span{display:flex;flex-wrap:wrap;align-items:center;gap:3px;font-size:12px;color:#c9d2d0}
+.al .fc,.fc{width:20px;height:20px;border-radius:5px;background:#ffc53d;object-fit:cover;flex:none}
+.al-sl .sw{display:flex;flex-direction:column;gap:3px;flex:none;width:auto;height:auto}
+.al .al-sl .sw button{width:80px;height:32px;border-radius:6px;background:#3a4446;color:#c9d2d0;font-size:12.5px;font-weight:900}
+.al .al-sl .sw button.on{background:#ffc53d;color:#2a2410}
+.al .al-sl .sw button:disabled{opacity:.4}
+/* 夜 */
+.al>.al-big{text-align:center;font-family:"Zen Maru Gothic",sans-serif;font-size:32px;font-weight:900;color:#ffe9a8;text-shadow:0 0 14px rgba(255,200,90,.7),0 3px 0 #1d1426}
+.al>.al-res{margin-top:auto;display:flex;flex-direction:column;gap:5px}
+.al-ro{display:flex;align-items:center;gap:7px;background:rgba(14,16,34,.9);border-radius:8px;padding:6px 9px}
+.al-ro.x{box-shadow:0 0 0 2px #e8402a}.al-ro.y{box-shadow:0 0 0 2px #45c46e}
+.al-ro .b{width:34px;height:34px}
+.al-ro .m{flex:1;min-width:0;font-size:14px;font-weight:900;line-height:1.3}
+.al-ro .m small{display:flex;gap:3px;align-items:center;font-size:12px;font-weight:700;color:#c3c9e0}
+.al-ro .p{text-align:right;font-size:21px;font-weight:900;line-height:1.05}
+.al-ro .p small{display:block;font-size:11px;font-weight:700;color:#ffb3a3}
+.al-rr{display:flex;align-items:center;gap:9px;background:rgba(14,16,34,.88);border-radius:9px;padding:6px 10px}
+.al-rr.me{box-shadow:0 0 0 2px #ffc53d}
+.al-rr i{font-style:normal;width:20px;font-size:17px;font-weight:900;color:#ffc53d}
+.al-rr .f{width:40px;height:40px;background:#ffc53d;border-radius:6px;object-fit:cover}
+.al-rr span{flex:1;min-width:0;font-size:15px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.al-rr em{font-style:normal;font-size:13px;font-weight:900;color:#8fe0a0}
+.al-rr b{font-size:21px;font-weight:900;font-variant-numeric:tabular-nums;min-width:32px;text-align:right}
+.al-ln{display:flex;justify-content:space-between;gap:8px;background:rgba(14,16,34,.86);border-radius:7px;padding:6px 11px;font-size:13.5px;font-weight:700}
+.al-ln b{color:#ffc53d;white-space:nowrap}
+.al>.al-win{text-align:center;padding-top:34px;font-family:"Zen Maru Gothic",sans-serif}
+.al-win b{display:block;font-size:29px;font-weight:900;color:#ffe9a8;text-shadow:0 3px 0 #1d1426}
+.al-win small{font-size:14px;font-weight:700}
+/* 遊びかた・ハブ */
+.al-sla{width:64px;height:64px;object-fit:contain}
+.al-slabig{width:150px;height:200px;object-fit:cover;border-radius:12px}
+.gi-alm{background:linear-gradient(160deg,#2c3a6e,#1d2340)}
+.gi-alm svg{width:70%;height:70%}
+.tk-alc{background:#1d2340;position:relative}
+.tka-alc{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 34%}
+@media (max-height:740px){
+  .al{gap:5px}
+  .al-cd{width:144px;height:200px}.al-cd .tx{font-size:12px}
+  .al .al-th{height:84px}
+  .al-pot{max-height:150px}
+  .al .al-sl .sw button{height:28px}
+  .al-sl .b{width:38px;height:38px}
+}

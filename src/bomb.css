@@ -1,0 +1,46 @@
+/* ===== ばくだんパス ===== */
+.bd-bomb{position:fixed;inset:0;max-width:none;margin:0;display:block;background:#14161c}
+.bm{height:100%;max-width:480px;margin:0 auto;box-sizing:border-box;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:9px;color:#fff;overflow:hidden;position:relative}
+.bm.bm-hot{background:radial-gradient(circle at 50% 58%,#3a1a1c,#14161c 72%)}
+.bm.bm-boomed{background:radial-gradient(circle at 50% 48%,#ff8a3c,#c23d1f 40%,#14161c 84%)}
+.bm .bd-ttl b,.bm .bd-ttl small{color:#fff}
+.bm .hub-ib{background:rgba(255,255,255,.1);border-color:transparent;color:#fff}
+.bm-seats{display:flex;flex-wrap:wrap;gap:5px;flex:none}
+.bm-seat{flex:1 1 22%;min-width:0;background:rgba(255,255,255,.1);border-radius:8px;padding:4px 7px;display:flex;flex-direction:column;gap:2px;box-sizing:border-box}
+.bm-seat.on{background:#e8402a;color:#fff}
+.bm-seat.on i{background:#fff}
+.bm-seat.out{opacity:.4}
+.bm-seat b{font-size:12.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bm-seat span{display:flex;gap:2px;height:11px}
+.bm-seat i{width:11px;height:11px;background:#ff5a4a;clip-path:polygon(50% 100%,0 40%,12% 10%,35% 4%,50% 20%,65% 4%,88% 10%,100% 40%)}
+.bm-mid{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+.bm-topic{font-family:"Zen Maru Gothic",sans-serif;font-size:32px;font-weight:900;line-height:1.2;text-wrap:balance}
+.bm-topic small{display:block;font-family:"Zen Kaku Gothic New",sans-serif;font-size:13px;font-weight:700;opacity:.85}
+.bm-topic.sla{color:#141414;font-size:26px}
+.bm-bomb{--sh:1px;width:min(62vw,250px);aspect-ratio:1;touch-action:none;animation:bm-sh .13s linear infinite;transition:translate .06s}
+.bm-bomb img{display:block;width:100%;height:100%;pointer-events:none}
+.bm-noart{display:block;width:70%;height:70%;margin:15%;border-radius:50%;background:#26242c}
+.bm-bomb:not(.mine){width:min(38vw,150px);opacity:.75;animation:none}
+.bm-bomb.fly{animation:bm-fly .23s ease-in forwards}
+@keyframes bm-sh{0%,100%{transform:translate(0,0)}25%{transform:translate(var(--sh),calc(var(--sh)*-1))}75%{transform:translate(calc(var(--sh)*-1),var(--sh))}}
+@keyframes bm-fly{to{transform:translateY(-120vh) rotate(40deg) scale(.6)}}
+.bm-note{flex:none;text-align:center;font-size:14px;font-weight:700}
+.bm-go{flex:none;min-height:54px;border:0;border-radius:10px;background:#e8402a;color:#fff;font:inherit;font-size:18px;font-weight:900;box-shadow:0 3px 0 #7a1f12}
+.bm-lap{flex:none;text-align:center;font-size:12px;font-weight:900;color:#a8b4ae}
+.bm-lcd{font-family:ui-monospace,Consolas,monospace;font-size:44px;font-weight:900;letter-spacing:.14em;color:#ff4a3a;background:#2a0d0c;border-radius:8px;padding:2px 14px;box-shadow:inset 0 0 0 2px #5a1a16,0 0 22px rgba(255,74,58,.35)}
+.bm-bits{position:relative;width:0;height:0}
+.bm-bits i{position:absolute;left:-7px;top:-7px;width:14px;height:14px;background:var(--c);animation:bm-bit .7s cubic-bezier(.1,.7,.3,1) forwards}
+@keyframes bm-bit{from{transform:rotate(var(--a)) translateX(0)}to{transform:rotate(var(--a)) translateX(var(--d)) rotate(120deg);opacity:.15}}
+.bm-sub{flex:none;min-height:44px;border:0;border-radius:10px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:13px;font-weight:700}
+.bm-big{font-family:"Zen Maru Gothic",sans-serif;font-size:58px;font-weight:900;color:#fff3c0;text-shadow:0 4px 0 #7a2410;animation:bm-big .3s cubic-bezier(.3,1.7,.5,1)}
+@keyframes bm-big{from{transform:scale(2.2);opacity:0}}
+.bm-who{font-size:20px;font-weight:900}
+.bm .bd-over{background:rgba(20,22,26,.6)}
+.bm-sla{width:130px;height:130px}
+.gi-bomb{background:linear-gradient(160deg,#ffd84a,#f5b81f)}
+.gi-bombi{display:block;width:54%;height:66%;background:repeating-linear-gradient(90deg,#cc2f20 0 30%,#14161c 30% 35%);position:relative;box-shadow:inset 0 -5px 0 #1c1a18}
+.gi-bombi::after{content:"";position:absolute;right:6%;top:-16%;width:18%;height:28%;background:#ffd54a;border-radius:2px;transform:rotate(30deg)}
+.tk-bomb{background:linear-gradient(160deg,#ffd84a,#f5b81f);position:relative}
+.tka-bomb{position:absolute;left:50%;top:50%;height:96%;transform:translate(-50%,-50%)}
+@media (prefers-reduced-motion:reduce){.bm-bomb,.bm-big{animation:none}}
+@media (max-height:740px){.bm-topic{font-size:26px}.bm-bomb{width:min(50vw,190px)}.bm-lcd{font-size:34px}}

@@ -1,7 +1,7 @@
 /* =================== TRAPPER UI =================== */
 const TS = { B: null, root: null, seen: 0, sel: [], card: null, cardCell: null, pending: false, lastLocal: null, overAt: 0 };
 const SEAT_COL = ['#4a4d55', '#e85a4a', '#3f7fe0', '#e8b42a'];
-const TRAP_ICON = '<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="41" rx="14" ry="3" fill="rgba(0,0,0,.12)"/><circle cx="24" cy="25" r="14" fill="#4a86e0"/><ellipse cx="24" cy="29" rx="9" ry="8" fill="#fbf1dd"/><circle cx="19" cy="22" r="2.2" fill="#151515"/><circle cx="29" cy="22" r="2.2" fill="#151515"/><path d="M21 26l3 4 3-4z" fill="#f3a43a"/><circle cx="15" cy="27" r="2" fill="#ff9a9a"/><circle cx="33" cy="27" r="2" fill="#ff9a9a"/><path d="M22 11c0-4 3-5 3-5s-1 3 1 5z" fill="#4a86e0"/></svg>';
+const TRAP_ICON = '<img class="gi-img" src="' + ICON_ART.trapper + '" alt="">';
 const isTrapDoc = () => !!doc && doc.game === 'trapper' && !!doc.t;
 const trCellDesc = (t, c) => c === 0 ? '巣' : t.traps.some(x => x.c === c) ? '罠がある！' : t.food[c] ? 'エサ ＋1' : 'なにもない';
 function trName(id) {
