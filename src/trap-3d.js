@@ -191,8 +191,9 @@ const TB = (() => {
     const th = TH[theme] || TH.flower, tr = trackOf(th.shape);
     // 画質の段階。スマホは画面がこまかく、点の数がそのまま重さになるので、こまかさは1.5倍まで。
     // 動いているあいだに描くのが追いつかないと、自動で1段ずつ下げる（その端末では次からも下げたまま）
-    const dpr = window.devicePixelRatio || 1, QS = [{ pr: Math.min(1.5, dpr), sm: 1024 }, { pr: Math.min(1, dpr), sm: 1024 }, { pr: Math.min(.75, dpr), sm: 512 }];
-    let q = 0; try { q = Math.min(QS.length - 1, Math.max(0, +localStorage.getItem('atsumaru.q3d') || 0)); } catch (e) { }
+    const dpr = window.devicePixelRatio || 1, QS = [{ pr: Math.min(2, dpr), sm: 1024 }, { pr: Math.min(1.5, dpr), sm: 1024 }, { pr: Math.min(1, dpr), sm: 1024 }, { pr: Math.min(.75, dpr), sm: 512 }];
+    // 覚える場所は q3d2（前の q3d は、まちがって下がったままの端末が多かったので読まない）
+    let q = 0; try { localStorage.removeItem('atsumaru.q3d'); q = Math.min(QS.length - 1, Math.max(0, +localStorage.getItem('atsumaru.q3d2') || 0)); } catch (e) { }
     const R = new T.WebGLRenderer({ antialias: true, alpha: true }); R.setPixelRatio(QS[q].pr); R.shadowMap.enabled = true; R.shadowMap.type = T.PCFShadowMap; R.outputEncoding = T.sRGBEncoding; R.setClearColor(0, 0);
     R.domElement.style.cssText = 'display:block;width:100%;height:100%;touch-action:manipulation'; host.append(R.domElement);
     const sc = new T.Scene();
@@ -262,7 +263,7 @@ const TB = (() => {
     // 影は光が動かないので、物が動いたときだけ描き直す（視点を動かすだけなら前の影を使う。動かすと重くなるのはここが大きい）
     // 風車だけが回っているときは、毎フレームではなく1秒に20回くらいに落とす
     R.shadowMap.autoUpdate = false;
-    let dirty = true, raf = 0, shadowDue = true, lastDraw = 0, millN = 0, shadowN = 0; const anims = [];
+    let dirty = true, raf = 0, shadowDue = true, lastDraw = 0, prevActive = false, millN = 0, shadowN = 0; const anims = [];
     // 描いている最中に「もう1回描いて」（draw）が来ても、ここで次のコマを二重に予約しない（again で覚えて最後に1回だけ予約）。
     // 二重に予約すると、1コマごとに描く回数が倍々に増えて、動きのあいだだけひどくカクカクになっていた
     let inFrame = false, again = false;
@@ -274,22 +275,25 @@ const TB = (() => {
       if (millOnly && now - lastDraw < 48) { inFrame = false; raf = requestAnimationFrame(frame); return; }
       if (deco.mill) { deco.mill.userData.hub.rotation.z += .01 * Math.min(4, Math.max(1, (now - lastDraw) / 16.7)); alive = true; if (++millN % 6 === 0) shadowDue = true; }
       if (shadowDue) { R.shadowMap.needsUpdate = true; shadowDue = false; }
-      const active = dirty || anims.length > 0, dt = now - lastDraw;
-      R.render(sc, cam); dirty = false; lastDraw = now; inFrame = false; if (alive || anims.length || again) raf = requestAnimationFrame(frame);
-      if (active && dt > 0 && dt < 150) measure(dt);
+      const active = dirty || anims.length > 0, dt = now - lastDraw, chain = active && prevActive;
+      R.render(sc, cam); dirty = false; lastDraw = now; prevActive = active; inFrame = false; if (alive || anims.length || again) raf = requestAnimationFrame(frame);
+      // 続けて動いているコマどうしの間だけ測る。止まっていたあとの1コマ（タップ・風車の間引き）は間があいているだけなので数えない
+      if (chain && dt > 0 && dt < 150) measure(dt);
     }
-    // 動いているあいだの1コマの時間を測る。30コマの平均が25ms（1秒に40回）より長ければ画質を1段下げる。最初の12コマは準備で重いので数えない
-    let warm = 12, acc = [], fpsAcc = [], fpsAt = 0;
+    // 動いているあいだの1コマの時間を測る。30コマの平均が40ms（1秒に25回）より長いことが2回続いたら画質を1段下げる。最初の12コマは準備で重いので数えない
+    // （25ms だと、省電力で1秒30回に止められている iPhone でも下がってしまい、ぼやけたままになっていた）
+    let warm = 12, acc = [], slow = 0, fpsAcc = [], fpsAt = 0;
     const fpsEl = /[?&]fps\b/.test(location.search) ? Object.assign(document.createElement('div'), { className: 'tp-fps' }) : null; if (fpsEl) host.append(fpsEl);
     function measure(dt) {
       if (fpsEl) { fpsAcc.push(dt); const t = performance.now(); if (t - fpsAt > 500) { const a = fpsAcc.reduce((s, x) => s + x, 0) / fpsAcc.length; fpsEl.textContent = `${Math.round(1000 / a)}fps　画質 ${QS.length - q}/${QS.length}　×${QS[q].pr}`; fpsAcc = []; fpsAt = t; } }
       if (warm > 0) { warm--; return; }
       acc.push(dt); if (acc.length < 30) return;
       const avg = acc.reduce((s, x) => s + x, 0) / acc.length; acc = [];
-      if (avg > 25 && q < QS.length - 1) setQ(q + 1);
+      slow = avg > 40 ? slow + 1 : 0;
+      if (slow >= 2 && q < QS.length - 1) { slow = 0; setQ(q + 1); }
     }
     function setQ(n) {
-      q = n; try { localStorage.setItem('atsumaru.q3d', String(q)); } catch (e) { }
+      q = n; try { localStorage.setItem('atsumaru.q3d2', String(q)); } catch (e) { }
       R.setPixelRatio(QS[q].pr); key.shadow.mapSize.set(QS[q].sm, QS[q].sm); if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; }
       warm = 6; fit(); kick();
     }

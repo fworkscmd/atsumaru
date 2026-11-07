@@ -343,10 +343,12 @@ const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Ar
 const within = (p, ms) => Promise.race([p, new Promise((_, ng) => setTimeout(() => ng(new Error('timeout')), ms))]);
 async function heal(force) {
   if (local || !db || !tableId || !onSnap || healing || document.hidden) return;
-  healing = true; const id = tableId;
+  healing = true; const id = tableId, snapAt = lastSnapAt;
   try {
     const s = await within(tref().fresh(), 4000);
     if (id !== tableId || !s.exists) return;
+    // 読んでいるあいだに知らせが届いていたら、そちらが新しいかもしれないので使わない（古い卓にもどって掘る演出が切れていた）
+    if (lastSnapAt !== snapAt) { if (force) listen(); return; }
     if (!serverDoc || canon(s.data()) !== canon(serverDoc)) { await within(onSnap(s), 4000); listen(); }
     else if (force) listen();
   } catch (e) {
@@ -402,7 +404,9 @@ const steward = () => { const hs = doc.players.filter(p => p !== NPC && !doc.gon
 setInterval(() => {
   if (local || !doc || doc.status !== 'playing' || doc.v !== 6 || !isPlayer()) return;
   if (doc.phase === 'choose') {
-    if (doc.inside.includes(NPC) && !doc.choice[NPC] && steward()) withLease(d => {
+    // コンピュータは、この端末で掘る演出（と始まりの動き）が終わってから選ぶ。坑道にコンピュータだけ残ると1.5秒ごとに掘って、演出が次の結果に上書きされていた
+    const calm = Date.now() >= (G.lockUntil || 0) && Date.now() - (G.revealAt || 0) >= SEENO_MS + DIG_MS + 1000;
+    if (calm && doc.inside.includes(NPC) && !doc.choice[NPC] && steward()) withLease(d => {
       if (!d || d.phase !== 'choose' || d.choice[NPC] || !d.inside.includes(NPC)) return null;
       let g = d, a = npcChoice(g); g = act(g, NPC, a); if (a.t === 'radar') g = act(g, NPC, npcChoice(g));
       return allChosen(g) ? resolve(g) : g;
@@ -815,7 +819,7 @@ function renderGame() {
     let reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { }
     // マグマ・分かれ道は、割れたところで止めて結果へ
     const split = burnt.length > 0 || !!rv.fork, dig = from && stay.length && !reduce ? (split ? DIG_MS * .68 : DIG_MS) : 0;
-    const t0 = Date.now(), after = dig ? SEENO_MS + dig : 0;
+    const t0 = Date.now(), after = dig ? SEENO_MS + dig : 0; G.revealAt = t0;
     G.dig = dig ? { start: t0 + SEENO_MS, end: t0 + after, from, out: d.out, stay, depth: rv.depth, split } : null;
     // 演出のあいだと結果が出た直後は、ボタンを止める（連打が次の段の選択にならないように）
     G.lockUntil = t0 + after + 1000; clearTimeout(G.lockT); G.lockT = setTimeout(renderPanel, after + 1050);
