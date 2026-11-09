@@ -316,8 +316,8 @@ button.ava{border:0;font:inherit;font-weight:900;font-size:15px;padding:0}
 .gi-secret{border:2px dashed #c9c6be;color:#c9c6be;box-sizing:border-box}
 /* ほかのゲーム：ふだんは1行（重なったアイコン＋文字）。タップで下から引き出し */
 .hub-bar{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;background:var(--h-card);border:1px solid var(--h-line);border-radius:14px;padding:6px 10px;font:inherit;color:var(--h-ink);text-align:left;cursor:pointer}
-.hub-bar b{flex:1;font-size:14px;font-weight:900}
-.hub-bar small{font-size:11px;color:var(--h-mute)}
+.hub-bar b{flex:1;font-size:14px;font-weight:900;white-space:nowrap}
+.hub-bar small{font-size:11px;color:var(--h-mute);white-space:nowrap}
 .hub-bar>i{display:grid;place-items:center}
 .hub-stack{display:flex}
 .hub-stack .gi-ic{width:28px;height:28px;aspect-ratio:auto;border-radius:8px;box-shadow:0 0 0 2px var(--h-card);overflow:hidden}

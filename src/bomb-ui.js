@@ -15,7 +15,7 @@ function bmLoad() {
     [[0, 10, -1], [1, 11, -1], [2, 11, -1], [3, 12, -1]].forEach(([x, y, z]) => cube(x, y, z, '#c9a27a'));
     [[4, 13, -1, '#ffd54a'], [4.8, 13.7, -.7, '#ff8a3c'], [3.3, 13.8, -1.3, '#ff5a36'], [4.1, 14.3, -1, '#ffe9a0']].forEach(([x, y, z, c]) => cube(x, y, z, c, c));
     const d = new T.DirectionalLight('#fff', .66); d.position.set(-7, 11, 13); s.add(d); s.add(new T.HemisphereLight('#fff', '#6a5a80', .34));
-    const c = new T.PerspectiveCamera(30, 1, .1, 140); c.position.set(0, 2, 37); c.lookAt(0, 2.5, 0); r.render(s, c); BM.art = r.domElement.toDataURL('image/png'); r.dispose();
+    const c = new T.PerspectiveCamera(30, 1, .1, 140); c.position.set(0, 3.2, 50); c.lookAt(0, 3.2, 0); r.render(s, c); BM.art = r.domElement.toDataURL('image/png'); r.dispose();
   }).catch(e => { BM.ready = null; throw e; });
   return BM.ready;
 }

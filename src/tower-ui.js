@@ -1,33 +1,22 @@
 /* =================== ぐらぐらタワーの画面 =================== */
 // bomb-ui.js のうしろに差し込まれる。物理は matter.js（cdnjs から遅延読み込み）、荷物と場面はボクセルを1回描いて画像にする
 const TW = { ready: null, art: null, wrap: null, cv: null, X: null, hud: null, seq: -1, gid: 0, eng: null, plat: null, bodies: [], phase: 'wait', x: 187, t: 0, quiet: 0, cam: 0, fell: false, replay: null, drag: false, heldAt: 0, aim: 187, run: false };
-const TW_W = 375, TW_S = 40, TW_PLAT = 178;
+const TW_W = 375, TW_S = 40, TW_PLAT = 150;
 const isTowerDoc = () => !!doc && doc.game === 'tower' && !!doc.b;
-// 荷物：w,h は大きさ（点）、parts は当たり判定の箱 [中心x, 中心y, 幅, 高さ]（下が＋）。f は3Dの形、yen は美術品の値段（億円）
+// 荷物：絵の1単位が20点（TW_U）。parts は当たり判定の箱 [中心x, 中心y, 幅, 高さ]（下が＋）。なければ全体が1つの箱。形は tools/tower-items-mockup.html
+const TW_U = 28, TW_PAD = 12;
+const twP = (n, u, v, o) => ({ n, w: u * TW_U, h: v * TW_U, ...o, parts: (o && o.parts || [[0, 0, u * 20, v * 20]]).map(a => a.map(x => x * TW_U / 20)) }); // parts は1単位20点で書いて、TW_U に合わせて広げる
 const TW_P = {
-  sofa: { n: 'ソファ', w: 132, h: 62, parts: [[0, 14, 132, 34], [-56, -14, 20, 34], [56, -14, 20, 34], [0, -16, 92, 14]], f(B) { B(0, -.35, 0, 3.3, .85, 1.5, '#c8573f'); B(-1.4, .35, 0, .5, .85, 1.5, '#b84a34'); B(1.4, .35, 0, .5, .85, 1.5, '#b84a34'); B(0, .4, -.5, 2.3, .35, .5, '#b84a34'); } },
-  fridge: { n: '冷蔵庫', w: 62, h: 108, parts: [[0, 0, 62, 108]], f(B) { B(0, 0, 0, 1.55, 2.7, 1.4, '#e8eef0'); B(0, .45, .72, 1.5, .03, .03, '#a8b4be'); B(-.55, .75, .72, .06, .5, .05, '#8a929e'); B(-.55, -.4, .72, .06, .5, .05, '#8a929e'); } },
-  table: { n: 'テーブル', w: 122, h: 52, parts: [[0, -20, 122, 12], [-50, 6, 12, 40], [50, 6, 12, 40]], f(B) { B(0, .5, 0, 3.05, .3, 1.5, '#a9743f'); B(-1.25, -.15, .5, .3, 1, .3, '#7c4d2a'); B(1.25, -.15, .5, .3, 1, .3, '#7c4d2a'); B(-1.25, -.15, -.5, .3, 1, .3, '#7c4d2a'); B(1.25, -.15, -.5, .3, 1, .3, '#7c4d2a'); } },
-  tv: { n: 'テレビ', w: 92, h: 62, parts: [[0, -7, 92, 48], [0, 25, 44, 12]], f(B) { B(0, .18, 0, 2.3, 1.2, .3, '#1c1e24'); B(0, .18, .16, 2, 1, .03, '#6fc8e0'); B(0, -.62, 0, 1.1, .3, .6, '#3a3a3a'); } },
-  tansu: { n: 'タンス', w: 86, h: 86, parts: [[0, 0, 86, 86]], f(B) { B(0, 0, 0, 2.15, 2.15, 1.3, '#9c6a3e'); [.55, 0, -.55].forEach(y => { B(0, y + .27, .67, 2, .03, .03, '#6b4526'); B(0, y, .68, .3, .08, .05, '#e7b52c'); }); } },
-  plant: { n: '観葉植物', w: 44, h: 74, parts: [[0, 22, 34, 30], [0, -14, 44, 44]], f(B) { B(0, -.55, 0, .85, .75, .85, '#c49058'); B(0, .35, 0, 1.1, 1.1, 1, '#4fae6c'); B(.2, .8, .1, .6, .4, .6, '#3f9a5e'); } },
-  bath: { n: 'おふろ', w: 132, h: 54, parts: [[0, 20, 132, 14], [-59, 0, 14, 54], [59, 0, 14, 54]], f(B) { B(0, -.5, 0, 3.3, .35, 1.5, '#f4efe6'); B(-1.47, 0, 0, .35, 1.35, 1.5, '#f4efe6'); B(1.47, 0, 0, .35, 1.35, 1.5, '#f4efe6'); B(0, 0, -.68, 2.6, 1.35, .14, '#f4efe6'); B(0, 0, .68, 2.6, 1.35, .14, '#f4efe6'); B(0, -.1, 0, 2.6, .2, 1.2, '#8fd8ff'); } },
-  chair: { n: 'いす', w: 54, h: 84, parts: [[0, 8, 54, 10], [-22, -18, 10, 42], [-20, 28, 10, 28], [20, 28, 10, 28]], f(B) { B(0, -.2, 0, 1.35, .25, 1.2, '#a9743f'); B(-.55, .45, 0, .25, 1.05, 1.2, '#7c4d2a'); B(-.5, -.7, 0, .25, .7, 1, '#7c4d2a'); B(.5, -.7, 0, .25, .7, 1, '#7c4d2a'); } },
-  wash: { n: '洗たく機', w: 72, h: 82, parts: [[0, 0, 72, 82]], f(B) { B(0, 0, 0, 1.8, 2.05, 1.4, '#dfe4ea'); B(0, -.1, .72, 1, 1, .04, '#55606c'); B(0, -.1, .75, .7, .7, .04, '#8fd8ff'); B(.55, .8, .72, .3, .12, .04, '#e8402a'); } },
-  beam: { n: '鉄骨', w: 170, h: 20, den: .004, parts: [[0, 0, 170, 20]], f(B) { B(0, -.2, 0, 4.25, .12, .9, '#d9a01f'); B(0, 0, 0, 4.25, .28, .22, '#d9a01f'); B(0, .2, 0, 4.25, .12, .9, '#d9a01f'); [-1.5, -.5, .5, 1.5].forEach(x => B(x, 0, .12, .3, .2, .04, '#1c1a18')); } },
-  beam2: { n: '赤い鉄骨', w: 130, h: 20, den: .004, parts: [[0, 0, 130, 20]], f(B) { B(0, -.2, 0, 3.25, .12, .9, '#e8402a'); B(0, 0, 0, 3.25, .28, .22, '#e8402a'); B(0, .2, 0, 3.25, .12, .9, '#e8402a'); [-1, 0, 1].forEach(x => B(x, 0, .12, .3, .2, .04, '#1c1a18')); } },
-  conc: { n: 'コンクリート', w: 88, h: 56, den: .004, parts: [[0, 0, 88, 56]], f(B) { B(0, 0, 0, 2.2, 1.4, 1.5, '#a59a88'); [-.7, .7].forEach(x => B(x, 0, .77, .3, .8, .04, '#8a8070')); } },
-  pipes: { n: '鉄パイプ', w: 92, h: 44, parts: [[0, 10, 92, 24], [0, -12, 48, 20]], f(B) { [[-.58, -.25], [.58, -.25], [0, .28]].forEach(([x, y]) => { B(x, y, 0, 1.08, .52, 2, '#7c8894'); B(x, y, 1.02, .6, .28, .04, '#3a4248'); }); } },
-  drum: { n: 'ドラム缶', w: 54, h: 66, parts: [[0, 0, 54, 66]], f(B) { B(0, 0, 0, 1.35, 1.65, 1.35, '#3f6fb5'); [-.4, .4].forEach(y => B(0, y, 0, 1.42, .08, 1.42, '#2c4f8a')); B(0, 0, .69, .8, .3, .04, '#ffd54a'); } },
-  crate: { n: '木箱', w: 74, h: 64, parts: [[0, 0, 74, 64]], f(B) { B(0, 0, 0, 1.85, 1.6, 1.5, '#b98450'); [-.5, 0, .5].forEach(y => B(0, y, .77, 1.85, .08, .04, '#7c4d2a')); } },
-  vase: { n: '青い壺', w: 70, h: 96, yen: 2, parts: [[0, 12, 68, 66], [0, -36, 34, 24]], f(B) { [[.9, -1.1, .22], [1.2, -.85, .3], [1.6, -.45, .5], [1.75, .05, .5], [1.4, .45, .3], [.8, .75, .3], [.9, 1.05, .16]].forEach(([w, y, h]) => B(0, y, 0, w, h, w, '#3f6fb5')); B(0, -.25, .88, 1.76, .12, .04, '#fff'); B(0, .1, .88, 1.76, .1, .04, '#fff'); } },
-  bust: { n: '胸像', w: 62, h: 110, yen: 3, parts: [[0, 32, 62, 46], [0, -26, 40, 58]], f(B) { B(0, -1.2, 0, 1.3, .25, 1.1, '#d8d4cc'); B(0, -.65, 0, 1.5, .85, .9, '#e8e4dc'); B(0, -.05, 0, .45, .35, .45, '#e8e4dc'); B(0, .6, 0, .95, 1, .95, '#efece4'); B(0, 1.15, -.1, 1, .3, .8, '#d8d4cc'); [-.24, .24].forEach(x => B(x, .7, .49, .2, .1, .04, '#a8a49c')); B(0, .45, .5, .16, .3, .1, '#d8d4cc'); } },
-  frame: { n: '名画', w: 124, h: 88, yen: 5, parts: [[0, 0, 124, 88]], f(B) { B(0, 0, 0, 3.1, 2.2, .4, '#d9a01f'); B(0, 0, .2, 2.7, 1.8, .06, '#5a8a7a'); B(-.5, .2, .24, 1, .8, .04, '#e8402a'); B(.6, -.2, .24, .7, .5, .04, '#ffd54a'); } },
-  gold: { n: '金の像', w: 60, h: 84, yen: 8, parts: [[0, 30, 60, 24], [0, -12, 34, 60]], f(B) { B(0, -.9, 0, 1.5, .3, 1.5, '#2a2622'); B(0, -.3, 0, .7, .9, .5, '#e7b52c'); B(0, .4, 0, .6, .6, .6, '#ffd24a'); B(-.65, -.2, 0, .5, .2, .3, '#e7b52c'); B(.65, 0, 0, .5, .2, .3, '#e7b52c'); B(0, .8, 0, .72, .14, .72, '#ffd54a'); } },
-  urn: { n: '赤い壺', w: 84, h: 70, yen: 2, parts: [[0, 6, 84, 54], [0, -29, 44, 12]], f(B) { [[1.2, -.75, .3], [1.9, -.35, .5], [2.1, .1, .4], [1.5, .45, .3], [1.1, .75, .2]].forEach(([w, y, h]) => B(0, y, 0, w, h, w, '#c8573f')); B(0, .1, 1.06, 2.12, .1, .04, '#ffd54a'); } },
+  sofa: twP('ソファ', 3.3, 1.1), tansu: twP('タンス', 2.8, 1.1), table: twP('ローテーブル', 3, .8), books: twP('本の山', 2.2, .9), case: twP('スーツケース', 2.2, 1.7), box: twP('ダンボール', 1.5, 1.4),
+  tv2: twP('テレビ', 2.3, 1.3, { parts: [[0, -2.5, 46, 21], [0, 10.5, 36, 5]] }), trash: twP('ゴミ箱', 1.3, 1.7), rice: twP('炊飯器', 1.5, 1.4),
+  beam: twP('鉄骨', 4.25, .5, { den: .004 }), beam2: twP('赤い鉄骨', 3.25, .5, { den: .004 }), sign: twP('矢印看板', 2.6, 1), bumper: twP('バンパードラム', 1.7, 1.4), conc: twP('コンクリート', 2.4, 1, { den: .004 }), bag: twP('土のう', 1.2, 1.7),
+  toolbox: twP('工具箱', 2.4, 1.1, { parts: [[0, 4, 48, 14], [0, -7, 20, 8]] }), drum: twP('ドラム缶', 1.25, 1.7), gen: twP('発電機', 2.4, 1.2, { parts: [[0, 5, 46, 12], [0, -6, 27, 12]] }),
+  fragile: twP('段ボール', 1.5, 1.4, undefined), mona: twP('モナリザ', 1.8, 2.2, undefined), wave: twP('波の絵', 3, 1.1, undefined), sunf: twP('ひまわりの絵', 1.8, 1.8, undefined), fossil: twP('アンモナイトの化石', 1.8, 1.7, { parts: [[0, 0, 36, 20], [0, -13.5, 22, 7], [0, 13.5, 22, 7]] }), byobu: twP('金の屏風', 3.1, 1.1, undefined),
+  dogu: twP('土偶', 1.4, 1.9, undefined), pot: twP('ツボ', 1.2, 1.95, undefined), rosetta: twP('ロゼッタストーン', 1.3, 1.9, undefined),
 };
-// 世界：物理のクセと場面
-const TW_WORLD = { house: { fr: .75, rs: .02, den: .0015, sky: '#a8d4ee' }, site: { fr: .5, rs: 0, den: .002, sky: '#9ad0ec' }, art: { fr: .55, rs: .02, den: .0015, sky: '#efe8dc' } };
+// 世界：物理と壁の色。すべりにくく、はねない。台を細くして、下は固める（高く積むための値。シミュレーションで決めた）
+const TW_FREEZE = 1, TW_DROP = 12;
+const TW_WORLD = { house: { fr: 1, fs: 1.5, rs: 0, air: .05, den: .0015, sky: '#f0dcc0' }, site: { fr: 1, fs: 1.5, rs: 0, air: .05, den: .002, sky: '#7fc0ec' }, art: { fr: 1, fs: 1.5, rs: 0, air: .05, den: .0015, sky: '#efe8dc' } };
 function twLoad() {
   if (TW.ready) return TW.ready;
   const matter = window.Matter ? Promise.resolve() : new Promise((ok, ng) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js'; s.onload = ok; s.onerror = ng; document.head.append(s); });
@@ -35,75 +24,119 @@ function twLoad() {
   return TW.ready;
 }
 function twArt() {
-  const T = TB.parts().T, r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.outputEncoding = T.sRGBEncoding; r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap;
-  const mats = {}, M = (c, e, i) => { const k = c + (e || ''); return mats[k] || (mats[k] = new T.MeshStandardMaterial({ color: c, roughness: .7, emissive: e || '#000', emissiveIntensity: e ? (i || .6) : 0 })); };
-  const put = g => (x, y, z, w, h, d, c, e) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), M(c, e)); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
-  const out = { piece: {}, bg: {} };
-  // 荷物：少しななめから写して立体に見せる。絵は当たり判定より少し大きい
+  const { T, C } = TB.parts(), kit = twKit(T, C), { I, m, rbox, twWallDeco, TW_BG } = kit;
+  const r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setPixelRatio(1); r.outputEncoding = T.sRGBEncoding; r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap; r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+  // まわりの光：色のついた面を映す（画像を読みこまないので軽い）
+  const envS = new T.Scene(), face = (c, x, y, z, e) => { const p = new T.Mesh(new T.PlaneGeometry(40, 40), new T.MeshBasicMaterial({ color: C(c).multiplyScalar(e || 1), side: T.DoubleSide })); p.position.set(x, y, z); p.lookAt(0, 0, 0); envS.add(p); };
+  face('#fff4e0', 0, 10, .01); face('#7a5a3a', 0, -10, .01); ['#d8c0a0', '#d8c0a0', '#d8c0a0', '#d8c0a0'].forEach((c, i) => face(c, [10, -10, 0, 0][i], 0, [0, 0, 10, -10][i]));
+  const lamp = new T.Mesh(new T.PlaneGeometry(5, 5), new T.MeshBasicMaterial({ color: C('#ffffff').multiplyScalar(5), side: T.DoubleSide })); lamp.position.set(-5, 7, 5); lamp.lookAt(0, 0, 0); envS.add(lamp);
+  const pm = new T.PMREMGenerator(r), ENV = pm.fromScene(envS, .04).texture; pm.dispose();
+  const light = sc => { sc.environment = ENV; const d = new T.DirectionalLight(C('#fff0dc'), 1.5); d.position.set(-6, 14, 9); d.castShadow = true; d.shadow.mapSize.set(1024, 1024); d.shadow.radius = 7; d.shadow.bias = -.0006; Object.assign(d.shadow.camera, { left: -14, right: 14, top: 20, bottom: -8, far: 50 }); sc.add(d); };
+  const out = { piece: {}, bg: {} }, PX = 2.6, geo = (w, h, d, q, o, c) => new T.Mesh(rbox(w, h, d, q), m(c, o || {}));
+  // 荷物：すこし上から見たミニチュアを1回描いて画像にする
   Object.keys(TW_P).forEach(id => {
-    const p = TW_P[id], s = new T.Scene(), g = new T.Group(); g.rotation.y = -.28; g.rotation.x = .16; s.add(g); p.f(put(g));
-    const d = new T.DirectionalLight('#fff', .72); d.position.set(-3, 5, 7); s.add(d); s.add(new T.HemisphereLight('#fff', '#9a8a70', .36));
-    const hw = p.w / TW_S / 2 * 1.3, hh = p.h / TW_S / 2 * 1.3, c = new T.OrthographicCamera(-hw, hw, hh, -hh, .1, 30); c.position.set(0, 0, 10); c.lookAt(0, 0, 0); r.setClearColor(0, 0); r.setPixelRatio(1); r.setSize(p.w * 2.6, p.h * 2.6, false); r.render(s, c);
+    const p = TW_P[id], s = new T.Scene(), g = new T.Group(); g.rotation.y = -.26; g.rotation.x = .16; s.add(g); light(s);
+    I[id][4]((x, y, z, w, hh, d, c, o) => { const a = new T.Mesh(o && o.geo ? o.geo : rbox(w, hh, d, o && o.r >= .7 ? .16 : .1), o && o.mat ? o.mat : m(c, o || {})); a.position.set(x, y, z); a.castShadow = a.receiveShadow = true; g.add(a); return a; });
+    const hw = (p.w + TW_PAD * 2) / TW_U / 2, hh = (p.h + TW_PAD * 2) / TW_U / 2, c = new T.OrthographicCamera(-hw, hw, hh, -hh, .1, 30); c.position.set(0, 0, 10); c.lookAt(0, 0, 0); r.setClearColor(0, 0); r.setSize((p.w + TW_PAD * 2) * PX, (p.h + TW_PAD * 2) * PX, false); r.render(s, c);
     const im = new Image(); im.src = r.domElement.toDataURL('image/png'); out.piece[id] = im;
   });
-  // 場面：画像の下から130点の高さが、荷物をのせる台の上面（y=0）
+  // 場面：机の上の台。画像の下から130点の高さが、荷物をのせる台の上面（y=0）
   const IW = TW_W / TW_S, IH = 900 / TW_S, Y0 = 130 / TW_S;
-  const scene = (sky, build) => {
-    const s = new T.Scene(); s.background = new T.Color(sky); build(put(s), s);
-    const d = new T.DirectionalLight('#fff', .72); d.position.set(-8, 14, 12); d.castShadow = true; d.shadow.mapSize.set(1024, 1024); Object.assign(d.shadow.camera, { left: -14, right: 14, top: 22, bottom: -8, far: 50 }); s.add(d); s.add(new T.HemisphereLight('#fff', '#6a6a70', .4));
+  const blob = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(30,20,10,.55)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new T.CanvasTexture(c); })();
+  const scene = (key, desk) => {
+    const s = new T.Scene(); light(s); const B = (w, h, d, c, x, y, z, o) => { const a = geo(w, h, d, .13, o, c); a.position.set(x, y, z); a.castShadow = a.receiveShadow = true; s.add(a); return a; };
+    const gc = document.createElement('canvas'); gc.width = 4; gc.height = 256; const gx = gc.getContext('2d'), gg = gx.createLinearGradient(0, 0, 0, 256); gg.addColorStop(0, TW_BG[key].w[0]); gg.addColorStop(1, TW_BG[key].w[1]); gx.fillStyle = gg; gx.fillRect(0, 0, 4, 256); const gt = new T.CanvasTexture(gc); gt.encoding = T.sRGBEncoding; const wall = new T.Mesh(new T.PlaneGeometry(60, 30), new T.MeshBasicMaterial({ map: gt, toneMapped: false })); wall.position.set(0, 5, -8); s.add(wall); TW_BG[key].f(twWallDeco(s));
+    const fl = new T.Mesh(new T.BoxGeometry(50, 1, 40), m(desk, { r: .6 })); fl.position.y = -1.55; fl.receiveShadow = true; s.add(fl);
+    // 土台はどの世界も青い台車（案は tools/tower-stage-mockup.html の2。持ち手はなし）
+    const STEEL = { r: .35, me: .6, e: 1 }; B(3.95, .26, 3.2, '#3f6fb5', 0, -.13, 0); B(3.75, .05, 3, '#2c4f8a', 0, .01, 0);
+    [-1.6, 1.6].forEach(x => [1.2, -1.2].forEach(z => { B(.3, .4, .3, '#c9cdd6', x, -.42, z, STEEL); const w = new T.Mesh(new T.CylinderGeometry(.26, .26, .2, 28), m('#22252c')); w.rotation.x = Math.PI / 2; w.position.set(x, -.78, z); w.castShadow = true; s.add(w); }));
+    const bl = new T.Mesh(new T.PlaneGeometry(8.5, 7), new T.MeshBasicMaterial({ map: blob, transparent: true, depthWrite: false })); bl.rotation.x = -Math.PI / 2; bl.position.set(.6, -1.03, 0); s.add(bl);
     const c = new T.OrthographicCamera(-IW / 2, IW / 2, IH - Y0, -Y0, .1, 80); c.position.set(0, 3.4, 30); c.rotation.x = -.11; c.updateMatrixWorld();
-    r.setClearColor(sky, 1); r.setPixelRatio(1); r.setSize(TW_W * 2, 1800, false); r.render(s, c); const im = new Image(); im.src = r.domElement.toDataURL('image/jpeg', .9); return im;
+    r.setClearColor(TW_WORLD[key].sky, 1); r.setSize(TW_W * 2, 1800, false); r.render(s, c); const im = new Image(); im.src = r.domElement.toDataURL('image/jpeg', .9); return im;
   };
-  const PW = TW_PLAT / TW_S;
-  out.bg.house = scene(TW_WORLD.house.sky, B => {
-    [[-3.6, 3.6, '#c8d8e2'], [-1.6, 5.6, '#bcd0dc'], [1.4, 3.2, '#c8d8e2'], [3.6, 6, '#bcd0dc']].forEach(([x, h, c]) => { B(x, h / 2 - 1.4, -7, 1.9, h, 2, c); for (let y = -.6; y < h - 2; y += .9) B(x, y, -5.98, 1.3, .4, .03, '#e8f2f8'); });
-    B(0, -2.9, 2, 16, 1, 16, '#8a8f96'); [-3, -1, 1, 3].forEach(x => B(x, -2.38, 7, 1, .04, .24, '#f4efe6'));
-    B(0, -.22, 0, PW + .3, .44, 3, '#e8eef0'); B(0, -.7, 0, PW + .3, .5, 3, '#3f6fb5'); B(PW / 2 + .95, -.2, 0, 1.5, 1.7, 3, '#ffd24a'); B(PW / 2 + 1.1, .2, 1.52, 1, .6, .05, '#bfe8ff');
-    [-1.5, 1.2, 3.1].forEach(x => B(x, -1.3, 1.2, .8, .8, .5, '#22252c'));
-  });
-  out.bg.site = scene(TW_WORLD.site.sky, B => {
-    for (let y = -2; y < 21; y += 2) { B(-3.6, y, -6, .16, 2, .16, '#e7b52c'); B(-2.8, y, -6, .16, 2, .16, '#e7b52c'); B(-3.2, y, -6, .9, .12, .12, '#e7b52c'); } B(-.4, 21, -6, 8, .3, .3, '#e7b52c');
-    for (let j = 0; j < 7; j++) B(3.8, -1.6 + j * 2.2, -7, 3, .2, 3, '#8a929e'); [2.5, 3.8, 5.1].forEach(x => B(x, 5, -7, .28, 14, .28, '#8a929e'));
-    B(0, -2.2, 2, 16, 1, 16, '#c8b898'); B(0, -.3, 0, PW + .1, .6, 3, '#6a6e74'); B(0, -.03, 1.52, PW + .1, .1, .04, '#ffd54a'); B(0, -1.2, 0, 1.2, 1.2, 2.4, '#55585e');
-  });
-  out.bg.art = scene(TW_WORLD.art.sky, B => {
-    B(0, 8, -6, 20, 30, .4, '#efe8dc'); B(0, -2.6, 2, 18, 1, 16, '#b98a5e'); B(0, -2.05, 3, 4, .08, 12, '#8f2015');
-    [[-3.4, 3, '#5a8a7a', '#fff'], [3.4, 5, '#c8573f', '#ffd54a'], [-3.5, 8, '#3f6fb5', '#ffd54a'], [3.4, 11, '#8a6ab8', '#ffd54a']].forEach(([x, y, a, c]) => { B(x, y, -5.7, 2.4, 1.8, .16, '#d9a01f'); B(x, y, -5.6, 2.1, 1.5, .05, a); B(x - .3, y + .1, -5.56, .8, .7, .04, c); });
-    B(0, -1.1, 0, PW - .4, 1.8, 2.6, '#f4efe6'); B(0, -.1, 0, PW + .1, .2, 3, '#d8d4cc');
-    [-3, 3].forEach(x => { B(x, -1.2, 3, .14, 1.6, .14, '#d9a01f'); }); B(0, -.6, 3, 6, .07, .07, '#8f2015');
-  });
-  r.dispose(); TW.art = out;
+  out.bg.house = scene('house', '#8f6238');
+  out.bg.site = scene('site', '#655a4c');
+  out.bg.art = scene('art', '#752a32');
+  ENV.dispose(); r.dispose(); r.forceContextLoss && r.forceContextLoss(); TW.art = out;
+}
+/* ---- 始まりの動き：できあがったタワーがぐらぐら → 下から上へカメラ → 大きくぐらぐら → 崩れて画面がゆれ、ほこり → 残った荷物がすーっと消える。案は tools/tower-intro-mockup.html の3 ---- */
+const TW_IN = { hold: .7, pan: 1.9, shake: 1.5, fadeAt: 2.3, fade: .7 };
+function twIntroLayout(order, t, amp) { const n = order.length, out = []; let x = TW_W / 2, y = twFloor(), a = 0; order.forEach((id, i) => { const p = TW_P[id], k = Math.pow((i + 1) / n, 1.35); a = amp * Math.sin(t * 5.6 - i * .24) * k; const dx = Math.sin(a) * p.h / 2, dy = Math.cos(a) * p.h / 2; x += dx; y -= dy; out.push({ id, x, y, a }); x += dx; y -= dy; }); return out; }
+function twIntroStart() {
+  const b = doc.b, ids = TWR.WORLDS[b.world].ids, order = []; let s = (b.gid % 2147483646) + 1, h = 0; const nx = () => (s = s * 16807 % 2147483647) / 2147483647;
+  while (h < 600 && order.length < 34) { const id = ids[Math.floor(nx() * ids.length)]; order.push(id); h += TW_P[id].h; }
+  const top = twIntroLayout(order, 0, 0).slice(-1)[0];
+  TW.intro = { t: 0, ph: 'build', order, pts: twIntroLayout(order, 0, .01), ft: 0, sh: 0, dust: [], landed: false, alpha: 1, camTop: Math.max(0, twFloor() - top.y - TW.H * .42) };
+  TW.cam = 0; TW.phase = 'intro'; TW.introAt = b.gid;
+}
+function twIntroEnd() { if (!TW.intro) return; TW.intro = null; twHold(); twHud(); }
+function twIntroCollapse() {
+  const { Engine, Bodies, Body, Composite } = Matter, ti = TW.intro, e = Engine.create(), f = twFloor(); e.gravity.y = 1; ti.eng = e;
+  Composite.add(e.world, [Bodies.rectangle(TW_W / 2, f + 10, TW_PLAT, 20, { isStatic: true, friction: .9 }), Bodies.rectangle(TW_W / 2, f + 98, 700, 40, { isStatic: true, friction: .8 })]);
+  const n = ti.pts.length, dir = ti.pts[n - 1].x > TW_W / 2 ? 1 : -1;
+  ti.bodies = ti.pts.map((q, i) => { const p = TW_P[q.id], o = Bodies.rectangle(q.x, q.y, p.w, p.h, { friction: .7, frictionAir: .012, restitution: .08, density: .0015, angle: q.a }), k = (i + 1) / n; Body.setVelocity(o, { x: dir * (.5 + k * 4.4), y: -k * .6 }); Body.setAngularVelocity(o, dir * (.012 + k * .05)); o.plugin = { id: q.id }; return o; });
+  Composite.add(e.world, ti.bodies); ti.ph = 'fall';
+}
+function twIntroStep() {
+  const ti = TW.intro, D = 1 / 60, f = twFloor();
+  if (ti.ph === 'build') {
+    ti.t += D; const p0 = TW_IN.hold, p1 = p0 + TW_IN.pan, end = p1 + TW_IN.shake, u = Math.max(0, Math.min(1, (ti.t - p0) / TW_IN.pan));
+    let amp = .016; if (ti.t > p0) amp = .016 + .018 * u; if (ti.t > p1) amp = .034 + Math.pow((ti.t - p1) / TW_IN.shake, 2) * .17;
+    ti.pts = twIntroLayout(ti.order, ti.t, amp); TW.cam = ti.camTop * (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
+    if (ti.t >= end) twIntroCollapse(); return;
+  }
+  ti.ft += D; Matter.Engine.update(ti.eng, 1000 / 60);
+  const top = ti.bodies.reduce((m, o) => Math.min(m, o.bounds.min.y), f); TW.cam += (Math.max(0, f - top - TW.H * .42) - TW.cam) * .1;
+  if (!ti.landed && ti.bodies.some(o => o.position.y > f + 18)) { ti.landed = true; ti.sh = 1; if (navigator.vibrate) try { navigator.vibrate(60); } catch (e) { } for (let i = 0; i < 26; i++) ti.dust.push({ x: TW_W / 2 + (Math.random() - .5) * 260, y: f + 60 - Math.random() * 16, vx: (Math.random() - .5) * 2.2, vy: -.5 - Math.random() * 1.3, r: 10 + Math.random() * 16, l: 1 }); }
+  if (ti.sh > 0) ti.sh = Math.max(0, ti.sh - D * 2.1);
+  ti.dust.forEach(d => { d.x += d.vx; d.y += d.vy; d.vy *= .985; d.r += .35; d.l -= D * .55; }); ti.dust = ti.dust.filter(d => d.l > 0);
+  ti.alpha = Math.max(0, 1 - Math.max(0, ti.ft - TW_IN.fadeAt) / TW_IN.fade);
+  if (ti.alpha <= 0) twIntroEnd();
 }
 function twEngine() { const { Engine } = Matter; TW.eng = Engine.create(); TW.eng.gravity.y = 1; TW.eng.positionIterations = 10; TW.eng.velocityIterations = 8; }
 const twFloor = () => TW.H - 120;
 function twBody(id, x, y, a, wd) {
-  const { Bodies, Body } = Matter, p = TW_P[id], fr = p.fr != null ? p.fr : wd.fr, opt = { friction: fr, restitution: wd.rs, density: p.den || wd.den };
-  const ps = p.parts.map(([cx, cy, w, h]) => Bodies.rectangle(cx, cy, w, h, opt)), b = ps.length > 1 ? Body.create({ parts: ps, friction: fr, restitution: wd.rs }) : ps[0];
+  const { Bodies, Body } = Matter, p = TW_P[id], fr = p.fr != null ? p.fr : wd.fr, opt = { friction: fr, frictionStatic: wd.fs, restitution: wd.rs, density: p.den || wd.den, frictionAir: wd.air, slop: .05 };
+  const ps = p.parts.map(([cx, cy, w, h]) => Bodies.rectangle(cx, cy, w, h, opt)), b = ps.length > 1 ? Body.create({ parts: ps, friction: fr, frictionStatic: wd.fs, restitution: wd.rs, frictionAir: wd.air }) : ps[0];
   const ox = -b.position.x, oy = -b.position.y; Body.setPosition(b, { x: x - ox * Math.cos(a) + oy * Math.sin(a), y: y - ox * Math.sin(a) - oy * Math.cos(a) }); Body.setAngle(b, a); b.plugin = { id, ox, oy }; return b;
 }
 // 荷物の位置は「絵の中心」で覚える（台の上面からの高さなので、画面の高さが端末ごとにちがっても同じ）
 const twPos = b => { const { ox, oy } = b.plugin, a = b.angle; return { x: b.position.x + ox * Math.cos(a) - oy * Math.sin(a), y: b.position.y + ox * Math.sin(a) + oy * Math.cos(a) }; };
 function twBuild(pieces) {
-  const { Bodies, Composite } = Matter, wd = TW_WORLD[doc.b.world]; Composite.clear(TW.eng.world, false); TW.bodies = [];
+  const { Bodies, Composite } = Matter, wd = TW_WORLD[doc.b.world]; Composite.clear(TW.eng.world, false); TW.bodies = []; TW.fell = false;
   TW.plat = Bodies.rectangle(TW_W / 2, twFloor() + 10, TW_PLAT, 20, { isStatic: true, friction: .9 }); Composite.add(TW.eng.world, TW.plat);
   pieces.forEach(q => { const b = twBody(q.id, q.x, twFloor() + q.y, q.a, wd); Composite.add(TW.eng.world, b); TW.bodies.push(b); });
+  twFreeze();
 }
+// いちばん上の荷物だけが動く（高く積んでも土台がくずれていかないように）。落としたときだけ twCollapse で全部ゆるめて崩す
+// 崩れる：固めていた荷物を全部ゆるめて、上ほど大きく左右へ押す
+function twCollapse() { if (TW.fell) return; TW.fell = true; const dir = Math.random() < .5 ? -1 : 1, n = TW.bodies.length; TW.bodies.forEach((o, i) => { if (o.isStatic) Matter.Body.setStatic(o, false); const k = (i + 1) / n; Matter.Body.setVelocity(o, { x: dir * (.6 + k * 3.4) + (Math.random() - .5), y: -k * 1.2 }); Matter.Body.setAngularVelocity(o, dir * (.015 + Math.random() * .05)); }); }
+function twFreeze() { TW.bodies.forEach((o, i) => { if (i < TW.bodies.length - TW_FREEZE && !o.isStatic) Matter.Body.setStatic(o, true); }); }
 const twTop = () => TW.bodies.reduce((m, b) => Math.min(m, b.bounds.min.y), twFloor());
 const twHeight = () => Math.max(0, (twFloor() - twTop()) / 40).toFixed(1);
-const twHoldY = id => twTop() - TW_P[id].h / 2 - 46;
+const twHoldY = id => twTop() - TW_P[id].h / 2 - TW_DROP;
 const twMine = () => { const id = doc.b.seats[doc.b.turn]; return !TWR.isNpc(id) && (local || id === me); };
 const twDriver = () => local || doc.players[0] === me;
 function twSync() {
   const b = doc.b; if (!TW.eng) twEngine();
   if (TW.gid === b.gid && TW.seq === b.seq) return;
-  const first = TW.gid !== b.gid; TW.gid = b.gid; TW.seq = b.seq;
+  const first = TW.gid !== b.gid; TW.gid = b.gid; TW.seq = b.seq; if (!first) TW.intro = null;
   const L = b.last;
   // ほかの人が積んだ：同じ落下をこの端末でも見せてから、書かれた位置にそろえる
-  if (!first && L && L.id && L.s !== TW.dropSeat && (L.kind === 'drop' || L.kind === 'crash')) { twBuild(L.from || []); const wd = TW_WORLD[b.world], y = twTop() - TW_P[L.id].h / 2 - 46, o = twBody(L.id, L.x, y, 0, wd); Matter.Composite.add(TW.eng.world, o); TW.bodies.push(o); TW.phase = 'replay'; TW.t = 0; TW.quiet = 0; }
+  if (!first && L && L.id && L.s !== TW.dropSeat && (L.kind === 'drop' || L.kind === 'crash')) { twBuild(L.from || []); const wd = TW_WORLD[b.world], y = twTop() - TW_P[L.id].h / 2 - TW_DROP, o = twBody(L.id, L.x, y, 0, wd); Matter.Composite.add(TW.eng.world, o); TW.bodies.push(o); TW.phase = 'replay'; TW.t = 0; TW.quiet = 0; }
   else { if (b.phase !== 'crash' && TW.phase !== 'fall') twBuild(b.pieces); twHold(); }
   TW.dropSeat = null;
+  let reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { }
+  if (first && !reduce && b.tower === 1 && !b.pieces.length && b.phase === 'play' && TW.introAt !== b.gid) twIntroStart();
 }
-function twHold() { const b = doc.b; TW.phase = b.phase === 'crash' ? 'crash' : 'hold'; TW.t = 0; TW.x = TW_W / 2; const t = TW.bodies.slice().sort((p, q) => p.bounds.min.y - q.bounds.min.y)[0]; TW.aim = (t ? t.position.x : TW_W / 2) + (Math.random() - .5) * 54; }
+function twHold() { const b = doc.b; TW.phase = b.phase === 'crash' ? 'crash' : 'hold'; TW.t = 0; TW.x = TW_W / 2; if (b.phase === 'play') TW.aim = twAim(b.cur); }
+// コンピュータの置き場所：荷物の幅ぶんの下が平らで、なるべく高いところ。少しだけ手がぶれる
+function twAim(id) {
+  const p = TW_P[id], bw = p.w * .8, cx = TW_W / 2, L = cx - TW_PLAT / 2, R = cx + TW_PLAT / 2, top = twTop();
+  const surf = sx => { let y = sx >= L && sx <= R ? twFloor() : 1e9; for (const o of TW.bodies) for (const q of (o.parts.length > 1 ? o.parts.slice(1) : [o])) if (q.bounds.min.x <= sx && sx <= q.bounds.max.x) y = Math.min(y, q.bounds.min.y); return y; };
+  let best = cx, sc = 1e18; for (let x = L; x <= R; x += 8) { const ys = [-.5, -.25, 0, .25, .5].map(k => surf(x + k * bw)); if (ys.some(v => v > 1e8)) continue; const hi = Math.min(...ys), s = (Math.max(...ys) - hi) * 3 + Math.abs(x - cx) * .25 + (hi - top) * .6; if (s < sc) { sc = s; best = x; } }
+  return best + (Math.random() + Math.random() + Math.random() + Math.random() - 2) * 12 * 1.73;
+}
 function twDrop() {
   if (TW.phase !== 'hold' || (!twMine() && !(TWR.isNpc(doc.b.seats[doc.b.turn]) && twDriver()))) return;
   const b = doc.b, wd = TW_WORLD[b.world], o = twBody(b.cur, TW.x, twHoldY(b.cur), 0, wd); Matter.Composite.add(TW.eng.world, o); TW.bodies.push(o); TW.phase = 'fall'; TW.t = 0; TW.quiet = 0; TW.fx = TW.x; twHud();
@@ -115,44 +148,48 @@ function twCommit(fell) {
   withLease(d => d && d.status === 'playing' && d.b && d.b.seq === seq0 ? TWR.act(d, id === me || !TWR.isNpc(id) ? me : id, a) : null, true).then(r => { if (r !== 'ok' && isTowerDoc() && doc.b.seq === seq0) { TW.seq = -1; TW.phase = 'wait'; toast('送れませんでした'); bdRender(); } });
 }
 function twTick() {
+  if (TW.intro) { twIntroStep(); return; }
   Matter.Engine.update(TW.eng, 1000 / 60); TW.t += 1 / 60;
   const want = Math.max(0, twFloor() - twTop() - TW.H * .42); TW.cam += (want - TW.cam) * .06;
   const b = doc.b, npc = TWR.isNpc(b.seats[b.turn]);
   if (TW.phase === 'hold' && npc && twDriver()) { TW.x += (TW.aim - TW.x) * .05; if (TW.t > 1.3) twDrop(); }
   if (TW.phase === 'fall' || TW.phase === 'replay') {
-    const lost = TW.bodies.some(o => o.position.y > twFloor() + 40), still = TW.bodies.every(o => o.speed < .16 && Math.abs(o.angularSpeed) < .012); TW.quiet = still ? TW.quiet + 1 : 0;
-    if (TW.phase === 'fall') { if (lost) { twCommit(true); return; } if (TW.quiet > 34 || TW.t > 6) twCommit(false); }
+    const lost = TW.bodies.some(o => o.position.y > twFloor() + 40), still = TW.bodies.every(o => o.isStatic || (o.speed < .16 && Math.abs(o.angularSpeed) < .012)); TW.quiet = still ? TW.quiet + 1 : 0;
+    if (TW.phase === 'replay' && b.phase === 'crash' && !TW.fell && (lost || TW.t > 1.2)) twCollapse();
+    if (TW.phase === 'fall') { if (lost) { twCollapse(); twCommit(true); return; } if (TW.quiet > 34 || TW.t > 6) { twFreeze(); twCommit(false); } }
     else if (b.phase === 'crash' ? TW.t > 2.4 : TW.quiet > 34 || TW.t > 5) { if (b.phase !== 'crash') twBuild(b.pieces); twHold(); twHud(); }
   }
 }
 function twPaint() {
   const X = TW.X, sc = TW.sc, A = TW.art, b = doc.b, wd = TW_WORLD[b.world]; if (!A) return;
-  X.setTransform(sc, 0, 0, sc, 0, 0); X.fillStyle = wd.sky; X.fillRect(0, 0, TW_W, TW.H); X.save(); X.translate(0, TW.cam);
+  X.setTransform(sc, 0, 0, sc, 0, 0); X.fillStyle = wd.sky; X.fillRect(0, 0, TW_W, TW.H); X.save(); const ti = TW.intro, sn = performance.now() / 16; X.translate(ti && ti.sh ? Math.sin(sn) * 9 * ti.sh : 0, TW.cam + (ti && ti.sh ? Math.cos(sn * .87) * 6 * ti.sh : 0));
   const bg = A.bg[b.world]; if (bg.complete) X.drawImage(bg, 0, twFloor() - (900 - 130), TW_W, 900);
-  TW.bodies.forEach(o => { const p = TW_P[o.plugin.id], im = A.piece[o.plugin.id], q = twPos(o); X.save(); X.translate(q.x, q.y); X.rotate(o.angle); if (im.complete) X.drawImage(im, -p.w * .65, -p.h * .65, p.w * 1.3, p.h * 1.3); X.restore(); });
-  if (TW.phase === 'hold' && b.phase === 'play') { const p = TW_P[b.cur], y = twHoldY(b.cur), im = A.piece[b.cur]; X.setLineDash([5, 5]); X.strokeStyle = 'rgba(29,58,87,.5)'; X.lineWidth = 1.5; X.beginPath(); X.moveTo(TW.x, y + p.h / 2); X.lineTo(TW.x, twFloor()); X.stroke(); X.setLineDash([]); if (im.complete) X.drawImage(im, TW.x - p.w * .65, y - p.h * .65, p.w * 1.3, p.h * 1.3); }
+  if (ti) { const one = (id, x, y, a) => { const p = TW_P[id], im = A.piece[id]; X.save(); X.translate(x, y); X.rotate(a); if (im.complete) X.drawImage(im, -p.w / 2 - TW_PAD, -p.h / 2 - TW_PAD, p.w + TW_PAD * 2, p.h + TW_PAD * 2); X.restore(); }; X.globalAlpha = ti.alpha; if (ti.ph === 'build') ti.pts.forEach(q => one(q.id, q.x, q.y, q.a)); else ti.bodies.forEach(o => one(o.plugin.id, o.position.x, o.position.y, o.angle)); ti.dust.forEach(d => { X.globalAlpha = Math.max(0, d.l) * .7; X.fillStyle = '#e9dfcb'; X.beginPath(); X.arc(d.x, d.y, d.r, 0, 7); X.fill(); }); X.globalAlpha = 1; X.restore(); return; }
+  TW.bodies.forEach(o => { const p = TW_P[o.plugin.id], im = A.piece[o.plugin.id], q = twPos(o); X.save(); X.translate(q.x, q.y); X.rotate(o.angle); if (im.complete) X.drawImage(im, -p.w / 2 - TW_PAD, -p.h / 2 - TW_PAD, p.w + TW_PAD * 2, p.h + TW_PAD * 2); X.restore(); });
+  if (TW.phase === 'hold' && b.phase === 'play') { const p = TW_P[b.cur], y = twHoldY(b.cur), im = A.piece[b.cur]; X.setLineDash([5, 5]); X.strokeStyle = 'rgba(29,58,87,.5)'; X.lineWidth = 1.5; X.beginPath(); X.moveTo(TW.x, y + p.h / 2); X.lineTo(TW.x, twFloor()); X.stroke(); X.setLineDash([]); if (im.complete) X.drawImage(im, TW.x - p.w / 2 - TW_PAD, y - p.h / 2 - TW_PAD, p.w + TW_PAD * 2, p.h + TW_PAD * 2); }
   X.restore();
 }
-function twLoop() { if (!TW.run) return; if (!isTowerDoc() || !BS.root || !BS.root.isConnected) { TW.run = false; return; } const now = performance.now(); TW.acc = (TW.acc || 0) + Math.min(100, now - (TW.last || now)); TW.last = now; while (TW.acc >= 16.67 && isTowerDoc() && doc.status === 'playing') { twTick(); TW.acc -= 16.67; } TW.acc = Math.min(TW.acc, 40); twPaint(); requestAnimationFrame(twLoop); }
+function twLoop() { if (!TW.run) return; if (!isTowerDoc() || !BS.root || !BS.root.isConnected) { TW.run = false; return; } const now = performance.now(); TW.acc = (TW.acc || 0) + Math.min(100, now - (TW.last || now)); TW.last = now; while (TW.acc >= 16.67 && isTowerDoc() && (doc.status === 'playing' || doc.b.phase === 'crash')) { twTick(); TW.acc -= 16.67; } TW.acc = Math.min(TW.acc, 40); twPaint(); requestAnimationFrame(twLoop); }
 function twSize() { if (!TW.wrap) return; const w = TW.wrap.clientWidth || TW_W, h = TW.wrap.clientHeight || 667, d = Math.min(2, devicePixelRatio || 1); TW.cv.width = w * d; TW.cv.height = h * d; TW.sc = w / TW_W * d; TW.H = h / (w / TW_W); }
 function twMount() {
   if (TW.wrap) return;
   TW.wrap = h('div', { class: 'tw' }); TW.cv = document.createElement('canvas'); TW.X = TW.cv.getContext('2d'); TW.hud = h('div', { class: 'tw-hud' }); TW.wrap.append(TW.cv, TW.hud);
   const toX = e => { const r = TW.wrap.getBoundingClientRect(); return Math.max(26, Math.min(TW_W - 26, (e.clientX - r.left) / r.width * TW_W)); };
-  TW.cv.addEventListener('pointerdown', e => { if (TW.phase === 'hold' && twMine() && doc.b.phase === 'play') { TW.drag = true; TW.x = toX(e); } });
+  TW.cv.addEventListener('pointerdown', e => { if (TW.intro) { twIntroEnd(); return; } if (TW.phase === 'hold' && twMine() && doc.b.phase === 'play') { TW.drag = true; TW.x = toX(e); } });
   TW.cv.addEventListener('pointermove', e => { if (TW.drag) TW.x = toX(e); });
   addEventListener('pointerup', () => { if (TW.drag) { TW.drag = false; twDrop(); } });
   addEventListener('pointercancel', () => { TW.drag = false; });
   addEventListener('resize', () => { if (isTowerDoc()) twSize(); });
 }
 function twHud() {
-  if (!TW.hud) return; const g = doc, b = g.b, mine = twMine(), name = id => bdName(id), over = g.status !== 'playing', yen = TW.bodies.reduce((n, o) => n + (TW_P[o.plugin.id].yen || 0), 0);
-  const hint = b.phase === 'crash' || over ? '' : TW.phase === 'hold' ? (mine ? `${TW_P[b.cur].n}：指で動かして はなす` : `${name(b.seats[b.turn])}が 積んでいます`) : TW.phase === 'loading' ? '読みこんでいます…' : 'ゆれがおさまるのを 待とう';
+  if (!TW.hud) return; const g = doc, b = g.b, mine = twMine(), name = id => bdName(id), over = g.status !== 'playing';
+  const hint = TW.intro || b.phase === 'crash' || over ? '' : TW.phase === 'hold' ? (mine ? `${TW_P[b.cur].n}：指で動かして はなす` : `${name(b.seats[b.turn])}が 積んでいます`) : TW.phase === 'loading' ? '読みこんでいます…' : 'ゆれがおさまるのを 待とう';
   const host = local || g.host === me, s = b.last && b.last.s;
+  const tall = TW.bodies.length;
   TW.hud.replaceChildren(h('div', { class: 'tw-top' }, h('div', { class: 'tw-seats' }, b.seats.map((id, i) => h('div', { class: 'tw-seat' + (i === b.turn && b.phase === 'play' ? ' on' : '') + (b.lives[i] <= 0 ? ' out' : '') }, h('b', null, name(id)), h('span', null, Array.from({ length: Math.max(0, b.lives[i]) }, () => h('i')))))),
     over ? null : h('button', { class: 'tw-ib', 'aria-label': '遊びかた', onclick: () => bdOpenRules('tower') }, '?'), over ? null : h('button', { class: 'tw-ib', 'aria-label': '中断してホームにもどる', onclick: confirmQuit }, '中断')),
-    h('div', { class: 'tw-hint' }, hint), h('div', { class: 'tw-hi' }, h('small', null, TWR.WORLDS[b.world].n), `${twHeight()}m`), b.world === 'art' ? h('div', { class: 'tw-yen' }, h('small', null, '積んだ値段'), `${yen}億円`) : null,
-    b.phase === 'crash' && !over ? h('div', { class: 'tw-big' }, 'ガシャーン！', h('small', null, `${name(b.seats[s])}が くずした`), b.world === 'art' ? h('small', null, `${yen}億円が…`) : null) : null,
+    h('div', { class: 'tw-hint' }, hint), TW.intro ? null : h('div', { class: 'tw-hi' }, h('small', null, TWR.WORLDS[b.world].n), `${tall}段`),
+    b.phase === 'crash' && !over ? h('div', { class: 'tw-big' }, 'ガシャーン！', h('small', null, `${name(b.seats[s])}が くずした`),) : null,
     b.phase === 'crash' && !over ? (host ? h('div', { class: 'tw-row' }, h('button', { class: 'tw-back', onclick: quitGame }, 'もどる'), h('button', { class: 'tw-go', onclick: () => twNext() }, 'つづける')) : h('div', { class: 'tw-note' }, '部屋主が つづけるか決めます')) : null,
     over ? bdOverCard(`${name(b.seats[b.result.win])}の勝ち！`, '最後までくずさなかった人の勝ち', null) : null);
 }
@@ -169,9 +206,9 @@ function twSlides() {
   const art = id => () => TW.art ? h('img', { class: 'tw-sla', src: TW.art.piece[id].src, alt: '' }) : null;
   return [
     { t: '指で動かして はなすと落ちる', s: '順番に 荷物を積んでいく', art: art('sofa') },
-    { t: '落としたら ライフが減る', s: 'くずれたら 次のタワーへ', art: art('fridge') },
-    { t: '世界は毎回かわる', s: '家具・工事現場・美術品', art: art('vase') },
-    { t: '最後まで残った人の勝ち', s: '形をよく見て そっと積もう', art: () => slaRank([['1位', 'のこった'], ['2位', 'ガシャーン'], ['3位', 'ガシャーン']]) },
+    { t: '落としたら ライフが減る', s: 'くずれたら 次のタワーへ', art: art('tv2') },
+    { t: '世界は毎回かわる', s: '家具・工事現場・美術品', art: art('mona') },
+    { t: '最後まで残った人の勝ち', s: '上の面をよく見て そっと積もう', art: () => slaRank([['1位', 'のこった'], ['2位', 'ガシャーン'], ['3位', 'ガシャーン']]) },
   ];
 }
 function twTicketArt(art) { art.classList.add('tk-css', 'tk-tower'); art.append(h('img', { class: 'tka-tower', src: ICON_ART.tower, alt: '' })); }

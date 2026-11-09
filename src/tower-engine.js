@@ -1,10 +1,11 @@
 /* ぐらぐらタワーのルール（DOMなし）。物理は番の人の端末が計算して、積み終わった位置だけをここへ渡す */
 const TWR = (() => {
   const SEATS = 8, MIN = 3;
-  const WORLDS = {
-    house: { n: '引っ越しの家具', ids: ['sofa', 'fridge', 'table', 'tv', 'tansu', 'plant', 'bath', 'chair', 'wash'] },
-    site: { n: '工事現場', ids: ['beam', 'beam2', 'conc', 'pipes', 'drum', 'crate'] },
-    art: { n: '美術品', ids: ['vase', 'bust', 'frame', 'gold', 'urn'] },
+  // ids は9種類。どれも同じ確率で出る
+    const WORLDS = {
+    house: { n: '引っ越しの家具', ids: ['sofa', 'tansu', 'table', 'books', 'case', 'box', 'tv2', 'trash', 'rice'] },
+    site: { n: '工事現場', ids: ['beam', 'beam2', 'sign', 'bumper', 'conc', 'bag', 'toolbox', 'drum', 'gen'] },
+    art: { n: '美術品', ids: ['fragile', 'mona', 'wave', 'sunf', 'fossil', 'byobu', 'dogu', 'pot', 'rosetta'] },
   };
   const WK = Object.keys(WORLDS);
   const isNpc = id => /^npc\d/.test(id);
