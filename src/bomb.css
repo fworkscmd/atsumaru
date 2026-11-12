@@ -37,10 +37,11 @@
 .bm-who{font-size:20px;font-weight:900}
 .bm .bd-over{background:rgba(20,22,26,.6)}
 .bm-sla{width:130px;height:130px}
-.gi-bomb{background:linear-gradient(160deg,#ffd84a,#f5b81f)}
+/* 背景は黄色に、うしろのギザギザの爆発（bomb-icon-bg の案3） */
+.gi-bomb{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='xMidYMid slice'%3E%3Crect width='100' height='100' fill='%23ffd84a'/%3E%3Cpath d='M50 4L58 26L80 12L74 36L98 38L78 52L96 70L72 70L76 94L56 78L46 98L38 76L16 90L22 66L2 60L22 46L6 26L30 30L28 6L44 24Z' fill='%23ff7a3a'/%3E%3Cpath d='M50 18L56 32L70 24L66 40L82 42L70 52L80 64L64 64L66 80L54 70L46 84L42 68L28 76L32 62L18 56L32 48L22 34L38 38L38 22L48 32Z' fill='%23ffb63a'/%3E%3C/svg%3E") center/cover}
 .gi-bombi{display:block;width:54%;height:66%;background:repeating-linear-gradient(90deg,#cc2f20 0 30%,#14161c 30% 35%);position:relative;box-shadow:inset 0 -5px 0 #1c1a18}
 .gi-bombi::after{content:"";position:absolute;right:6%;top:-16%;width:18%;height:28%;background:#ffd54a;border-radius:2px;transform:rotate(30deg)}
-.tk-bomb{background:linear-gradient(160deg,#ffd84a,#f5b81f);position:relative}
+.tk-bomb{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='xMidYMid slice'%3E%3Crect width='100' height='100' fill='%23ffd84a'/%3E%3Cpath d='M50 4L58 26L80 12L74 36L98 38L78 52L96 70L72 70L76 94L56 78L46 98L38 76L16 90L22 66L2 60L22 46L6 26L30 30L28 6L44 24Z' fill='%23ff7a3a'/%3E%3Cpath d='M50 18L56 32L70 24L66 40L82 42L70 52L80 64L64 64L66 80L54 70L46 84L42 68L28 76L32 62L18 56L32 48L22 34L38 38L38 22L48 32Z' fill='%23ffb63a'/%3E%3C/svg%3E") center/cover;position:relative}
 .tka-bomb{position:absolute;left:50%;top:50%;height:96%;transform:translate(-50%,-50%)}
 @media (prefers-reduced-motion:reduce){.bm-bomb,.bm-big{animation:none}}
 @media (max-height:740px){.bm-topic{font-size:26px}.bm-bomb{width:min(50vw,190px)}.bm-lcd{font-size:34px}}

@@ -1,0 +1,125 @@
+/* ===== ボクシング（.bx）。会場の夜の上に、白・黒・朱の札 ===== */
+.bd-boxing{position:fixed;inset:0;max-width:none;margin:0;display:block;background:#120e18}
+.bx{position:relative;height:100%;max-width:520px;margin:0 auto;overflow:hidden;color:#fff;font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;user-select:none;-webkit-user-select:none}
+.bx-stage{position:absolute;inset:0}
+.bx-cv{display:block;position:absolute;inset:0}
+.bx-hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));gap:7px;background:linear-gradient(#000c,#0000 26%)}
+.bx-hud button{pointer-events:auto;font-family:inherit;cursor:pointer}
+.bx-hud :focus-visible{outline:2px solid #ff5a36;outline-offset:2px}
+.bx-ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.bx-ic.l{transform:scaleX(-1)}.bx-ic.d{transform:rotate(90deg)}
+/* 上 */
+.bx-top{display:flex;align-items:center;gap:6px}
+.bx-lbl{flex:1;min-width:0;display:flex;align-items:center;gap:7px}
+.bx-lbl b{font-size:12px;font-weight:900;letter-spacing:.06em;background:#0008;border-radius:99px;padding:3px 11px;white-space:nowrap}
+.bx-watch{font-size:10.5px;font-weight:900;border:1.5px solid #fff8;border-radius:99px;padding:1px 9px;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.bx-watch::before{content:"";width:6px;height:6px;border-radius:50%;background:#ff5a36;box-shadow:0 0 6px #ff5a36}
+.bx-ib{flex:none;min-width:34px;height:30px;border-radius:99px;border:1.5px solid #fff6;background:#0007;color:#fff;font-size:12px;font-weight:900;padding:0 10px}
+.bx-vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.bx-pl{display:grid;gap:3px;min-width:0}.bx-pl.b{justify-items:end;text-align:right}
+.bx-pl b{font-size:14px;font-weight:900;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bx-pl b::before{content:"";flex:none;width:10px;height:10px;border-radius:3px;background:var(--c,#e0503a)}.bx-pl.b b{flex-direction:row-reverse}
+.bx-pips{display:flex;gap:3px;align-items:center;font-size:10px;color:#fffb}.bx-pl.b .bx-pips{flex-direction:row-reverse}
+.bx-pips s{width:15px;height:6px;border-radius:2px;background:#fff3}.bx-pips s.on{background:#ffd23a;box-shadow:0 0 7px #ffd23a99}
+.bx-pips em{font-style:normal;margin:0 4px;white-space:nowrap}
+.bx-rd{display:grid;justify-items:center;gap:2px}
+.bx-rd small{font-size:10.5px;font-weight:900;color:#fffd;white-space:nowrap}
+.bx-rd b{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:900 16px "Zen Maru Gothic",sans-serif;background:#16141a;border:2.5px solid #fff}
+.bx-load{margin:auto;font-size:13px;opacity:.8}
+/* 当たった・ガード */
+.bx-ban{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);display:grid;gap:6px;justify-items:center;animation:bx-pop .3s cubic-bezier(.3,1.6,.5,1)}
+.bx-ban div{font:900 15px "Zen Maru Gothic",sans-serif;white-space:nowrap;border-radius:12px;padding:5px 13px;background:#141414e6;border:2px solid #fff6;box-shadow:0 6px 18px #0008}
+.bx-ban .hit{color:#ffd23a;border-color:#ffd23a}.bx-ban .hurt{color:#ff8a6e;border-color:#ff6a4a}.bx-ban .blk{color:#cfe2ff}
+@keyframes bx-pop{from{transform:translate(-50%,-50%) scale(.6);opacity:0}}
+.bx.hurt::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 90px 30px #ff2a1a;animation:bx-hurt .55s ease-out forwards}
+@keyframes bx-hurt{from{opacity:.95}to{opacity:0}}
+/* 向きえらび（順番に聞く） */
+.bx-card{margin-top:auto;background:#fff;color:#141414;border-radius:22px;padding:13px 13px 14px;display:grid;gap:10px;box-shadow:0 10px 30px #0008;pointer-events:auto}
+.bx-steps{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#8a867e}
+.bx-steps .dn{display:inline-flex;align-items:center;gap:4px;color:#c23d1f}.bx-steps .now{color:#141414}
+.bx-steps hr{flex:1;border:0;border-top:2px dotted #d6d3cc;margin:0}
+.bx-card h3{margin:0;font:900 22px "Zen Maru Gothic",sans-serif;text-align:center}
+.bx-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bx-tile{display:grid;justify-items:center;gap:3px;padding:11px 0 9px;border-radius:14px;border:2px solid #e4e2dc;background:#fff;color:#141414;font-size:15px;font-weight:900}
+.bx-tile i{display:flex;align-items:center;gap:1px;font-size:24px;color:#c23d1f}.bx-tile i .bx-ic+.bx-ic{font-size:15px}
+.bx-tiles.g .bx-tile i{color:#141414}
+.bx-tile:active{background:#141414;color:#fff;border-color:#141414}.bx-tile:active i{color:#fff}
+.bx-back{justify-self:center;border:0;background:none;font-size:11.5px;color:#8a867e;text-decoration:underline;text-underline-offset:3px}
+.bx-hint{text-align:center;font-size:11px;color:#8a867e}
+.bx-wait{margin-top:auto;align-self:center;display:grid;gap:8px;justify-items:center}
+.bx-wait span{font-size:13px;font-weight:700;background:#000a;border-radius:99px;padding:7px 16px}
+.bx-force{align-self:center;border:1.5px solid #fff8;background:#0009;color:#fff;border-radius:99px;font-size:12px;font-weight:700;padding:6px 14px}
+/* 声援 */
+.bx-cheer{margin-top:auto;display:grid;gap:7px;pointer-events:auto}
+.bx-cheer small{text-align:center;font-size:10.5px;font-weight:700;opacity:.8}
+.bx-cheer div{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.bx-cheer button{border:0;border-radius:12px;background:#fff;color:#141414;font:900 13px "Zen Maru Gothic",sans-serif;padding:11px 0;box-shadow:0 3px 0 #0006}
+.bx-cheer .c0{background:#ffd23a}.bx-cheer .c1{background:#ff5a36;color:#fff}
+.bx-cheer button:active{transform:translateY(2px);box-shadow:0 1px 0 #0006}
+.bx-fl{position:absolute;bottom:30%;font:900 13px "Zen Maru Gothic",sans-serif;border-radius:99px;padding:5px 12px;white-space:nowrap;background:#fff;color:#141414;box-shadow:0 4px 12px #0007;pointer-events:none;animation:bx-up 2.6s ease-out forwards;opacity:0}
+.bx-fl small{font:700 9.5px "Zen Kaku Gothic New",sans-serif;opacity:.75;margin-right:6px}
+.bx-fl.c0{background:#ffd23a}.bx-fl.c1{background:#ff5a36;color:#fff}
+@keyframes bx-up{0%{opacity:0;transform:translateY(20px) scale(.8)}12%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-150px)}}
+/* 試合のおわり・トーナメント表 */
+.bx-sheet{margin-top:auto;background:#f6f5f2;color:#141414;border-radius:22px;padding:14px 12px 14px;display:grid;gap:8px;box-shadow:0 10px 30px #0008;pointer-events:auto;max-height:100%;overflow:auto}
+.bx-res{display:grid;justify-items:center;gap:2px;text-align:center}
+.bx-res small{font-size:11px;font-weight:900;letter-spacing:.14em;color:#c23d1f}
+.bx-res b{font:900 24px "Zen Maru Gothic",sans-serif}
+.bx-res span{font-size:12px;color:#7d7a72}
+.bx-res.lose b{color:#55524c}.bx-res.champ b{color:#c23d1f}
+.bx-br{width:100%;height:auto;max-height:46vh;display:block}
+.bx-br text{font-family:"Zen Kaku Gothic New",sans-serif;font-weight:700}
+.bx-br .ln{fill:none;stroke:#c9c6bf;stroke-width:1.5}.bx-br .win{fill:none;stroke:#141414;stroke-width:2.6}.bx-br .me{fill:none;stroke:#e0503a;stroke-width:3}.bx-br .nx{fill:none;stroke:#ff5a36;stroke-width:2;stroke-dasharray:4 4}
+.bx-br .bxb{fill:#fff;stroke:#e1ded7}.bx-br .bxb.lost{fill:#efede8}.bx-br .bxb.mine{stroke:#e0503a;stroke-width:2}.bx-br .bxb.now{stroke:#ff5a36;stroke-width:2.2}
+.bx-br .nm{font-size:9.5px;fill:#141414}.bx-br .nm.lost{fill:#a9a59d}.bx-br .nm.mine{fill:#c23d1f;font-weight:900}
+.bx-br .fl{font-size:11px;font-weight:900;fill:#141414}.bx-br .rs{font-size:8px;fill:#7d7a72}
+.bx-go{border:0;border-radius:99px;background:#ff5a36;color:#fff;font:900 16px "Zen Maru Gothic",sans-serif;padding:12px 0;box-shadow:0 4px 0 #c23d1f;letter-spacing:.08em}
+.bx-sub{border:1.5px solid #d6d3cc;border-radius:99px;background:#fff;color:#141414;font:900 14px "Zen Maru Gothic",sans-serif;padding:10px 0}
+.bx-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bx-note{text-align:center;font-size:12px;color:#7d7a72}
+.bx-card .bx-go{margin-top:2px}
+/* 遊びかた */
+.bx-stile{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;border:2px solid #e4e2dc;font-weight:900}
+.bx-stile.on{background:#141414;color:#fff;border-color:#141414}
+.bx-spips{display:flex;gap:6px}.bx-spips s{width:34px;height:12px;border-radius:4px;background:#e4e2dc}.bx-spips s.on{background:#ffd23a}
+.bx-sbelt{width:150px;height:75px}
+/* ハブのアイコン・チケット */
+.gi-box{background:#15111c;overflow:hidden} /* 絵が四角いので、タイルの角で切る */
+@media (max-height:740px){.bx-card{padding:10px 11px 11px;gap:7px}.bx-card h3{font-size:19px}.bx-tile{padding:8px 0 7px}.bx-br{max-height:40vh}}
+@media (prefers-reduced-motion:reduce){.bx-fl,.bx-ban,.bx.hurt::after{animation-duration:.01s}}
+/* 優勝（下から見上げる絵の上に名前） */
+.bx-champ{margin:auto -12px calc(-12px - env(safe-area-inset-bottom,0px));padding:70px 14px calc(16px + env(safe-area-inset-bottom,0px));background:linear-gradient(#0000,#000d 40%);display:grid;gap:12px;pointer-events:auto}
+.bx-champ .nm{display:grid;justify-items:center;text-align:center;text-shadow:0 2px 10px #000c}
+.bx-champ .nm small{font-size:11px;font-weight:900;letter-spacing:.3em;color:#ffd23a}
+.bx-champ .nm b{font:900 36px "Zen Maru Gothic",sans-serif;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bx-champ .nm span{font-size:12.5px;opacity:.85}
+.bx-note.w{color:#fffc}
+/* 実況のひとこと（最初の試合だけ） */
+.bx-ann{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;margin-top:8px;pointer-events:auto;animation:bx-in .35s ease-out}
+.bx-ann .mic{width:36px;height:36px;border-radius:50%;background:#ffd23a;color:#141414;display:grid;place-items:center;font:900 11px "Zen Maru Gothic",sans-serif;box-shadow:0 4px 10px #0007}
+.bx-ann .bub{position:relative;background:#fff;color:#141414;border-radius:14px;padding:8px 11px;display:grid;gap:2px;box-shadow:0 6px 16px #0008}
+.bx-ann .bub::after{content:"";position:absolute;left:-5px;top:13px;width:11px;height:11px;background:#fff;transform:rotate(45deg)}
+.bx-ann .bub b{font:900 14px "Zen Maru Gothic",sans-serif}.bx-ann .bub span{font-size:12px;font-weight:700;color:#55524c;line-height:1.5}
+.bx-annx{grid-column:2;justify-self:end;border:1.5px solid #fff6;background:#0009;color:#fff;border-radius:99px;font-size:10.5px;font-weight:700;padding:2px 10px}
+@keyframes bx-in{from{opacity:0;transform:translateY(-6px)}}
+.tka-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+
+/* トーナメント表が進む：勝った人の線がのびて、次の枠に顔と名前がぽんと入る */
+.bx-br .grow{stroke-dasharray:1;stroke-dashoffset:1;animation:bx-draw .55s .35s ease-out forwards}
+.bx-br .grow2{stroke-dasharray:1;stroke-dashoffset:1;animation:bx-draw .35s .9s ease-out forwards}
+.bx-br .pop{transform-box:fill-box;transform-origin:center;animation:bx-pop3 .45s 1.2s cubic-bezier(.3,1.6,.5,1) backwards}
+@keyframes bx-draw{to{stroke-dashoffset:0}}
+@keyframes bx-pop3{from{opacity:0;transform:scale(.4)}}
+/* 試合の前の「○○ VS ○○」 */
+.bx-vsi{margin:auto 0;display:grid;justify-items:center;gap:12px;background:#0b0a0ee6;border:1px solid #ffffff22;border-radius:22px;padding:20px 18px;pointer-events:auto}
+.bx-vsi small{font-size:12px;font-weight:900;letter-spacing:.24em;color:#ffd23a}
+.bx-vsi .row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;width:100%}
+.bx-vsi .p{display:grid;justify-items:center;gap:6px;min-width:0}
+.bx-vsi .p b{font-size:16px;font-weight:900;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bx-vf{width:76px;height:76px;filter:drop-shadow(0 6px 10px #0008)}
+.bx-vsi .p.a{animation:bx-inL .45s cubic-bezier(.2,1.3,.5,1) backwards}.bx-vsi .p.b{animation:bx-inR .45s cubic-bezier(.2,1.3,.5,1) backwards}
+.bx-vsi .vs{font:italic 900 34px "Zen Maru Gothic",sans-serif;text-shadow:0 0 14px #ff5a36aa;animation:bx-pop3 .4s .35s cubic-bezier(.3,1.6,.5,1) backwards}
+.bx-vsi .go{font:900 20px "Zen Maru Gothic",sans-serif;color:#ff8a6e;letter-spacing:.1em;animation:bx-pop3 .35s 1.3s cubic-bezier(.3,1.6,.5,1) backwards}
+@keyframes bx-inL{from{opacity:0;transform:translateX(-60px)}}
+@keyframes bx-inR{from{opacity:0;transform:translateX(60px)}}
+@media (prefers-reduced-motion:reduce){.bx-br .grow,.bx-br .grow2{animation-duration:.01s;animation-delay:0s}.bx-br .pop,.bx-vsi *{animation:none}}

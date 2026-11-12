@@ -1,8 +1,8 @@
-/* ===== ワードウルフ（フェルトの牧場。案は tools/wordwolf-sheep-mockup.html） ===== */
-.gi-ww{background:linear-gradient(160deg,#b9e29d,#6fae5a)}
-.bd-wordwolf{position:fixed;inset:0;max-width:none;margin:0;display:block;background:#7fb765}
-.ww{position:relative;height:100%;max-width:480px;margin:0 auto;box-sizing:border-box;padding:calc(18px + env(safe-area-inset-top,0px)) 20px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;color:#27401f;font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;overflow:hidden}
-.ww::before{content:"";position:absolute;inset:calc(8px + env(safe-area-inset-top,0px)) 8px calc(8px + env(safe-area-inset-bottom,0px));border:2px dashed rgba(255,255,255,.55);border-radius:22px;pointer-events:none}
+/* ===== ワードウルフ（ピクセルの牧場。案は https://claude.ai/artifact/NdSK9tk84UixjnnmBbokNd の B） ===== */
+.gi-ww{background:#8fc474;overflow:hidden}.gi-ww .gi-img{image-rendering:pixelated}
+.bd-wordwolf{position:fixed;inset:0;max-width:none;margin:0;display:block;background:#8fc474 var(--ww-grass,none) 0 0/128px 128px}
+.ww{position:relative;height:100%;max-width:480px;margin:0 auto;box-sizing:border-box;padding:calc(18px + env(safe-area-inset-top,0px)) 20px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;color:#1d3a1a;font-family:"DotGothic16","Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;overflow:hidden}
+.ww img{image-rendering:pixelated;image-rendering:crisp-edges}
 .ww>*{position:relative;flex:none}
 .ww .bd-ttl b,.ww .bd-ttl small{color:#27401f}
 .ww .hub-ib{background:#fff8e8;border-color:transparent;color:#27401f}
@@ -13,27 +13,27 @@
 .ww-say{font-size:18px;font-weight:900;line-height:1.45}
 .ww-sm{font-size:13px;line-height:1.5;opacity:.85}
 .ww-note{text-align:center;font-size:13px;font-weight:700;min-height:46px;display:grid;place-items:center}
-.ww-btn{height:52px;border:0;border-radius:15px;background:#6d4427;color:#fff4dc;box-shadow:0 4px 0 #48291a;font:inherit;font-weight:900;font-size:16px;cursor:pointer;width:100%}
+.ww-btn{height:52px;border:0;border-radius:8px;background:#2a2620;color:#fff;box-shadow:0 4px 0 #0f0d0b;font:inherit;font-weight:900;font-size:16px;cursor:pointer;width:100%}
 .ww-btn:disabled{opacity:.55}
-.ww-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #48291a}
-.ww-btn.l{background:#fff8e8;color:#6d4427;box-shadow:0 4px 0 rgba(39,64,31,.3)}
+.ww-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #0f0d0b}
+.ww-btn.l{background:#fffdf6;color:#2a2620;box-shadow:0 4px 0 rgba(29,58,26,.35)}
 .ww-bs{display:flex;gap:8px}.ww-bs .ww-btn.n{flex:0 0 84px}
-.ww-sign{position:relative;background:#a9734a;color:#fff4dc;border-radius:12px;padding:12px 30px;font-size:44px;font-weight:900;line-height:1.2;box-shadow:0 5px 0 #6d4427;max-width:100%;box-sizing:border-box}
-.ww-sign::after{content:"";position:absolute;inset:5px;border:1.5px dashed rgba(255,244,220,.65);border-radius:8px;pointer-events:none}
+.ww-sign{position:relative;background:#fffdf6;color:#2a2620;border-radius:6px;border:3px solid #2a2620;padding:12px 30px;font-size:44px;font-weight:900;line-height:1.2;box-shadow:0 5px 0 #6d4427;max-width:100%;box-sizing:border-box}
+
 .ww-sign.m{font-size:32px;padding:12px 22px}.ww-sign.s{font-size:24px;padding:8px 20px}
-.ww-clk{background:#fff8e8;border-radius:16px;padding:3px 24px;font-size:38px;font-weight:900;font-variant-numeric:tabular-nums;box-shadow:0 3px 0 rgba(39,64,31,.3)}
-.ww-flock{display:flex;flex-wrap:wrap;justify-content:center;width:100%;max-width:330px}
-.ww-flock img{width:calc(100% / min(var(--n),4));max-height:15vh;object-fit:contain;margin:-4px 0}
+.ww-clk{background:#fffdf6;border-radius:6px;border:3px solid #2a2620;padding:3px 24px;font-size:38px;font-weight:900;font-variant-numeric:tabular-nums;box-shadow:0 3px 0 rgba(39,64,31,.3)}
+.ww-flock{display:flex;flex-wrap:wrap;justify-content:center;width:100%;max-width:400px}
+.ww-flock img{width:calc(100% / min(var(--n),4));max-height:18vh;object-fit:contain;margin:-4px 0}
 .ww-peek{border:0;background:none;color:inherit;font:inherit;font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:3px;min-height:36px;padding:0 10px}
 .ww-g{display:grid;grid-template-columns:repeat(var(--c),1fr);gap:6px;align-self:stretch}
 .ww-sh{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;border:0;background:none;color:inherit;font:inherit;padding:5px 2px;border-radius:14px;min-width:0}
 .ww-sh img{height:clamp(46px,11vh,104px)}
 .ww-sh b{font-size:14px;font-weight:900;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ww-sh.on{background:rgba(255,255,255,.45);box-shadow:inset 0 0 0 2px #6d4427}
+.ww-sh.on{background:rgba(255,255,255,.45);box-shadow:inset 0 0 0 3px #2a2620}
 .ww-vt{position:absolute;right:8%;top:5px;min-width:24px;height:24px;border-radius:12px;background:#ff5a36;color:#fff;font-size:13px;font-weight:900;display:grid;place-items:center}
-.ww-opt{align-self:stretch;min-height:46px;border:0;border-radius:12px;background:#fff8e8;color:#27401f;font:inherit;font-weight:900;font-size:17px;box-shadow:0 2px 0 rgba(39,64,31,.25);flex:none}
-.ww-opt.on{background:#6d4427;color:#fff4dc}
-.ww-row{align-self:stretch;background:#fff8e8;border-radius:12px;padding:7px 14px;font-weight:900;font-size:18px;text-align:left;line-height:1.3}
+.ww-opt{align-self:stretch;min-height:46px;border:0;border-radius:6px;background:#fffdf6;color:#1d3a1a;font:inherit;font-weight:900;font-size:17px;box-shadow:0 2px 0 rgba(39,64,31,.25);flex:none}
+.ww-opt.on{background:#2a2620;color:#fff}
+.ww-row{align-self:stretch;background:#fffdf6;border-radius:6px;padding:7px 14px;font-weight:900;font-size:18px;text-align:left;line-height:1.3}
 .ww-row small{display:block;font-size:11px;font-weight:700;opacity:.7}
 .ww-force{align-self:center;border:0;background:none;color:inherit;font:inherit;font-size:13px;text-decoration:underline;min-height:40px}
 .ww-res{font-size:28px;font-weight:900}.ww-res.no{font-size:22px}
@@ -47,4 +47,4 @@
 .ww-sla{height:100%;max-width:90%;object-fit:contain}
 @media (prefers-reduced-motion:reduce){.ww-rev .a{animation:none;opacity:0}.ww-rev .b,.ww-res{animation:none}}
 @media (max-height:740px){.ww{gap:7px}.ww>.ww-c{gap:7px}.ww-say{font-size:16px}.ww-sign{font-size:36px;padding:9px 24px}.ww-clk{font-size:30px}.ww-btn{height:46px;font-size:15px}.ww-opt{min-height:40px}}
-.ww-sh img,.ww-flock img{transform:scale(1.28);transform-origin:50% 100%}
+

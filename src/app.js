@@ -318,7 +318,7 @@ function extend() {
   });
   toast('受付を5分のばしました');
 }
-const newGameFor = (id, humans, host) => id === 'wordwolf' ? WW.make(humans) : id === 'tower' ? TWR.make(humans) : id === 'bomb' ? BMB.make(humans) : id === 'alchemy' ? ALC.make(humans) : id === 'trapper' ? trNew(humans) : id === 'bingo' ? BGO.make(humans, host) : DUEL[id] ? duelNew(id, humans) : CARDG[id] ? CARDG[id].make(humans) : newGame(humans);
+const newGameFor = (id, humans, host) => id === 'boxing' ? BOX.make(humans) : id === 'wordwolf' ? WW.make(humans) : id === 'tower' ? TWR.make(humans) : id === 'bomb' ? BMB.make(humans) : id === 'alchemy' ? ALC.make(humans) : id === 'trapper' ? trNew(humans) : id === 'bingo' ? BGO.make(humans, host) : DUEL[id] ? duelNew(id, humans) : CARDG[id] ? CARDG[id].make(humans) : newGame(humans);
 const fits = (g, n) => n >= g.min && n <= g.max;
 // id：始めるゲーム。もう一度のときは前と同じゲーム、ロビーからは部屋主の端末で選んでいるゲーム
 const gameDoc = (d, pick = d.game || 'dwarf') => {
@@ -496,14 +496,15 @@ const GAMES = [
   { id: 'babanuki', n: 'ババ抜き', sub: 'ジョーカーを<br>最後まで持たない', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-old', icon: '<img class="gi-img" src="' + ICON_ART.babanuki + '" alt="">' },
   { id: 'tower', n: 'ぐらぐらタワー', sub: '順番に積んで<br>くずしたら負け', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-tower', icon: '<img class="gi-img" src="' + ICON_ART.tower + '" alt="">' },
   { id: 'bomb', n: 'ばくだんパス', sub: 'お題に答えて<br>爆弾を次の人へ', ppl: '1〜8人', time: '約5分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-bomb', icon: '<img class="gi-img" src="' + ICON_ART.bomb + '" alt="">' },
-  { id: 'wordwolf', n: 'ワードウルフ', sub: 'ひとりだけ<br>ちがうお題', ppl: '3〜8人', time: '約5分', ok: true, min: 3, max: TABLE_MAX, cls: 'gi-ww', icon: '<img class="gi-img" src="' + ICON_ART.wordwolf + '" alt="">' },
+  { id: 'boxing', n: 'ボクシング', sub: '右・左・下の<br>読みあい', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-box', icon: '<img class="gi-img" src="' + ICON_ART.boxing + '" alt="">' },
+  { id: 'wordwolf', n: 'ワードウルフ', sub: 'ひとりだけ<br>ちがうお題', ppl: '3〜8人', time: '約5分', ok: false, min: 3, max: TABLE_MAX, cls: 'gi-ww', icon: '<img class="gi-img" src="' + ICON_ART.wordwolf + '" alt="">' },
   { id: 'alchemy', n: '月夜の錬金市場', short: '錬金市場', sub: '昼に薬を作り<br>夜にいっせいに売る', ppl: '1〜4人', time: '約30分', ok: false, min: 1, max: 4, cls: 'gi-alm', icon: '<svg viewBox="0 0 40 48" aria-hidden="true"><rect x="14" y="2" width="12" height="5" rx="2" fill="#c9975a"/><path d="M16 7h8v8.5a15 15 0 1 1-8 0z" fill="#fff"/><path d="M5.6 28a14.6 14.6 0 0 0 28.8 0z" fill="#2fa37a"/></svg>' },
 ];
 // チケットの「むずかしさ」（3段階）
-const GAME_LV = { babanuki: 1, bingo: 1, bomb: 1, tower: 1, wordwolf: 2, dwarf: 2, reversi: 2, daifugo: 2, trapper: 3, shogi: 3, chess: 3, alchemy: 3 };
+const GAME_LV = { boxing: 1, babanuki: 1, bingo: 1, bomb: 1, tower: 1, wordwolf: 2, dwarf: 2, reversi: 2, daifugo: 2, trapper: 3, shogi: 3, chess: 3, alchemy: 3 };
 const gameById = id => GAMES.find(g => g.id === id && g.ok) || GAMES[0];
 // ゲーム選択の引き出しのジャンル。'wolf' はまだ遊べない（じゅんび中の枠）
-const GENRES = [['定番', ['daifugo', 'babanuki', 'reversi', 'shogi', 'chess', 'bingo']], ['みんなでワイワイ', ['wordwolf', 'tower', 'bomb', 'dwarf', 'trapper']]];
+const GENRES = [['定番', ['daifugo', 'babanuki', 'reversi', 'shogi', 'chess', 'bingo']], ['みんなでワイワイ', ['boxing', 'tower', 'bomb', 'dwarf', 'trapper']]];
 const SOON = { wolf: '人狼' };
 // 選んでいるゲームは端末ごと（部屋主と画面は合わせない）。まだ選んでいなければ卓の前のゲーム
 const hubScroll = {}; // 引き出しの横スクロールの位置（描き直しても動かないように）
@@ -660,6 +661,7 @@ function hubFootText(g, n, hostName) {
   const note = g.id === 'bingo' ? `回す係は${hostName}`
     : g.id === 'trapper' ? (n < 4 ? '足りない席はコンピュータ' : '')
     : g.id === 'bomb' || g.id === 'tower' ? (n < 3 ? 'コンピュータも入ります' : '')
+    : g.id === 'boxing' ? (n !== 4 && n !== 8 ? 'コンピュータも入ります' : '')
     : g.id === 'alchemy' ? (n < 4 ? '足りない席はコンピュータ' : '')
     : CARDG[g.id] ? (n < 3 ? 'コンピュータも入ります' : '')
     : n === 1 ? '相手はコンピュータ' : '';
@@ -1077,6 +1079,7 @@ function render() {
   if (doc && doc.status === 'lobby' && hubPick(doc) === 'bomb' || !tableId && local && localGame === 'bomb') bmLoad().catch(() => { });
   if (doc && doc.status === 'lobby' && hubPick(doc) === 'wordwolf' || !tableId && local && localGame === 'wordwolf') wwLoad().catch(() => { });
   if (doc && doc.status === 'lobby' && hubPick(doc) === 'tower' || !tableId && local && localGame === 'tower') twLoad().catch(() => { });
+  if (doc && doc.status === 'lobby' && hubPick(doc) === 'boxing' || !tableId && local && localGame === 'boxing') bxLoad().catch(() => { });
 }
 setInterval(() => {
   if (doc && doc.status === 'lobby') { const t = $('lobbyTimer'); const left = Math.max(0, OPEN_MS - (Date.now() - doc.openedAt)); if (t) t.textContent = `招待コード ${tableId} ・ ` + (left ? `あと${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}` : '受付終了'); if (!left && t && !t.dataset.closed) { t.dataset.closed = '1'; render(); } }

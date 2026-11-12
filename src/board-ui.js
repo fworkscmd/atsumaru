@@ -1,8 +1,8 @@
 /* =================== 盤のゲーム（リバーシ・チェス・将棋）とビンゴ大会の画面 =================== */
 // app.js の /*__BOARD_UI__*/ の位置に差し込まれる（app.js の変数を共有）
 const BS = { root: null, sel: null, seen: 0, pending: false, tab: null, cache: null, taps: new Set(), peek: false, lastSeat: null, fx: null, ro: null };
-const isBoardDoc = () => !!doc && (doc.game === 'wordwolf' || doc.game === 'bingo' || doc.game === 'alchemy' || doc.game === 'bomb' || doc.game === 'tower' || !!DUEL[doc.game] || !!CARDG[doc.game]) && !!doc.b;
-const BD_TITLE = { reversi: 'リバーシ', chess: 'チェス', shogi: '将棋', bingo: 'ビンゴ大会', daifugo: '大富豪', babanuki: 'ババ抜き', alchemy: '月夜の錬金市場', bomb: 'ばくだんパス', tower: 'ぐらぐらタワー', wordwolf: 'ワードウルフ' };
+const isBoardDoc = () => !!doc && (doc.game === 'boxing' || doc.game === 'wordwolf' || doc.game === 'bingo' || doc.game === 'alchemy' || doc.game === 'bomb' || doc.game === 'tower' || !!DUEL[doc.game] || !!CARDG[doc.game]) && !!doc.b;
+const BD_TITLE = { reversi: 'リバーシ', chess: 'チェス', shogi: '将棋', bingo: 'ビンゴ大会', daifugo: '大富豪', babanuki: 'ババ抜き', alchemy: '月夜の錬金市場', bomb: 'ばくだんパス', tower: 'ぐらぐらタワー', wordwolf: 'ワードウルフ', boxing: 'ボクシング' };
 const CHESS_G = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' }, CHESS_N = { Q: 'クイーン', R: 'ルーク', B: 'ビショップ', N: 'ナイト' };
 const chessGlyph = t => CHESS_G[t] + '︎'; // 絵文字にならないように文字として出す
 const SHOGI_K = { K: '玉', R: '飛', B: '角', G: '金', S: '銀', N: '桂', L: '香', P: '歩', D: '龍', H: '馬', Z: '全', M: '圭', Y: '杏', T: 'と' };
@@ -32,6 +32,7 @@ const slaBingo = (holes, line = []) => h('div', { class: 'sla-bg' }, 'BINGO'.spl
 function bdSlides(id) {
   if (id === 'alchemy') return alSlides();
   if (id === 'wordwolf') return wwSlides();
+  if (id === 'boxing') return bxSlides();
   if (id === 'bomb') return bmSlides();
   if (id === 'tower') return twSlides();
   if (CARDG[id]) return cdSlides(id);
@@ -61,12 +62,13 @@ function bdSlides(id) {
 function bdOpenRules(id, foot) { openSlides(BD_TITLE[id], bdSlides(id), foot); }
 // ハブのチケットの絵
 // チケットの絵はアイコンと同じ
-const TK_BG = { daifugo: 'linear-gradient(160deg,#7a5ac0,#4a2f88)', babanuki: 'linear-gradient(160deg,#c04a60,#7f1f36)', reversi: 'linear-gradient(160deg,#2f8a62,#1f6b4a)', shogi: 'linear-gradient(160deg,#6b4a30,#3a2618)', chess: 'linear-gradient(160deg,#4a4d55,#24262b)', wordwolf: 'linear-gradient(160deg,#cfe9b8,#8fc474)' };
+const TK_BG = { daifugo: 'linear-gradient(160deg,#7a5ac0,#4a2f88)', babanuki: 'linear-gradient(160deg,#c04a60,#7f1f36)', reversi: 'linear-gradient(160deg,#2f8a62,#1f6b4a)', shogi: 'linear-gradient(160deg,#6b4a30,#3a2618)', chess: 'linear-gradient(160deg,#4a4d55,#24262b)', wordwolf: '#8fc474' };
 function bdTicketArt(id, art) {
   if (TK_BG[id]) { art.classList.add('tk-css'); art.style.background = TK_BG[id]; art.style.position = 'relative'; art.append(h('img', { class: 'tka-ic', src: ICON_ART[id], alt: '' })); return; }
   if (id === 'alchemy') { alTicketArt(art); return; }
   if (id === 'bomb') { bmTicketArt(art); return; }
   if (id === 'tower') { twTicketArt(art); return; }
+  if (id === 'boxing') { art.classList.add('tk-css'); art.style.position = 'relative'; art.append(h('img', { class: 'tka-cover', src: ICON_ART.boxing, alt: '' })); return; }
   if (CARDG[id]) { cdTicketArt(id, art); return; }
   art.classList.add('tk-css', 'tk-' + id);
   if (id === 'reversi') {
@@ -86,6 +88,7 @@ function viewBoard() {
   // リバーシ・将棋・チェスは3Dの盤。読みこむまで（読みこめないときも）ふつうの盤で遊べる
   bd3Drop(); CS.sel.clear(); CS.shown = -1; CS.view = -1; CS.lhover = -1; CS.seen = doc.b.seq; CS.fieldKey = doc.b.field ? doc.b.seq : '';
   if (doc.game === 'tower') { const root = BS.root; twLoad().then(() => { if (BS.root === root && isTowerDoc()) bdRender(); }, () => toast('読みこめませんでした')); }
+  if (doc.game === 'boxing') { const root = BS.root; bxLoad().then(() => { if (BS.root === root && isBoxDoc()) bdRender(); }, () => { BX.failed = true; if (BS.root === root && isBoxDoc()) bdRender(); }); }
   if (doc.game === 'wordwolf') { const root = BS.root; wwLoad().then(() => { if (BS.root === root && isWordDoc()) bdRender(); }, () => { }); }
   if (doc.game === 'bomb') { const root = BS.root; bmLoad().then(() => { if (BS.root === root && isBombDoc()) bdRender(); }, () => { }); }
   if (doc.game === 'alchemy') { const root = BS.root; AL3.load().then(() => { if (BS.root === root && isAlcDoc()) bdRender(); }, () => { }); }
@@ -96,7 +99,7 @@ function viewBoard() {
 function bd3Drop() { if (BS.b3) { BS.b3.dispose(); BS.b3 = null; } if (BS.c3) { BS.c3.dispose(); BS.c3 = null; } }
 function bdRender() {
   if (!BS.root || !BS.root.isConnected) { render(); return; }
-  const parts = doc.game === 'wordwolf' ? wordView() : doc.game === 'tower' ? towerView() : doc.game === 'bomb' ? bombView() : doc.game === 'alchemy' ? alcView() : doc.game === 'bingo' ? bingoView() : CARDG[doc.game] ? cardView() : duelView();
+  const parts = doc.game === 'boxing' ? boxView() : doc.game === 'wordwolf' ? wordView() : doc.game === 'tower' ? towerView() : doc.game === 'bomb' ? bombView() : doc.game === 'alchemy' ? alcView() : doc.game === 'bingo' ? bingoView() : CARDG[doc.game] ? cardView() : duelView();
   BS.root.replaceChildren(...[parts].flat(2).filter(Boolean));
   bdFit();
 }
