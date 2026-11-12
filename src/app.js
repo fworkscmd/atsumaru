@@ -486,17 +486,17 @@ const DWARF_ART = (() => {
   } catch (e) { return ''; }
 })();
 const GAMES = [
-  { id: 'dwarf', n: 'ドワーフ', sub: '深掘り<br>チキンレース', ppl: '2〜4人', time: '約10分', ok: true, min: 1, max: 4, cls: 'gi-dwarf', icon: '<img class="gi-img gi-pxl" src="' + DWARF_ART + '" alt="">' },
-  { id: 'trapper', n: 'チュンチュン大作戦', short: 'チュンチュン', sub: '罠士 VS 鳥3羽<br>1対3のすごろく', ppl: '1〜4人', time: '約15分', ok: true, min: 1, max: 4, cls: 'gi-trap', icon: TRAP_ICON },
+  { id: 'dwarf', n: 'ドワーフ', sub: '深掘り<br>チキンレース', ppl: '2〜4人', time: '約5分', ok: true, min: 1, max: 4, cls: 'gi-dwarf', icon: '<img class="gi-img gi-pxl" src="' + DWARF_ART + '" alt="">' },
+  { id: 'trapper', n: 'チュンチュン大作戦', short: 'チュンチュン', sub: '罠士 VS 鳥3羽<br>1対3のすごろく', ppl: '1〜4人', time: '約10分', ok: true, min: 1, max: 4, cls: 'gi-trap', icon: TRAP_ICON },
   { id: 'bingo', n: 'ビンゴ大会', short: 'ビンゴ', sub: '部屋主が回して<br>みんなで穴あけ', ppl: '2〜8人', time: '約15分', ok: true, min: 2, max: TABLE_MAX, cls: 'gi-bingo', icon: BINGO_ICON },
   { id: 'reversi', n: 'リバーシ', sub: 'はさんで<br>ひっくり返す', ppl: '1〜2人', time: '約10分', ok: true, min: 1, max: 2, cls: 'gi-rev', icon: '<img class="gi-img" src="' + ICON_ART.reversi + '" alt="">' },
   { id: 'shogi', n: '将棋', sub: '玉を詰ませたら<br>勝ち', ppl: '1〜2人', time: '約30分', ok: true, min: 1, max: 2, cls: 'gi-shogi', icon: '<img class="gi-img" src="' + ICON_ART.shogi + '" alt="">' },
   { id: 'chess', n: 'チェス', sub: 'キングを<br>追いつめる', ppl: '1〜2人', time: '約30分', ok: true, min: 1, max: 2, cls: 'gi-chs', icon: '<img class="gi-img" src="' + ICON_ART.chess + '" alt="">' },
   { id: 'daifugo', n: '大富豪', sub: '強いカードを出して<br>先に上がる', ppl: '1〜8人', time: '約20分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-dfg', icon: '<img class="gi-img" src="' + ICON_ART.daifugo + '" alt="">' },
   { id: 'babanuki', n: 'ババ抜き', sub: 'ジョーカーを<br>最後まで持たない', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-old', icon: '<img class="gi-img" src="' + ICON_ART.babanuki + '" alt="">' },
-  { id: 'tower', n: 'ぐらぐらタワー', sub: '順番に積んで<br>くずしたら負け', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-tower', icon: '<img class="gi-img" src="' + ICON_ART.tower + '" alt="">' },
+  { id: 'tower', n: 'ぐらぐらタワー', sub: '順番に積んで<br>くずしたら負け', ppl: '1〜8人', time: '約5分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-tower', icon: '<img class="gi-img" src="' + ICON_ART.tower + '" alt="">' },
   { id: 'bomb', n: 'ばくだんパス', sub: 'お題に答えて<br>爆弾を次の人へ', ppl: '1〜8人', time: '約5分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-bomb', icon: '<img class="gi-img" src="' + ICON_ART.bomb + '" alt="">' },
-  { id: 'boxing', n: 'ボクシング', sub: '右・左・下の<br>読みあい', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-box', icon: '<img class="gi-img" src="' + ICON_ART.boxing + '" alt="">' },
+  { id: 'boxing', n: 'ガツンとロボ', sub: '右・左・下の<br>読みあい', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-box', icon: '<img class="gi-img" src="' + ICON_ART.boxing + '" alt="">' },
   { id: 'wordwolf', n: 'ワードウルフ', sub: 'ひとりだけ<br>ちがうお題', ppl: '3〜8人', time: '約5分', ok: false, min: 3, max: TABLE_MAX, cls: 'gi-ww', icon: '<img class="gi-img" src="' + ICON_ART.wordwolf + '" alt="">' },
   { id: 'alchemy', n: '月夜の錬金市場', short: '錬金市場', sub: '昼に薬を作り<br>夜にいっせいに売る', ppl: '1〜4人', time: '約30分', ok: false, min: 1, max: 4, cls: 'gi-alm', icon: '<svg viewBox="0 0 40 48" aria-hidden="true"><rect x="14" y="2" width="12" height="5" rx="2" fill="#c9975a"/><path d="M16 7h8v8.5a15 15 0 1 1-8 0z" fill="#fff"/><path d="M5.6 28a14.6 14.6 0 0 0 28.8 0z" fill="#2fa37a"/></svg>' },
 ];
@@ -504,7 +504,7 @@ const GAMES = [
 const GAME_LV = { boxing: 1, babanuki: 1, bingo: 1, bomb: 1, tower: 1, wordwolf: 2, dwarf: 2, reversi: 2, daifugo: 2, trapper: 3, shogi: 3, chess: 3, alchemy: 3 };
 const gameById = id => GAMES.find(g => g.id === id && g.ok) || GAMES[0];
 // ゲーム選択の引き出しのジャンル。'wolf' はまだ遊べない（じゅんび中の枠）
-const GENRES = [['定番', ['daifugo', 'babanuki', 'reversi', 'shogi', 'chess', 'bingo']], ['みんなでワイワイ', ['boxing', 'tower', 'bomb', 'dwarf', 'trapper']]];
+const GENRES = [['定番', ['daifugo', 'babanuki', 'reversi', 'shogi', 'chess', 'bingo']], ['みんなでワイワイ', ['dwarf', 'trapper', 'tower', 'boxing', 'bomb']]];
 const SOON = { wolf: '人狼' };
 // 選んでいるゲームは端末ごと（部屋主と画面は合わせない）。まだ選んでいなければ卓の前のゲーム
 const hubScroll = {}; // 引き出しの横スクロールの位置（描き直しても動かないように）
@@ -545,7 +545,7 @@ function ticketEl(g, d) {
   const art = h('div', { class: 'tk-art' });
   if (g.id === 'dwarf') { const cv = document.createElement('canvas'); drawShaft(cv, { depth: 4, phase: 'choose', next: { fork: false }, pot: 3, inside: ['h0', 'h1', 'h2'], players: [], out: {} }); art.append(cv); }
   if (BD_TITLE[g.id]) bdTicketArt(g.id, art);
-  if (g.id === 'trapper') { art.style.background = 'linear-gradient(#cfeaff,#fff4dc)'; if (TB.ready()) art.append(h('img', { class: 'tp-tk', src: TB.arts().ticket, alt: '' })); else TB.load().then(() => { if (art.isConnected) art.append(h('img', { class: 'tp-tk', src: TB.arts().ticket, alt: '' })); }).catch(() => { }); }
+  if (g.id === 'trapper') { art.classList.add('tk-css'); art.style.position = 'relative'; art.style.background = '#8fd0f8'; art.append(h('img', { class: 'tka-cover', src: ICON_ART.trapperTk, alt: '' })); }
   return h('div', { class: 'ticket', style: swayPhase(), role: 'group', 'aria-label': `えらんだゲーム：${g.n}` },
     h('div', { class: 'tk-top' }, art,
       h('div', { class: 'tk-row' }, h('div', { class: 'tk-l' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('span', { class: 'tk-name' + (g.n.length > 6 ? ' long' : '') }, g.n)),
@@ -623,7 +623,7 @@ function viewHub() {
   const icon = g => h('span', { class: 'gi-ic ' + g.cls, svg: g.icon });
   root.append(h('button', { class: 'hub-bar', 'aria-label': 'ほかのゲームを見る', onclick: () => hubDrawer(true) },
     h('span', { class: 'hub-stack' }, GAMES.filter(g => g.ok && g.id !== pick.id).slice(0, 4).map(icon)),
-    h('b', null, 'ほかのゲーム'), h('small', null, `${GENRES.length}ジャンル・${GAMES.filter(g => g.ok).length}つ`), h('i', { svg: ICON.up })));
+    h('b', null, 'ほかのであそぶ'), h('small', null, `${GAMES.filter(g => g.ok).length}個のゲーム`), h('i', { svg: ICON.up })));
   if (hubSheet) {
     const sh = h('div', { class: 'gsheet' + (hubSheet === 1 ? '' : ' on'), onclick: e => { if (e.target === e.currentTarget) hubDrawer(false); } },
       h('div', { class: 'gsheet-in', role: 'dialog', 'aria-label': 'ゲームを選ぶ' }, h('i', { class: 'gsheet-grab' }),

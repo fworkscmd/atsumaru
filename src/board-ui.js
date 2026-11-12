@@ -2,7 +2,7 @@
 // app.js の /*__BOARD_UI__*/ の位置に差し込まれる（app.js の変数を共有）
 const BS = { root: null, sel: null, seen: 0, pending: false, tab: null, cache: null, taps: new Set(), peek: false, lastSeat: null, fx: null, ro: null };
 const isBoardDoc = () => !!doc && (doc.game === 'boxing' || doc.game === 'wordwolf' || doc.game === 'bingo' || doc.game === 'alchemy' || doc.game === 'bomb' || doc.game === 'tower' || !!DUEL[doc.game] || !!CARDG[doc.game]) && !!doc.b;
-const BD_TITLE = { reversi: 'リバーシ', chess: 'チェス', shogi: '将棋', bingo: 'ビンゴ大会', daifugo: '大富豪', babanuki: 'ババ抜き', alchemy: '月夜の錬金市場', bomb: 'ばくだんパス', tower: 'ぐらぐらタワー', wordwolf: 'ワードウルフ', boxing: 'ボクシング' };
+const BD_TITLE = { reversi: 'リバーシ', chess: 'チェス', shogi: '将棋', bingo: 'ビンゴ大会', daifugo: '大富豪', babanuki: 'ババ抜き', alchemy: '月夜の錬金市場', bomb: 'ばくだんパス', tower: 'ぐらぐらタワー', wordwolf: 'ワードウルフ', boxing: 'ガツンとロボ' };
 const CHESS_G = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' }, CHESS_N = { Q: 'クイーン', R: 'ルーク', B: 'ビショップ', N: 'ナイト' };
 const chessGlyph = t => CHESS_G[t] + '︎'; // 絵文字にならないように文字として出す
 const SHOGI_K = { K: '玉', R: '飛', B: '角', G: '金', S: '銀', N: '桂', L: '香', P: '歩', D: '龍', H: '馬', Z: '全', M: '圭', Y: '杏', T: 'と' };

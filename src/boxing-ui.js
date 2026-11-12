@@ -49,11 +49,16 @@ function bxSync(b) {
   if (BX.gid !== b.gid) { BX.gid = b.gid; BX.cn = -1; }
   if (BX.mk !== key) { BX.mk = key; BX.seen = m ? m.log.length : 0; BX.over = !!(m && m.result); BX.step = 'atk'; BX.atk = null; BX.sent = false; BX.anim = false; BX.banner = null; BX.view = m ? bxSnap(m) : null; BX.at = Date.now(); BX.cover = -1; BX.table = false; if (BX.st) BX.st.reset();
     // 新しい試合：まず「○○ VS ○○」を約2秒（いきなり始まらないように）。時間はそのあとから数える
-    if (m && !m.log.length && !m.result && b.phase === 'pick') { BX.intro = Date.now() + 2300; BX.at = BX.intro; setTimeout(() => { if (isBoxDoc()) bdRender(); }, 2350); } else BX.intro = 0; }
+    // トーナメントの最初の試合なら、その前に始まりの動き（着地と選手紹介）。この端末でそのトーナメントに1回
+    if (m && !m.log.length && !m.result && b.phase === 'pick') {
+      if (b.tier === 0 && BX.openGid !== b.gid && !matchMedia('(prefers-reduced-motion: reduce)').matches) { BX.openGid = b.gid; BX.opening = 1; BX.intro = 0; BX.at = Date.now() + 864e5; }
+      else bxVsStart(); }
+    else BX.intro = 0; }
   const s = bxSeat(b), mode = b.phase === 'over' ? 'champ' : s >= 0 ? 'fp' : 'side';
-  if (BX.st) { BX.st.setMode(mode); if (mode === 'champ') BX.st.setColors(null, bxCol(b.champion)); else if (m) BX.st.setColors(bxCol(m.seats[s >= 0 ? s : 0]), bxCol(m.seats[s >= 0 ? 1 - s : 1])); }
+  if (BX.st && !BX.opening) { BX.st.setMode(mode); if (mode === 'champ') BX.st.setColors(null, bxCol(b.champion)); else if (m) BX.st.setColors(bxCol(m.seats[s >= 0 ? s : 0]), bxCol(m.seats[s >= 0 ? 1 - s : 1])); }
+  if (BX.opening === 1 && BX.st && m) bxOpen(b, s, mode);
   if (!m) return;
-  if (m.log.length > BX.seen && !BX.anim) {
+  if (m.log.length > BX.seen && !BX.anim && !BX.opening) {
     const e = m.log[m.log.length - 1], res = m.result; BX.seen = m.log.length;
     if (!BX.st) { BX.view = bxSnap(m); BX.over = !!res; BX.sent = false; BX.at = Date.now(); return; }
     BX.anim = true; BX.banner = null;
@@ -69,6 +74,19 @@ function bxSync(b) {
       BX.anim = false; BX.at = Date.now(); BX.sent = false; BX.step = 'atk'; BX.atk = null; if (res) BX.over = true; if (isBoxDoc()) bdRender();
     });
   } else if (m.result && !BX.anim && m.log.length === BX.seen) BX.over = true;
+}
+// 新しい試合：まず「○○ VS ○○」を約2秒（いきなり始まらないように）。時間はそのあとから数える
+function bxVsStart() { BX.intro = Date.now() + 2300; BX.at = BX.intro; setTimeout(() => { if (isBoxDoc()) bdRender(); }, 2350); }
+// トーナメントの始まりの動き。札は「○コーナー」（機体の色）とニックネーム。画面をタップでとばせる
+const BX_CN = ['赤', '青', '黄', '緑', 'オレンジ', 'むらさき', '白', '黒'];
+function bxOpen(b, s, mode) {
+  const st = BX.st, m = b.m, L = s >= 0 ? s : 0, ids = [m.seats[L], m.seats[1 - L]], k0 = BX.mk;
+  BX.opening = 2; st.setMode(mode); st.setColors(bxCol(ids[0]), bxCol(ids[1]));
+  st.intro({ fp: mode === 'fp', label: k => {
+    const el = BX.lbl; if (!el) return; if (k < 0) { el.classList.remove('on'); return; }
+    const ci = bxCi(ids[k]); el.className = 'bx-olb ' + (k ? 'b' : 'a'); el.style.setProperty('--c', BX_ACC[ci]); el.style.color = ci === 6 ? '#141414' : '#fff';
+    el.replaceChildren(h('small', null, BX_CN[ci] + 'コーナー'), h('b', null, bdName(ids[k]))); void el.offsetWidth; el.classList.add('on'); } })
+    .then(() => { if (BX.st !== st) return; BX.opening = 0; if (BX.mk === k0) bxVsStart(); if (isBoxDoc()) bdRender(); });
 }
 function bxBanner(e, s, b) {
   const nm = i => bdName(b.m.seats[i]);
@@ -182,7 +200,9 @@ function bxAnn(b, s) {
 // ---- 画面 ----
 function bxMount() {
   if (BX.wrap) return;
-  BX.wrap = h('div', { class: 'bx' }); BX.host = h('div', { class: 'bx-stage' }); BX.hud = h('div', { class: 'bx-hud' }); BX.wrap.append(BX.host, BX.hud);
+  BX.wrap = h('div', { class: 'bx' }); BX.host = h('div', { class: 'bx-stage' }); BX.hud = h('div', { class: 'bx-hud' }); BX.lbl = h('div', { class: 'bx-olb' }); BX.wrap.append(BX.host, BX.lbl, BX.hud);
+  // 始まりの動きは、画面をタップでとばせる
+  BX.host.addEventListener('pointerdown', () => { if (BX.opening === 2 && BX.st) BX.st.skip(); });
   addEventListener('resize', () => { if (BX.st && isBoxDoc()) BX.st.resize(); });
 }
 function bxStart() {
@@ -197,6 +217,7 @@ function boxView() {
   else BX.st.resize();
   bxSync(b); const s = bxSeat(b), m = b.m;
   const parts = [bxTop(b, s)];
+  if (BX.opening && BX.st) { BX.hud.replaceChildren(parts[0], h('div', { class: 'bx-oskip' }, 'タップでとばす')); return BX.wrap; }
   if (m && b.phase !== 'over') parts.push(bxVs(b, s));
   if (!BX.st) parts.push(h('div', { class: 'bx-load' }, BX.failed ? '3Dを表示できませんでした' : '読みこんでいます…'));
   if (BX.banner) parts.push(h('div', { class: 'bx-ban' }, BX.banner.map(([c, t]) => h('div', { class: c }, t))));

@@ -172,6 +172,7 @@ const BX3 = (() => {
       const b = new T.Mesh(body, pm); b.position.set(x, y, z); cr.add(b); const hh = new T.Mesh(head, pm); hh.position.set(x, y + .4, z); cr.add(hh);
       if (rnd() < .08) { const l = new T.Mesh(lightG, rnd() < .5 ? lm : lw); l.position.set(x + .1, y + .45, z + .22); l.lookAt(0, 1, 3); cr.add(l); } }
     cr.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = false; }); merge(cr);
+    return [g, cr];
   }
   // 映りこみ用の小さな部屋（RoomEnvironment の代わり）
   function envMap(R) { const es = new T.Scene(); es.add(new T.Mesh(new T.BoxGeometry(12, 7, 12), new T.MeshBasicMaterial({ color: C('#2a2630'), side: T.BackSide })));
@@ -186,11 +187,11 @@ const BX3 = (() => {
     R.shadowMap.enabled = true; R.shadowMap.type = T.PCFShadowMap; R.shadowMap.autoUpdate = false;
     const el = R.domElement; el.className = 'bx-cv';
     const sc = new T.Scene(); sc.background = C('#120e18'); sc.fog = new T.Fog(C('#120e18'), 9, 18); sc.environment = envMap(R);
-    arena(sc);
+    const AR = arena(sc);
     const key = new T.SpotLight(C('#ffe8cc'), 1.5, 0, .55, .55, 1); key.position.set(-.6, 6.5, 1.6); key.target.position.set(0, .8, 0); key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -.0004; key.shadow.normalBias = .02; sc.add(key, key.target);
     const r1 = new T.SpotLight(C('#ff7a5a'), .7, 0, .6, .6, 1); r1.position.set(-4, 3, -3); r1.target.position.set(0, 1, 0); sc.add(r1, r1.target);
     const r2 = new T.SpotLight(C('#6aa0ff'), .8, 0, .6, .6, 1); r2.position.set(4, 3, -3); r2.target.position.set(0, 1, 0); sc.add(r2, r2.target);
-    const fill = new T.DirectionalLight(C('#ffffff'), .35); fill.position.set(.5, 2, 4); sc.add(fill); sc.add(new T.HemisphereLight(C('#c8d0ff'), C('#2a1e1a'), .35));
+    const fill = new T.DirectionalLight(C('#ffffff'), .35); fill.position.set(.5, 2, 4); sc.add(fill); const hemi = new T.HemisphereLight(C('#c8d0ff'), C('#2a1e1a'), .35); sc.add(hemi);
     const A = liveRobot(RED), B = liveRobot(BLUE); sc.add(A.root, B.root);
     const cam = new T.PerspectiveCamera(56, .5625, .04, 60), rig = fpArms(); sc.add(rig);
     // 光る星（当たった・ガード）
@@ -220,8 +221,13 @@ const BX3 = (() => {
       A.home = { p: A.root.position.clone(), q: A.root.quaternion.clone() }; B.home = { p: B.root.position.clone(), q: B.root.quaternion.clone() };
       placeCam(); R.shadowMap.needsUpdate = true; draw();
     }
-    function placeCam(shk = 0, roll = 0, drop = 0) { const c = CAMS[S.mode] || CAMS.fp, asp = S.w / S.h; cam.aspect = asp; cam.fov = 2 * Math.atan(Math.tan(c.hf / 2 * Math.PI / 180) / asp) * 180 / Math.PI; cam.updateProjectionMatrix();
+    function placeCam(shk = 0, roll = 0, drop = 0) { const c = S.camO || CAMS[S.mode] || CAMS.fp, asp = S.w / S.h; cam.aspect = asp; cam.fov = 2 * Math.atan(Math.tan(c.hf / 2 * Math.PI / 180) / asp) * 180 / Math.PI; cam.updateProjectionMatrix();
       cam.position.set(c.pos[0] + (rnd() - .5) * shk, c.pos[1] + (rnd() - .5) * shk - drop, c.pos[2]); cam.up.set(Math.sin(roll), Math.cos(roll), 0); cam.lookAt(c.look[0], c.look[1] + drop * .35, c.look[2]);
+      // 始まりの動きで2台とも映るときは、2台のまん中が画面の横のまん中に来るように向きを合わせる（片方のアップ solo はそのまま）
+      if (S.camO && !c.solo && A.root.visible) { const look = V(...c.look), hw = Math.tan(c.hf / 2 * Math.PI / 180);
+        for (let i = 0; i < 3; i++) { cam.updateMatrixWorld(); const pts = [A, B].map(Rb => Rb.root.position.clone().add(V(0, 1.0, 0)).project(cam));
+          if (pts.some(p => p.z > 1 || Math.abs(p.x) > 1.6 || Math.abs(p.y) > 1.3)) break;
+          const m = (pts[0].x + pts[1].x) / 2; if (Math.abs(m) < .005) break; look.addScaledVector(V(0, 0, 0).setFromMatrixColumn(cam.matrixWorld, 0), m * hw * cam.position.distanceTo(look)); cam.lookAt(look); } }
       rig.position.copy(cam.position); rig.quaternion.copy(cam.quaternion); }
     function resize() { if (S.paused && el.isConnected) { S.paused = false; stop(); schedule(0); } const p = el.parentNode; if (!p) return; const w = Math.max(1, p.clientWidth), h = Math.max(1, p.clientHeight); if (w === S.w && h === S.h) return; S.w = w; S.h = h; R.setSize(w, h, false); el.style.width = w + 'px'; el.style.height = h + 'px'; placeCam(); draw(); }
     function draw() { R.render(sc, cam); }
@@ -275,6 +281,34 @@ const BX3 = (() => {
       Rb.light(t < 1.4 ? 1 : t < 2.1 ? (Math.sin(t * 40) > 0 ? .6 : 0) * (1 - (t - 1.4) / .7) : 0);
       if (ev && ev.winner) ev.winner.set(track([[0, STANCE], [1.0, STANCE], [1.5, WIN, 'o']], t));
     } }; }
+    // トーナメントの始まり（案は bx-intro の10「着地＋紹介」）：暗いリングにスポットライト → A がドスンと着地して紹介 → B も → 全部の光がついて試合の画面へ。
+    // 2台は向かいあって立ち、リング（星）を2台のまん中にずらしておく。自分の目（fp）なら最後に A の肩ごしから目へ切りかえる。
+    // label(k)：0＝A の札、1＝B の札、-1＝消す（札は画面の側で出す）
+    let dust = null;
+    function introAnim(o) {
+      if (!dust) dust = Array.from({ length: 22 }, (_, i) => { const m = new T.Mesh(new T.SphereGeometry(.05, 8, 6), new T.MeshStandardMaterial({ color: C('#b8bcc6'), roughness: 1, transparent: true })); m.visible = false; sc.add(m); return { m, a: i / 22 * Math.PI * 2, v: .8 + (i % 5) * .25 }; });
+      const fp = !!o.fp, al = .55, bl = 2.85, AZ = 1.35, MID = AZ / 2, env = sc.environment; let lb = -2;
+      const ck = (pos, look, hf, solo) => ({ pos, look, hf, solo }), SIDE = ck([3.1, 1.35, MID], [0, 1.1, MID], 44);
+      const camK = fp ? [[5.0, SIDE], [5.75, ck([.4, 1.62, 2.6], [0, 1.15, 0], 38), 'io'], [6.05, { ...CAMS.fp, solo: 0 }, 'io']] : [[5.0, SIDE], [5.5, ck([3.0, 1.4, MID], [0, 1.05, MID], 46), 'io']];
+      const drop = t0 => t => { const u = Math.min(1, Math.max(0, (t - t0) / .45)); return u >= 1 ? 0 : 6 * (1 - u * u); };
+      const land = t0 => t => track([[0, mk(STANCE, { body: [0, .05, 0] })], [t0 + .45, mk(STANCE, { body: [0, .05, 0] })], [t0 + .55, KNEEL, 'o'], [t0 + .95, KNEEL], [t0 + 1.3, STANCE, 'io'], [t0 + 1.55, WIN, 'o'], [t0 + 1.95, WIN], [t0 + 2.25, STANCE, 'io']], t);
+      const dA = drop(al), dB = drop(bl), lA = land(al), lB = land(bl);
+      const lights = (k, amb) => { key.intensity = k; r1.intensity = r2.intensity = 0; fill.intensity = .35 * amb; hemi.intensity = .35 * amb; };
+      A.root.visible = true; rig.visible = false;
+      const fin = () => { S.camO = null; S.shake = 0; AR.forEach(g => g.position.z = 0); key.position.set(-.6, 6.5, 1.6); key.target.position.set(0, .8, 0); key.intensity = 1.5; r1.intensity = .7; r2.intensity = .8; fill.intensity = .35; hemi.intensity = .35; sc.environment = env;
+        dust.forEach(d => d.m.visible = false); A.reset(); B.reset(); if (o.label) o.label(-1); const m = S.mode; S.mode = ''; setMode(m); };
+      return { dur: fp ? 6.4 : 5.6, fin, step: t => {
+        const ph = t < 2.7 ? 0 : t < 5.0 ? 1 : 2, cut = fp && t > 5.9;
+        AR.forEach(g => g.position.z = cut ? 0 : MID);
+        if (ph < 2) { const tz = ph === 0 ? AZ : 0, f = ph === 0 ? -1 : 1, on = ph === 1 || t > .25; key.position.set(f * -.9, 5.6, tz + f * 1.6); key.target.position.set(0, .9, tz); lights(on ? 2.0 : 0, on ? .55 : .03); sc.environment = null; }
+        else { key.position.set(-.6, 6.5, 1.6); key.target.position.set(0, .8, 0); key.intensity = 1.5; r1.intensity = .7; r2.intensity = .8; fill.intensity = .35; hemi.intensity = .35; sc.environment = env; }
+        A.root.position.set(0, dA(t), AZ); A.root.rotation.set(0, Math.PI, 0); B.root.position.set(0, dB(t), 0); B.root.rotation.set(0, 0, 0); A.set(lA(t)); B.set(lB(t));
+        A.root.visible = !cut; rig.visible = cut; if (cut) rig.setHands(ARM_REST);
+        dust.forEach((d, i) => { const u = t - ((i % 2 ? al : bl) + .45), z = i % 2 ? AZ : 0; d.m.visible = u > 0 && u < 1.1; if (!d.m.visible) return; const r = .3 + u * d.v; d.m.position.set(Math.cos(d.a) * r, .05 + u * .25, z + Math.sin(d.a) * r); d.m.scale.setScalar(1 + u * 1.5); d.m.material.opacity = .7 * (1 - u / 1.1); });
+        const k = t > al + 1.0 && t < 2.65 ? 0 : t > bl + 1.0 && t < 4.95 ? 1 : -1; if (k !== lb) { lb = k; if (o.label) o.label(k); }
+        S.shake = (t > al + .45 && t < al + .7) || (t > bl + .45 && t < bl + .7) ? .08 : 0;
+        S.camO = ph === 0 ? ck([1.15, 1.15, -.35], [0, 1.15, AZ], 48, 1) : ph === 1 ? ck([-1.15, 1.15, 1.7], [0, 1.15, 0], 48, 1) : cut ? CAMS.fp : track(camK, t);
+      } }; }
     function fallAnim() { return { dur: 2.4, step: t => { const u = E.o(Math.min(1, Math.max(0, (t - .2) / 1.1))); S.roll = u * .55; S.drop = u * 1.05; B.set(track([[0, STANCE], [.5, STANCE], [1.2, WIN, 'o']], t)); } }; }
     function frame(now) {
       S.raf = 0; if (!S.alive) return; if (!el.isConnected) { S.paused = true; return; }
@@ -305,6 +339,9 @@ const BX3 = (() => {
       ko: who => { if (S.mode === 'fp') return who === 'me' ? run(fallAnim()) : run(koAnim(B)); const L = who === 0 ? A : B, Wn = who === 0 ? B : A; return run(koAnim(L, { winner: Wn })); },
       down: who => { if (S.mode === 'fp') return who === 'me' ? run(fallAnim()) : run(downAnim(B)); const L = who === 0 ? A : B, Wn = who === 0 ? B : A; return run(downAnim(L, { winner: Wn })); },
       hold: v => { S.hold = v; },
+      // トーナメントの始まりの動き。o：{ fp: 自分の目で終わるか, label(k) }。skip() で最後まで飛ばす
+      intro: o => { const a = introAnim(o); return run(a).then(a.fin); },
+      skip: () => { if (S.anim) S.t0 = -1e9; schedule(0); },
       reset: () => { S.anim = null; S.roll = S.drop = 0; A.reset(); B.reset(); A.set(STANCE); B.set(STANCE); fx.forEach(f => f.visible = false); sparks.forEach(s => s.m.visible = false); rig.setHands(ARM_REST); R.shadowMap.needsUpdate = true; schedule(0); },
       set onEvent(f) { S.onEvent = f; },
       busy: () => !!S.anim,

@@ -2,6 +2,13 @@
 .bd-boxing{position:fixed;inset:0;max-width:none;margin:0;display:block;background:#120e18}
 .bx{position:relative;height:100%;max-width:520px;margin:0 auto;overflow:hidden;color:#fff;font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;user-select:none;-webkit-user-select:none}
 .bx-stage{position:absolute;inset:0}
+/* トーナメントの始まり：選手紹介の札（A は左下、B は右下から出る）と「タップでとばす」 */
+.bx-olb{position:absolute;left:14px;bottom:22%;z-index:2;background:var(--c,#c63a2d);color:#fff;padding:5px 16px 7px;border-radius:8px;box-shadow:0 4px 0 #0005;pointer-events:none;opacity:0;transform:translateX(-14px);transition:opacity .2s,transform .25s cubic-bezier(.3,1.5,.5,1);max-width:calc(100% - 28px)}
+.bx-olb.b{left:auto;right:14px;transform:translateX(14px)}
+.bx-olb.on{opacity:1;transform:none}
+.bx-olb small{display:block;font-size:11px;font-weight:900;letter-spacing:.14em;opacity:.85}
+.bx-olb b{display:block;font-size:24px;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bx-oskip{margin-top:auto;align-self:center;font-size:12px;font-weight:700;opacity:.6}
 .bx-cv{display:block;position:absolute;inset:0}
 .bx-hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));gap:7px;background:linear-gradient(#000c,#0000 26%)}
 .bx-hud button{pointer-events:auto;font-family:inherit;cursor:pointer}
@@ -84,6 +91,7 @@
 .bx-spips{display:flex;gap:6px}.bx-spips s{width:34px;height:12px;border-radius:4px;background:#e4e2dc}.bx-spips s.on{background:#ffd23a}
 .bx-sbelt{width:150px;height:75px}
 /* ハブのアイコン・チケット */
+@media (prefers-reduced-motion:reduce){.bx-olb{transition:none}}
 .gi-box{background:#15111c;overflow:hidden} /* 絵が四角いので、タイルの角で切る */
 @media (max-height:740px){.bx-card{padding:10px 11px 11px;gap:7px}.bx-card h3{font-size:19px}.bx-tile{padding:8px 0 7px}.bx-br{max-height:40vh}}
 @media (prefers-reduced-motion:reduce){.bx-fl,.bx-ban,.bx.hurt::after{animation-duration:.01s}}

@@ -28,6 +28,29 @@ const TB = (() => {
     g.strokeStyle = ink; g.lineWidth = 2.5; g.setLineDash([6, 5]); g.lineCap = 'round'; g.strokeRect(11, 11, 106, 106);
     const t = new T.CanvasTexture(c); t.encoding = T.sRGBEncoding; t.anisotropy = 4; return t; }
   const mesh = (g, m) => { const o = new T.Mesh(g, m); o.castShadow = o.receiveShadow = true; return o; };
+  // 島の地面：濃い・うすいまだらに、細かい草の房（雪は霜、砂は粒）と小さな点。つなぎ目の出ない1枚の絵（案は scratch の trap-grass の A）
+  const MOT = {
+    flower: { base: '#8fd06a', blob: ['#6fbf52', '#a9de7c'], bits: ['#5aa845', '#7cc95c', '#b4e68a', '#4d9a3c'], dots: ['#ffe36a', '#ffffff', '#ffb0c8'] },
+    snow:   { base: '#dce4ee', blob: ['#c3cfe0', '#f4f7fb'], bits: ['#b8c6da', '#eef3f9', '#ffffff', '#c9d5e6'], dots: ['#ffffff', '#a8c8e8'] },
+    beach:  { base: '#f3dcaa', blob: ['#e6c78c', '#fcebc8'], bits: ['#dcbb80', '#fff3d8', '#e9cc96', '#d2ae72'], dots: ['#ffffff', '#ffb4a0'], grain: true },
+    autumn: { base: '#a9aa62', blob: ['#909148', '#c2bb6c'], bits: ['#86883f', '#b8ae5a', '#c99a4a', '#767838'], dots: ['#e8783a', '#d84a3a', '#f0b23a'] },
+  };
+  function mottleTex(theme) { const M = MOT[theme] || MOT.flower, N = 1024; sd = 21; const ops = [], pick = a => a[Math.floor(rr() * a.length)];
+    for (let i = 0; i < 26; i++) ops.push([0, rr() * N, rr() * N, 60 + rr() * 120, rr() < .55 ? M.blob[0] : M.blob[1], []]);
+    for (const o of ops) for (let j = 0; j < 40; j++) o[5].push(.8 + rr() * .35);
+    for (let i = 0; i < 2600; i++) ops.push([M.grain ? 3 : 1, rr() * N, rr() * N, M.grain ? 2 + rr() * 3 : 6 + rr() * 10, pick(M.bits)]);
+    for (let i = 0; i < 70; i++) ops.push([2, rr() * N, rr() * N, 3 + rr() * 3, pick(M.dots)]);
+    const [c, g] = cv(N); g.fillStyle = M.base; g.fillRect(0, 0, N, N);
+    for (const dx of [-N, 0, N]) for (const dy of [-N, 0, N]) { g.save(); g.translate(dx, dy);
+      for (const [k, x, y, s, col, rs] of ops) { if (x + dx < -200 || x + dx > N + 200 || y + dy < -200 || y + dy > N + 200) continue; g.fillStyle = col;
+        if (k === 0) { g.globalAlpha = .55; rs.forEach((f, j) => { const a = j / 40 * Math.PI * 2, r = s * f; g.beginPath(); g.ellipse(x + Math.cos(a) * r * .7, y + Math.sin(a) * r * .5, s * .35, s * .22, a, 0, Math.PI * 2); g.fill(); }); g.globalAlpha = 1; }
+        else if (k === 1) { for (const d of [-1, 0, 1]) { g.beginPath(); g.moveTo(x + d * s * .45, y); g.lineTo(x + d * s * .3 + s * .12, y - s * (d ? .9 : 1.4)); g.lineTo(x + d * s * .3 + s * .3, y); g.closePath(); g.fill(); } }
+        else if (k === 3) { g.beginPath(); g.ellipse(x, y, s, s * .7, x, 0, Math.PI * 2); g.fill(); }
+        else { g.beginPath(); g.arc(x, y, s, 0, Math.PI * 2); g.fill(); } }
+      g.restore(); }
+    // フェルトの毛羽を上から少しだけ
+    feltTex(1); g.globalCompositeOperation = 'multiply'; g.globalAlpha = .6; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) g.drawImage(FELT, i * 256, j * 256); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+    const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(.22, .22); t.encoding = T.sRGBEncoding; t.anisotropy = 4; return t; }
   // ツヤのある素材（クリアコートは重いので使わず、つるっとした素材で代わりにする）
   const gloss = (col, o = {}) => new T.MeshStandardMaterial({ color: C(col), roughness: Math.min(o.r ?? .25, .3) * .8, metalness: o.m ?? 0, transparent: !!o.t, opacity: o.t || 1 });
   const paint = (col, r = .55, m = 0) => new T.MeshStandardMaterial({ color: C(col), roughness: r, metalness: m });
@@ -202,7 +225,8 @@ const TB = (() => {
     const rim = new T.DirectionalLight(C('#ffffff'), .35); rim.position.set(5, 4, -6); sc.add(rim);
     sd = 11;
     const soil = slabShape(islandShape(tr, .5), .7, felt(th.soil, 2), .12); soil.position.y = -.95; sc.add(soil);
-    const ground = slabShape(islandShape(tr, .53), .3, felt(th.ground, 3), .12); ground.position.y = -.3; sc.add(ground);
+    const ground = slabShape(islandShape(tr, .53), .3, [new T.MeshStandardMaterial({ color: C('#ffffff').multiplyScalar(1.04), map: mottleTex(theme), roughness: 1 }), felt(th.ground, 3)], .12); ground.position.y = -.3; sc.add(ground);
+    sd = 11;
     if (th.sea) { const sea = mesh(new T.CylinderGeometry(40, 40, .05, 48), felt('#6fb4cf', 6)); sea.position.y = -.7; sea.castShadow = false; sc.add(sea); }
     // 飾りは24マスの島の大きさで並べて、島ごと大きくする
     const dg = new T.Group(); dg.scale.setScalar(tr.K); sc.add(dg);
@@ -228,11 +252,21 @@ const TB = (() => {
     const dirOf = (az, el) => new T.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
     let W = 1, H = 1;
     function applyCam() { const tg = TARGET.clone().add(V.pan); cam.position.copy(tg).addScaledVector(dirOf(V.az, V.el), fitDist * V.zoom); cam.lookAt(tg); cam.updateProjectionMatrix(); cam.updateMatrixWorld(); faceAll(); dirty = true; draw(); }
+    // 絵は画面いっぱい（.tp 全体）に描き、コースは盤の枠（host）にぴったり入るように合わせる。
+    // 上の情報や手札のうしろにも島や海がつづく（枠だけに描くと、上下に別の背景の帯ができていた）
+    const full = host.closest('.tp') || host;
     function fit() {
-      const r = host.getBoundingClientRect(); W = Math.max(1, r.width); H = Math.max(1, r.height); R.setSize(W, H, false); cam.aspect = W / H;
+      const r = host.getBoundingClientRect(), fr = full.getBoundingClientRect(); const Ws = Math.max(1, r.width), Hs = Math.max(1, r.height);
+      W = Math.max(1, fr.width); H = Math.max(1, fr.height); R.setSize(W, H, false);
+      Object.assign(R.domElement.style, { left: fr.left - r.left + 'px', top: fr.top - r.top + 'px', width: W + 'px', height: H + 'px' });
+      cam.clearViewOffset(); cam.fov = 36; cam.aspect = Ws / Hs;
       const D = dirOf(0, EL0); let lo = 3, hi = 60; for (let it = 0; it < 22; it++) { const d = (lo + hi) / 2; cam.position.copy(TARGET).addScaledVector(D, d); cam.lookAt(TARGET); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
         const ok = bounds.every(v => { const p = v.clone().project(cam); return Math.abs(p.x) < .95 && Math.abs(p.y) < .95; }); if (ok) hi = d; else lo = d; }
-      fitDist = hi; applyCam(); }
+      fitDist = hi;
+      // 枠の高さで決めた見え方を、画面全体に広げる（画角を広げて、真ん中を枠の真ん中へずらす）
+      cam.fov = 2 * Math.atan(Math.tan(18 * Math.PI / 180) * H / Hs) * 180 / Math.PI; cam.aspect = W / H;
+      cam.setViewOffset(W, H, W / 2 - (r.left - fr.left + Ws / 2), H / 2 - (r.top - fr.top + Hs / 2), W, H);
+      applyCam(); }
     const changed = () => Math.abs(V.az) > .02 || Math.abs(V.el - EL0) > .02 || Math.abs(V.zoom - 1) > .02 || V.pan.length() > .05;
     const resetBtn = document.createElement('button'); resetBtn.className = 'tp-reset'; resetBtn.type = 'button'; resetBtn.textContent = '視点をもどす'; resetBtn.hidden = true; host.append(resetBtn);
     function resetView() { const a0 = { ...V, pan: V.pan.clone() }; const az0 = ((a0.az + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
@@ -452,10 +486,10 @@ const TB = (() => {
       const p = new T.Vector3(); rc.ray.intersectPlane(new T.Plane(new T.Vector3(0, 1, 0), -.1), p); let best = -1, bd = .7; tr.cells.forEach((c, k) => { const d = Math.hypot(c.x - p.x, c.z - p.z); if (d < bd) { bd = d; best = k; } }); return best < 0 ? null : best; }
     // 鳥のコマの画面上の位置（ページの座標）。役のお知らせで、自分のコマを照らすのに使う
     function birdScreen(i) { const v = birds[i].position.clone(); v.y += .42; v.project(cam); const r = R.domElement.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }
-    function screenOf(k, dy = .6) { const v = P(k); v.y += dy; v.project(cam); const r = R.domElement.getBoundingClientRect(); return { x: (v.x + 1) / 2 * r.width, y: (1 - v.y) / 2 * r.height }; }
+    function screenOf(k, dy = .6) { const v = P(k); v.y += dy; v.project(cam); const r = R.domElement.getBoundingClientRect(), hr = host.getBoundingClientRect(); return { x: r.left - hr.left + (v.x + 1) / 2 * r.width, y: r.top - hr.top + (1 - v.y) / 2 * r.height }; }
     // 動かない物（島・マス・巣・飾り）はまとめて描く（1回に描く命令が大きく減る）
     merge(sc, [...birds, dyn, ...(deco.mill ? [deco.mill.userData.hub] : [])]);
-    let ro = null; try { ro = new ResizeObserver(fit); ro.observe(host); } catch (e) { window.addEventListener('resize', fit); }
+    let ro = null; try { ro = new ResizeObserver(fit); ro.observe(host); if (full !== host) ro.observe(full); } catch (e) { window.addEventListener('resize', fit); }
     fit();
     return { el: R.domElement, sync, play, intro, pick, screenOf, birdScreen, fit, resetView, set onTap(f) { tapCb = f; }, get busy() { return busy; },
       dispose() { cancelAnimationFrame(raf); ro && ro.disconnect(); R.dispose(); R.forceContextLoss && R.forceContextLoss(); R.domElement.remove(); } };
@@ -521,6 +555,6 @@ const TB = (() => {
     board(host, theme) { this.init(); return Board(host, theme); },
     arts() { this.init(); return cardArts(); },
     // モックアップ用（tools/motion-mockup.html）。コマや飾りの部品をそのまま使う
-    parts() { this.init(); return { T, C, felt, mesh, gloss, paint, slab, stitchTex, bird, apple, trap, star, merge, pine, blob, mush, snowman, palm, umbrella, hut, flower, windmill, rock }; },
+    parts() { this.init(); return { T, C, felt, mesh, gloss, paint, slab, stitchTex, bird, apple, trap, star, merge, mottleTex, pine, blob, mush, snowman, palm, umbrella, hut, flower, windmill, rock }; },
   };
 })();
