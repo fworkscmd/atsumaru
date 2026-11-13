@@ -416,7 +416,7 @@ function leaveTable() {
     const players = d.players.filter(p => p !== me); if (!players.length) return null;
     return { ...d, players, host: d.host === me ? players[0] : d.host };
   }, true);
-  if (unsub) unsub(); unsub = null; tableId = null; doc = null; serverDoc = null; onSnap = null; hubSel = null; hubSheet = 0;
+  if (unsub) unsub(); unsub = null; tableId = null; doc = null; serverDoc = null; onSnap = null; hubSel = null; hubSheet = 0; bootId = '';
   try { history.replaceState(null, '', location.pathname); } catch (e) { }
   render();
 }
@@ -560,13 +560,21 @@ function ticketEl(g, d) {
 let admitAt = 0;
 // チケットのゆれは時計に合わせる（画面を描き直しても、ゆれが最初にもどってガクッとしないように）
 const swayPhase = () => `animation-delay:-${Date.now() % 3200}ms`;
+// 卓につながるまで：スマホがコインに「ピッ」とさわって波紋が広がる（案は tools/loading-mockup.html の4）
+// 動きは時計に合わせる（描き直しで最初にもどらないように）
+function viewBoot() {
+  const art = h('div', { class: 'boot-art', 'aria-hidden': 'true', style: `--bt:-${(Date.now() % 1800) / 1000}s` },
+    h('div', { class: 'boot-ph' }), h('span', { class: 'boot-pi' }, 'ピッ'), h('div', { class: 'boot-ring' }), h('div', { class: 'boot-ring r2' }), h('div', { class: 'boot-coin' }));
+  return h('div', { class: 'hub-wrap' }, hubHead(h('span', { class: 'hub-meta' }, `招待コード ${tableId || bootId}`), leaveTable),
+    h('div', { class: 'wait boot' }, art, h('div', { class: 'wait-msg', role: 'status' }, 'よみこみちゅう', h('span', { class: 'wait-dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')))));
+}
 function viewWait(d, left, ok) {
   const req = (d.requests || []).includes(me), den = (d.denied || []).includes(me), full = d.players.length >= TABLE_MAX, hostName = (d.nicks || {})[d.host] || nameOf(d.host);
   const st = ok ? 'ok' : den ? 'no' : req ? 'wait' : !left ? 'closed' : full ? 'full' : 'wait';
   const dots = h('span', { class: 'wait-dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'));
   const msg = { ok: '入場OK！', wait: [`${hostName}が きみの名前を `, h('span', { class: 'nw' }, 'チェック中', dots)], no: '今回は 入場できませんでした', closed: '受付は もう終わっています', full: `満員です（${TABLE_MAX}人）` }[st];
   const sub = { ok: 'ロビーに入ります', wait: 'OKが出たら、自動でロビーに入ります', no: '', closed: `${hostName}に 受付をのばしてもらってね`, full: '' }[st];
-  return h('div', { class: 'hub-wrap' }, hubHead(h('span', { class: 'hub-meta' }, `招待コード ${tableId}`), leaveTable),
+  return h('div', { class: 'hub-wrap' }, hubHead(h('span', { class: 'hub-meta' }, `招待コード ${tableId || bootId}`), leaveTable),
     h('div', { class: 'wait ' + st },
       h('div', { class: 'wait-tk', style: swayPhase() }, h('div', { class: 'wait-top' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('b', null, myNick || 'ゲスト')),
         h('div', { class: 'tk-perf' }), h('div', { class: 'wait-stub' }, h('small', null, '招待コード'), h('b', null, tableId)),
@@ -679,7 +687,7 @@ function viewNick() {
     if (doc) { syncNick(); if (doc.status === 'lobby' && !doc.players.includes(me) && !(doc.requests || []).includes(me) && !(doc.denied || []).includes(me)) requestJoin(); }
     render();
   };
-  const root = h('div', { class: 'hub-wrap' }, hubHead(h('span', { class: 'hub-meta' }, `招待コード ${tableId}`), first ? leaveTable : () => { nickGate = false; render(); }),
+  const root = h('div', { class: 'hub-wrap' }, hubHead(h('span', { class: 'hub-meta' }, `招待コード ${tableId || bootId}`), first ? leaveTable : () => { nickGate = false; render(); }),
     h('div', { class: 'hub-hello' }, h('span', { role: 'heading', 'aria-level': '1' }, first ? 'ようこそ！' : 'なまえを変える'), h('span', { class: 'hub-meta' }, 'みんなの画面に出るニックネームを入れてね（10文字まで）')),
     h('form', { class: 'hub-card', onsubmit: submit }, h('label', { class: 'hub-lab', for: 'nickIn' }, 'ニックネーム'), h('div', { class: 'hub-field' }, inp),
       h('button', { class: 'hub-go', type: 'submit' }, first ? '入場する' : 'これにする')),
@@ -1053,9 +1061,11 @@ window.addEventListener('resize', fitTk);
 function render() {
   if (TS.B) { TS.B.dispose(); TS.B = null; } TS.root = null;
   let v, inGame = false;
-  if (!tableId) v = viewHome();
+  // コイン（#コードつき）で開いたときは、つながる前から「卓を開いています…」（最初の画面を見せない）
+  const booting = !tableId && !ready && !!bootId;
+  if (!tableId && !booting) v = viewHome();
   else if (!local && tableId !== 'LOCAL' && (!myNick || nickGate)) v = viewNick();
-  else if (!doc) v = h('div', { class: 'hub-wrap' }, hubHead(null, leaveTable), h('div', { class: 'hub-note c' }, '卓を開いています…'));
+  else if (!doc) v = viewBoot();
   else if (doc.v !== 6) v = viewOld();
   else if (doc.status === 'lobby') v = viewHub();
   else if ((doc.status === 'playing' || doc.status === 'over') && isBoardDoc()) { v = viewBoard(); inGame = 'board'; }
@@ -1063,7 +1073,7 @@ function render() {
   else if (doc.status === 'playing') { v = viewGameShell(); inGame = true; }
   else if (isTrapDoc()) { v = viewTrapOver(); inGame = 'trapover'; }
   else v = viewOver();
-  const hubby = !tableId || !doc || doc.status === 'lobby' || nickGate || !myNick && !local;
+  const hubby = !tableId || booting || !doc || doc.status === 'lobby' || nickGate || !myNick && !local;
   document.body.className = inGame === 'board' ? 'board' : inGame === 'trap' || inGame === 'trapover' ? 'trap' : inGame || (doc && doc.status === 'over' && !hubby) ? 'ingame' : hubby ? 'hub' : 'page';
   if (inGame !== 'trap') TS.root = null;
   if (inGame !== 'board') bd3Drop();
@@ -1085,6 +1095,8 @@ setInterval(() => {
   if (doc && doc.status === 'lobby') { const t = $('lobbyTimer'); const left = Math.max(0, OPEN_MS - (Date.now() - doc.openedAt)); if (t) t.textContent = `招待コード ${tableId} ・ ` + (left ? `あと${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}` : '受付終了'); if (!left && t && !t.dataset.closed) { t.dataset.closed = '1'; render(); } }
 }, 1000);
 
+// コイン（URL の #コード）で開いたときの卓。つながるまでのあいだ、最初の画面ではなく読みこみ中を出すのに使う
+let bootId = (() => { const x = (location.hash || '').slice(1).toUpperCase(); return /^[A-Z0-9]{4,8}$/.test(x) ? x : ''; })();
 render();
 (async () => {
   const c = window.claude, cfg = window.PITOPA_FIREBASE || window.ATSUMARU_FIREBASE;

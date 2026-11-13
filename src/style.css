@@ -373,6 +373,18 @@ body.hub .gsheet .gi-ic{width:min(100%,54px)}
 .wait-sub{font-size:12px;color:var(--h-mute)}
 .wait-x{align-self:center;min-width:140px;margin-bottom:8px}
 @media (prefers-reduced-motion:reduce){.wait-tk,.wait-dots i,.wait-stamp{animation:none}}
+/* 卓につながるまで（viewBoot）：スマホがコインに「ピッ」→ 波紋。案は tools/loading-mockup.html の4 */
+.boot-art{position:relative;width:180px;height:210px;--bt:0s}
+.boot-coin{position:absolute;left:50%;top:128px;width:62px;height:62px;margin-left:-31px;border-radius:50%;background:var(--h-acc);box-shadow:inset 0 0 0 5px rgba(255,255,255,.35);z-index:1}
+.boot-ring{position:absolute;left:50%;top:159px;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;border:3px solid var(--h-acc);opacity:0;animation:boot-ring 1.8s ease-out var(--bt) infinite}
+.boot-ring.r2{animation-delay:calc(var(--bt) + .22s)}
+.boot-ph{position:absolute;left:50%;top:22px;width:46px;height:80px;margin-left:-23px;border:3px solid var(--h-ink);border-radius:11px;background:var(--h-card);transform-origin:50% 100%;animation:boot-tap 1.8s ease-in-out var(--bt) infinite;z-index:2}
+.boot-ph::after{content:"";position:absolute;left:50%;top:5px;width:14px;height:3px;margin-left:-7px;border-radius:2px;background:var(--h-ink)}
+.boot-pi{position:absolute;left:118px;top:44px;font-weight:900;font-size:22px;color:var(--h-acc);opacity:0;animation:boot-pi 1.8s var(--bt) infinite}
+@keyframes boot-ring{0%,32%{transform:scale(1);opacity:0}34%{opacity:.8}100%{transform:scale(2.5);opacity:0}}
+@keyframes boot-tap{0%,100%{transform:translateY(-4px) rotate(-14deg)}30%,46%{transform:translateY(25px) rotate(-4deg)}}
+@keyframes boot-pi{0%,30%{opacity:0;transform:scale(.6)}36%{opacity:1;transform:scale(1.12)}58%{opacity:1;transform:none}74%,100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.boot-ph,.boot-ring,.boot-pi{animation:none}.boot-ph{transform:translateY(25px) rotate(-4deg)}.boot-ring{opacity:.35;transform:scale(1.6)}.boot-pi{opacity:1}}
 body.hub .card{background:var(--h-card);border:1px solid var(--h-line);color:var(--h-ink)}
 body.hub .cap{color:var(--h-mute)}
 body.hub .linkbox{background:#f6f5f2;border-color:var(--h-line)}
