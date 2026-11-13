@@ -4525,6 +4525,8 @@ function leaveTable() {
   }, true);
   if (unsub) unsub(); unsub = null; tableId = null; doc = null; serverDoc = null; onSnap = null; hubSel = null; hubSheet = 0; bootId = '';
   try { history.replaceState(null, '', location.pathname); } catch (e) { }
+  // 出たら、自分の新しい卓へ（最初の画面はもう出さない）
+  if (!local && db && me && !window.claude) { openTable(genId()); return; }
   render();
 }
 /* ---- ゲームの途中でやめる：確かめてから「中断してホーム（ゲーム選択）にもどる」 ---- */
@@ -6511,10 +6513,17 @@ let admitAt = 0;
 const swayPhase = () => `animation-delay:-${Date.now() % 3200}ms`;
 // 卓につながるまで：スマホがコインに「ピッ」とさわって波紋が広がる（案は tools/loading-mockup.html の4）
 // 動きは時計に合わせる（描き直しで最初にもどらないように）
+// 早くつながっても、最低2秒は見せる（一瞬で切りかわると何が起きたかわからない）
+const BOOT_MS = 2000; let bootShownAt = 0, bootT = 0;
+function bootHold() {
+  const r = BOOT_MS - (Date.now() - bootShownAt); if (!bootShownAt || r <= 0) return false;
+  clearTimeout(bootT); bootT = setTimeout(render, r + 20); return true;
+}
 function viewBoot() {
+  if (!bootShownAt) bootShownAt = Date.now();
   const art = h('div', { class: 'boot-art', 'aria-hidden': 'true', style: `--bt:-${(Date.now() % 1800) / 1000}s` },
     h('div', { class: 'boot-ph' }), h('span', { class: 'boot-pi' }, 'ピッ'), h('div', { class: 'boot-ring' }), h('div', { class: 'boot-ring r2' }), h('div', { class: 'boot-coin' }));
-  return h('div', { class: 'hub-wrap' }, hubHead(h('span', { class: 'hub-meta' }, `招待コード ${tableId || bootId}`), leaveTable),
+  return h('div', { class: 'hub-wrap boot-wrap' }, hubHead(h('span', { class: 'hub-meta' }, `招待コード ${tableId || bootId}`), leaveTable),
     h('div', { class: 'wait boot' }, art, h('div', { class: 'wait-msg', role: 'status' }, 'よみこみちゅう', h('span', { class: 'wait-dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')))));
 }
 function viewWait(d, left, ok) {
@@ -7014,7 +7023,7 @@ function render() {
   const booting = !tableId && !ready && !!bootId;
   if (!tableId && !booting) v = viewHome();
   else if (!local && tableId !== 'LOCAL' && (!myNick || nickGate)) v = viewNick();
-  else if (!doc) v = viewBoot();
+  else if (!doc || bootHold()) v = viewBoot();
   else if (doc.v !== 6) v = viewOld();
   else if (doc.status === 'lobby') v = viewHub();
   else if ((doc.status === 'playing' || doc.status === 'over') && isBoardDoc()) { v = viewBoard(); inGame = 'board'; }
@@ -7022,7 +7031,8 @@ function render() {
   else if (doc.status === 'playing') { v = viewGameShell(); inGame = true; }
   else if (isTrapDoc()) { v = viewTrapOver(); inGame = 'trapover'; }
   else v = viewOver();
-  const hubby = !tableId || booting || !doc || doc.status === 'lobby' || nickGate || !myNick && !local;
+  const isBoot = v && v.classList && v.classList.contains('boot-wrap'); if (!isBoot) bootShownAt = 0;
+  const hubby = !tableId || booting || isBoot || !doc || doc.status === 'lobby' || nickGate || !myNick && !local;
   document.body.className = inGame === 'board' ? 'board' : inGame === 'trap' || inGame === 'trapover' ? 'trap' : inGame || (doc && doc.status === 'over' && !hubby) ? 'ingame' : hubby ? 'hub' : 'page';
   if (inGame !== 'trap') TS.root = null;
   if (inGame !== 'board') bd3Drop();
@@ -7045,7 +7055,8 @@ setInterval(() => {
 }, 1000);
 
 // コイン（URL の #コード）で開いたときの卓。つながるまでのあいだ、最初の画面ではなく読みこみ中を出すのに使う
-let bootId = (() => { const x = (location.hash || '').slice(1).toUpperCase(); return /^[A-Z0-9]{4,8}$/.test(x) ? x : ''; })();
+// コードなしで開いたときは、新しい卓（自分が部屋主）を作る。最初の画面（テスト用の卓・招待コード）はもう出さない
+let bootId = (() => { const x = (location.hash || '').slice(1).toUpperCase(); if (/^[A-Z0-9]{4,8}$/.test(x)) return x; if (window.claude) return ''; const id = genId(); try { history.replaceState(null, '', '#' + id); } catch (e) { } return id; })();
 render();
 (async () => {
   const c = window.claude, cfg = window.PITOPA_FIREBASE || window.ATSUMARU_FIREBASE;
