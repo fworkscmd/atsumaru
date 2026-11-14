@@ -90,6 +90,10 @@ function cdTable(view, act, hidden) {
 function cdEvents() {
   const b = doc.b, ev = b.last && b.last.seq > CS.seen ? b.last : null; CS.seen = Math.max(CS.seen, b.seq); if (!ev) return;
   const who = s => bdName(b.seats[s]);
+  // 音：出す・パス・引く。8切りや革命は派手に
+  if (ev.kind === 'play') SFX.play(ev.rev || ev.eight || ev.s3 ? 'big' : 'cardplay');
+  else if (ev.kind === 'pass') SFX.play('pass');
+  else if (ev.kind === 'draw') { SFX.play('card'); if (ev.pair) SFX.later('cardplay', 260); }
   if (doc.game === 'daifugo') {
     if (ev.kind === 'play') { const t = [ev.rev && (b.rev ? '革命！' : '革命返し！'), ev.eight && '8切り！', ev.s3 && 'スペ3返し！', ev.back && '11バック', ev.lock && 'しばり！'].filter(Boolean); if (ev.done) t.push(`${who(ev.seat)}が ${DFG.titles(b.seats.length)[ev.done - 1]}！`); if (t.length) bdBanner(t.join('　')); }
     if (ev.kind === 'pass' && ev.flow) bdBanner('場が流れた');

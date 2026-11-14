@@ -108,10 +108,13 @@ function openSettings() {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
   const btn = (t, label, icon) => h('button', { class: theme === t ? 'on' : '', 'aria-pressed': String(theme === t), onclick: () => { setTheme(t); stub.querySelectorAll('button').forEach((b, i) => { const on = (i ? 'dark' : 'light') === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); }, svg: icon }, label);
   const stub = h('div', { class: 'tk-stub', role: 'group', 'aria-label': '見た目' }, btn('light', 'ライト', ICON.sun), btn('dark', 'ダーク', ICON.moon));
+  // 音：あり／なし（端末に覚える）
+  const sb = v => h('button', { class: SFX.on === v ? 'on' : '', 'aria-pressed': String(SFX.on === v), onclick: () => { SFX.set(v); snd.querySelectorAll('button').forEach((b, i) => { const on = !i === SFX.on; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); } }, v ? 'あり' : 'なし');
+  const snd = h('div', { class: 'set-snd', role: 'group', 'aria-label': '音' }, h('span', { class: 'set-lab' }, '音'), h('div', { class: 'set-seg' }, sb(true), sb(false)));
   const tk = h('div', { class: 'set-tk', role: 'dialog', 'aria-modal': 'true', 'aria-label': '設定' },
     h('div', { class: 'tk-top' }, h('span', { class: 'tk-admit' }, 'SETTINGS ・ 設定'), h('span', { class: 'set-lab' }, 'ニックネーム'),
       h('div', { class: 'set-name' }, inp, h('label', { for: 'setNick', 'aria-label': '名前を書きかえる', svg: ICON.pen })),
-      h('span', { class: 'set-note' }, '10文字まで。みんなの画面に出ます')),
+      h('span', { class: 'set-note' }, '10文字まで。みんなの画面に出ます'), snd),
     h('div', { class: 'tk-perf' }), stub);
   const ov = h('div', { class: 'set-ov' }, h('div', { class: 'set-in' }, tk));
   const close = () => { keep(); document.removeEventListener('keydown', esc); ov.classList.remove('on'); setTimeout(() => ov.remove(), 200); };
@@ -144,18 +147,35 @@ const actor = () => local ? localActor() : me;
 /* =================== PIXEL SHAFT =================== */
 const VW = 180, VH = 170, SX = 70, SW = 40, LV = 22, TOP = 40;
 function rng(s) { return () => (s = (s * 16807) % 2147483647) / 2147483647; }
-function sprite(c, x, y, i, isNpc, mark) {
+// look：自分が使っているアイテムの見た目（helm＝鉄カブトをかぶる、vodka＝顔がまっ赤）。自分の画面の自分にだけ出す
+// o：気持ちの動き（案は tools/dwarf-motion-mockup.html、https://claude.ai/artifact/FRCs2S85sx2jEskbATRoqa）
+//   bag＝リュックの中身（多いほどふくらむ）、sweat＝汗のコマ（0でなし）、step＝そわそわ足ぶみ、banzai＝バンザイ、climb＝はしごを登るうしろ姿のコマ
+function sprite(c, x, y, i, isNpc, mark, look, o = {}) {
   x = Math.round(x - 5); y = Math.round(y - 14);
   const R = (dx, dy, w, h, col) => { c.fillStyle = col; c.fillRect(x + dx, y + dy, w, h); };
-  const hat = isNpc ? '#9a9aa8' : HATS2[i % 4];
+  const hat = isNpc ? '#9a9aa8' : HATS2[i % 4], skin = isNpc ? '#9aa0b8' : look === 'vodka' ? '#f49a7a' : '#f6c49a', body = isNpc ? '#7a7f98' : '#4a6ad0';
+  const bs = o.bag ? Math.min(5, 1 + Math.floor(o.bag / 5)) : 0;
+  if (o.climb) { // はしごをつかんで登る（うしろ姿。リュックが背中に見える）
+    R(2, 0, 6, 1, hat); R(1, 1, 8, 2, hat); R(1, 3, 8, 2, skin);
+    const up = o.climb % 2; R(0, up ? 1 : 4, 1, 4, skin); R(9, up ? 4 : 1, 1, 4, skin);
+    R(2, 5, 6, 6, body); if (bs) { R(1, 5, 8, 4 + bs, '#8a5a32'); R(2, 6, 6, 1, '#a8703e'); R(4, 7, 2, 1, '#c9a24a'); }
+    R(2 + (up ? 0 : 4), 11, 2, 3, '#4a3222');
+    return;
+  }
   c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(x + 1, y + 14, 8, 2);
-  R(2, 0, 6, 1, hat); R(1, 1, 8, 2, hat); R(4, 0, 2, 1, '#fff6c8');
+  if (bs) { R(-1 - bs, 5, 2 + bs, 6, '#8a5a32'); R(-bs, 5, 1, 6, '#a8703e'); R(-1 - bs, 4, 2 + bs, 1, '#6b4228'); } // リュック
+  if (look === 'helm') { R(1, -1, 8, 1, '#8a909a'); R(0, 0, 10, 3, '#a8aeb8'); R(1, 0, 8, 1, '#d8dce4'); R(2, 1, 1, 1, '#6a707a'); R(7, 1, 1, 1, '#6a707a'); }
+  else { R(2, 0, 6, 1, hat); R(1, 1, 8, 2, hat); R(4, 0, 2, 1, '#fff6c8'); }
   if (isNpc) { R(1, 3, 8, 4, '#9aa0b8'); R(3, 4, 1, 1, '#ff6b6b'); R(6, 4, 1, 1, '#ff6b6b'); R(1, 7, 8, 5, '#7a7f98'); R(1, 7, 8, 1, '#a8aec6'); }
   else {
-    R(1, 3, 8, 3, '#f6c49a'); R(3, 4, 1, 1, '#2a1d14'); R(6, 4, 1, 1, '#2a1d14'); R(4, 5, 2, 1, '#e88a72');
-    R(1, 6, 8, 3, '#f4f1ea'); R(2, 9, 6, 1, '#f4f1ea'); R(1, 9, 1, 3, '#4a6ad0'); R(8, 9, 1, 3, '#3a54a8'); R(2, 10, 6, 2, '#4a6ad0'); R(3, 11, 4, 1, '#5a3a22');
-    R(2, 12, 2, 1, '#4a3222'); R(6, 12, 2, 1, '#4a3222');
+    R(1, 3, 8, 3, skin); R(3, 4, 1, 1, '#2a1d14'); R(6, 4, 1, 1, '#2a1d14'); R(4, 5, 2, 1, o.banzai ? '#c83a2a' : '#e88a72');
+    if (look === 'vodka') { R(1, 5, 2, 1, '#e8504a'); R(7, 5, 2, 1, '#e8504a'); }
+    R(1, 6, 8, 3, '#f4f1ea'); R(2, 9, 6, 1, '#f4f1ea'); R(2, 10, 6, 2, '#4a6ad0'); R(3, 11, 4, 1, '#5a3a22');
+    if (!o.banzai) { R(1, 9, 1, 3, '#4a6ad0'); R(8, 9, 1, 3, '#3a54a8'); }
+    const st = o.step ? 1 : 0; R(2, 12 - st, 2, 1 + st, '#4a3222'); R(6, 12, 2, 1, '#4a3222');
   }
+  if (o.banzai) { R(0, -2, 1, 8, body); R(9, -2, 1, 8, body); R(0, -3, 1, 1, skin); R(9, -3, 1, 1, skin); }
+  if (o.sweat) { const k = o.sweat % 3; R(10, 2 + k, 1, 2, '#9ad8ff'); if (o.sweat % 2) R(-1, 1 + k, 1, 1, '#9ad8ff'); }
   if (mark) { R(4, -5, 3, 1, '#f2a541'); R(5, -4, 1, 1, '#f2a541'); }
 }
 const HATS2 = ['#f2a541', '#6fb1e8', '#7fd19b', '#d98ad6'], BEARDS = ['#d8823a', '#efe4d4', '#8a5a3a', '#3a2a22'];
@@ -204,12 +224,8 @@ function drawShaft(cv, g, opt = {}) {
   // magma moment
   if (opt.boom) {
     const sides = opt.sides && opt.sides.length ? opt.sides : ['main'];
-    if (sides.includes('main')) {
-      const top = shaftBottom - 9; const lv = c.createLinearGradient(0, top - 30, 0, top + 60); lv.addColorStop(0, 'rgba(255,120,40,0)'); lv.addColorStop(.35, 'rgba(255,120,40,.45)'); lv.addColorStop(1, 'rgba(255,90,20,.9)'); c.fillStyle = lv; c.fillRect(0, top - 30, VW, 90);
-      c.fillStyle = '#ff6a1e'; c.fillRect(SX, top, SW, LV + 9); c.fillStyle = '#ffb23a'; for (let x = SX; x < SX + SW; x += 4) c.fillRect(x, top - ((x / 4) % 2), 3, 2);
-      c.fillStyle = '#fff1a8'; [[SX + 6, top + 4], [SX + 20, top + 8], [SX + 31, top + 3]].forEach(([x, y]) => c.fillRect(x, y, 2, 2));
-      (opt.burnt || []).forEach((id, k) => sprite(c, SX + 10 + k * 9, shaftBottom - 14 - (k % 2) * 6, pIndex(id), id === NPC, false));
-    } else {
+    if (sides.includes('main')) dobon(c, shaftBottom, opt.burnt || [], opt.bt == null ? 1e9 : opt.bt, opt.looks || {});
+    else {
       // 分かれ道：掘った横穴を両方見せて、マグマの側だけ溶岩で満たす
       const py = shaftBottom - LV + 2, ph = LV - 2, PW = 28;
       ['left', 'right'].forEach(sd => {
@@ -223,7 +239,10 @@ function drawShaft(cv, g, opt = {}) {
       });
     }
   }
-  inside.forEach((id, k) => sprite(c, SX + 8 + k * 8, shaftBottom - 2, pIndex(id), id === NPC, id === opt.me));
+  // 気持ちの動き：リュックは中身の分ふくらむ。選んでいるあいだはそわそわ、危ない段（マグマ16%〜）では汗。大鉱脈のあとはバンザイ
+  const tt = opt.t || Date.now(), choosing = g.phase === 'choose', hot = choosing && magmaRate(depth + 1) >= .16, fr = Math.floor(tt / 180);
+  inside.forEach((id, k) => sprite(c, SX + 8 + k * 8, shaftBottom - 2, pIndex(id), id === NPC, id === opt.me, id === opt.me ? (g.armed || {})[id] : null,
+    { bag: (g.bag || {})[id] || 0, sweat: hot ? fr + k + 1 : 0, step: choosing && !(g.choice || {})[id] && (Math.floor(tt / 260) + k) % 2 === 0, banzai: !!opt.banzai && (Math.floor(tt / 200) + k) % 2 === 0 }));
   const home = g.players.filter(id => g.out && g.out[id] && g.out[id].result === 'home');
   home.forEach((id, k) => {
     const x = k % 2 ? SX + SW + 14 + Math.floor(k / 2) * 12 : SX - 12 - Math.floor(k / 2) * 12;
@@ -231,6 +250,53 @@ function drawShaft(cv, g, opt = {}) {
     sprite(c, x, TOP - 3, pIndex(id), id === NPC, false);
   });
   c.restore();
+}
+
+// マグマ「ドボン」：床がバキッと割れて（〜DB_FALL）、溶岩の池に落ちる → しぶき（DB_SPLASH〜）→ ぶくぶく → 顔だけぷかっと浮いて「あちち」
+// e は割れてからの時間（ms）。大きい値なら最後の止まった絵（遊びかたのスライドもこれ）。案は tools/dwarf-magma-mockup.html の2（https://claude.ai/artifact/4HxyboJuPinH9w48GBqGep）
+const DB_FALL = 160, DB_SPLASH = 380, DB_MS = 1500;
+function dobon(c, sb, burnt, e, looks = {}) {
+  sb -= LV; // 立っていたのは1段上の床（マグマでも深さは1つ進む）。その床が割れて、下の段が溶岩の池になる
+  const P =(x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); };
+  const lv = c.createLinearGradient(0, sb - 40, 0, sb + 50); lv.addColorStop(0, 'rgba(255,120,40,0)'); lv.addColorStop(.45, `rgba(255,120,40,${e < DB_FALL ? .2 : .45})`); lv.addColorStop(1, 'rgba(255,90,20,.9)'); c.fillStyle = lv; c.fillRect(0, sb - 40, VW, 90);
+  const xs = burnt.map((_, k) => SX + 8 + k * 8);
+  if (e < DB_FALL) { // ひびがのびる
+    const v = e / DB_FALL; P(SX + 19, sb - 2, 1, 2 + v * 3, '#000'); P(SX + 19 - v * 10, sb - 1, v * 10, 1, '#000'); P(SX + 20, sb, v * 12, 1, '#000');
+    burnt.forEach((id, k) => sprite(c, xs[k], sb - 2, pIndex(id), id === NPC, false, looks[id]));
+    return;
+  }
+  // 落ちる（池より先に描いて、溶岩に沈んで見えるように）
+  const f = Math.min(1, (e - DB_FALL) / 260);
+  if (f < 1) burnt.forEach((id, k) => sprite(c, xs[k], sb - 2 + f * f * 18, pIndex(id), id === NPC, false, looks[id]));
+  const top = sb - 3, t = Date.now();
+  P(SX, top, SW, LV + 6, '#ff6a1e'); for (let x = SX; x < SX + SW; x += 4) P(x, top - ((x / 4 + Math.floor(t / 110)) % 2), 3, 2, '#ffb23a');
+  [[6, 5], [20, 9], [31, 4]].forEach(([a, b], k) => P(SX + a, top + b + ((Math.floor(t / 150) + k) % 2), 2, 2, '#fff1a8'));
+  // しぶき
+  if (e > DB_SPLASH && e < DB_SPLASH + 520) { const v = (e - DB_SPLASH) / 520; for (let q = 0; q < 12; q++) { const a = (q + .5) / 12 * Math.PI; P(SX + SW / 2 + Math.cos(a) * 30 * v, top - Math.sin(a) * 36 * v + v * v * 34, 2, 2, q % 2 ? '#ffb23a' : '#fff1a8'); } }
+  // 鉄カブト：池に落ちた瞬間に「カーン」と白い火花
+  burnt.forEach((id, k) => { if (looks[id] !== 'helm' || e <= DB_SPLASH || e >= DB_SPLASH + 360) return; const v = (e - DB_SPLASH) / 360, x = xs[k] + 2, y = top - 4; for (let q = 0; q < 8; q++) { const an = q / 8 * 6.283; P(x + Math.cos(an) * (4 + v * 10), y + Math.sin(an) * (3 + v * 7), 2, 1, '#fff6c8'); } });
+  // ぶくぶく
+  if (e > 700) for (let q = 0; q < 3; q++) { const bt = (e - 700 + q * 220) % 660; P(SX + 9 + q * 11, top + 16 - bt / 30, 2, 2, '#ffd27a'); }
+  // 顔だけぷかっ（帽子と目）。ときどき「あちち」で少し跳ねる
+  if (e > 900) burnt.forEach((id, k) => {
+    const x = SX + 10 + k * (burnt.length > 2 ? 8 : 12), bob = Math.round(Math.sin(e / 140 + k) * .8), hop = (Math.floor(e / 700) + k) % 4 === 0 ? 2 : 0, y = top + 1 + bob - hop;
+    const helm = looks[id] === 'helm', hat = helm ? '#a8aeb8' : id === NPC ? '#9a9aa8' : HATS2[Math.max(0, pIndex(id)) % 4];
+    P(x - 4, y - 5, 8, 2, hat); P(x - 2, y - 6, 4, 1, hat); if (helm) { P(x - 5, y - 4, 10, 1, '#6a707a'); P(x - 3, y - 6, 3, 1, '#e8ecf2'); } P(x - 4, y - 3, 8, 3, id === NPC ? '#9aa0b8' : '#f6c49a'); P(x - 2, y - 2, 1, 1, '#2a1d14'); P(x + 1, y - 2, 1, 1, '#2a1d14');
+  });
+}
+// ドボンの動き（割れてから DB_MS）。ゆれと赤いフラッシュは、動きを減らす設定ならなし
+function boomLoop() {
+  if (!G.cv || !G.cv.isConnected || !doc || doc.status !== 'playing' || digActive()) { if (G.cv) G.cv.style.transform = ''; return; }
+  const e = Date.now() - boomFrom; if (e < 0 || Date.now() >= boomUntil) { G.cv.style.transform = ''; return; } // 顔がぷかぷかしているあいだも動かす
+  drawShaft(G.cv, doc, { boom: true, bt: e, burnt: boomBurnt, sides: boomSides, who: boomWho, looks: boomLooks, me: local ? localActor() : me, vh: boardVh() });
+  let still = false; try { still = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (x) { }
+  if (!still) {
+    const s = e > DB_SPLASH && e < DB_SPLASH + 450 ? (1 - (e - DB_SPLASH) / 450) * 3 : 0;
+    G.cv.style.transform = s ? `translate(${Math.round((Math.random() - .5) * 2 * s)}px,${Math.round((Math.random() - .5) * 2 * s)}px)` : '';
+    if (e > DB_SPLASH && e < DB_SPLASH + 160) { const c = G.cv.getContext('2d'); c.fillStyle = `rgba(255,60,20,${.45 * (1 - (e - DB_SPLASH) / 160)})`; c.fillRect(0, 0, G.cv.width, G.cv.height); }
+  }
+  if (G.boom) { const on = e >= DB_SPLASH; if (on && G.boom.hidden) { G.boom.textContent = 'ドボン！'; G.boom.className = 'boom'; G.boom.hidden = false; } }
+  requestAnimationFrame(boomLoop);
 }
 
 /* =================== WRITES =================== */
@@ -252,7 +318,7 @@ function play(a, who) {
 function autoLocal(g) {
   const humansWaiting = needChoice(g).some(p => p !== NPC && !g.choice[p]);
   if (humansWaiting) return g;
-  if (g.phase === 'choose' && g.inside.includes(NPC) && !g.choice[NPC]) { let a = npcChoice(g); g = act(g, NPC, a); if (a.t === 'radar') g = act(g, NPC, npcChoice(g)); }
+  if (g.phase === 'choose' && g.inside.includes(NPC) && !g.choice[NPC]) { let a = npcChoice(g); g = act(g, NPC, a); if (a.t !== 'choose') g = act(g, NPC, npcChoice(g)); /* アイテムを使ったら、もう一度考えて選ぶ */ }
   if (g.phase === 'choose' && allChosen(g)) g = resolve(g);
   return g;
 }
@@ -318,7 +384,7 @@ function extend() {
   });
   toast('受付を5分のばしました');
 }
-const newGameFor = (id, humans, host) => id === 'boxing' ? BOX.make(humans) : id === 'wordwolf' ? WW.make(humans) : id === 'tower' ? TWR.make(humans) : id === 'bomb' ? BMB.make(humans) : id === 'alchemy' ? ALC.make(humans) : id === 'trapper' ? trNew(humans) : id === 'bingo' ? BGO.make(humans, host) : DUEL[id] ? duelNew(id, humans) : CARDG[id] ? CARDG[id].make(humans) : newGame(humans);
+const newGameFor = (id, humans, host) => id === 'boxing' ? BOX.make(humans) : id === 'icho' ? ICH.make(humans) : id === 'wordwolf' ? WW.make(humans) : id === 'tower' ? TWR.make(humans) : id === 'bomb' ? BMB.make(humans) : id === 'alchemy' ? ALC.make(humans) : id === 'trapper' ? trNew(humans) : id === 'bingo' ? BGO.make(humans, host) : DUEL[id] ? duelNew(id, humans) : CARDG[id] ? CARDG[id].make(humans) : newGame(humans);
 const fits = (g, n) => n >= g.min && n <= g.max;
 // id：始めるゲーム。もう一度のときは前と同じゲーム、ロビーからは部屋主の端末で選んでいるゲーム
 const gameDoc = (d, pick = d.game || 'dwarf') => {
@@ -358,7 +424,8 @@ function openTable(id) {
     }
     const wasIn = !!doc && (doc.players || []).includes(me), nowIn = (data.players || []).includes(me);
     if (wasIn && data.status === 'lobby' && !nowIn && (data.denied || []).includes(me)) toast('部屋主に卓から外されました');
-    if (doc && !wasIn && nowIn && data.status === 'lobby' && data.host !== me) admitAt = Date.now(); // 待つ画面から入れてもらえた
+    if (doc && !wasIn && nowIn && data.status === 'lobby' && data.host !== me) { admitAt = Date.now(); SFX.play('ok'); } // 待つ画面から入れてもらえた
+    if (doc && data.status === 'lobby' && data.host === me && (data.requests || []).length > (doc.requests || []).length) SFX.play('knock'); // 部屋主：入りたい人が来た
     const prevStatus = doc && doc.status;
     doc = JSON.parse(JSON.stringify(data)); serverDoc = doc;
     syncNick();
@@ -452,7 +519,7 @@ setInterval(() => {
     const calm = Date.now() >= (G.lockUntil || 0) && Date.now() - (G.revealAt || 0) >= SEENO_MS + DIG_MS + 1000;
     if (calm && doc.inside.includes(NPC) && !doc.choice[NPC] && steward()) withLease(d => {
       if (!d || d.phase !== 'choose' || d.choice[NPC] || !d.inside.includes(NPC)) return null;
-      let g = d, a = npcChoice(g); g = act(g, NPC, a); if (a.t === 'radar') g = act(g, NPC, npcChoice(g));
+      let g = d, a = npcChoice(g); g = act(g, NPC, a); if (a.t !== 'choose') g = act(g, NPC, npcChoice(g)); /* アイテムを使ったら、もう一度考えて選ぶ */
       return allChosen(g) ? resolve(g) : g;
     }, true);
     if (allChosen(doc)) withLease(d => d && d.phase === 'choose' && allChosen(d) ? resolve(d) : null, true);
@@ -487,6 +554,8 @@ const DWARF_ART = (() => {
     return o.toDataURL('image/png');
   } catch (e) { return ''; }
 })();
+// いっちょあがり！のアイコン（3Dの絵を描くまでのかわり。描いたらラーメンの絵になる）
+const ICH_ICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#fdebd3"/><ellipse cx="32" cy="27" rx="24" ry="8" fill="#d99a3f"/><path d="M8 27h48c-1.5 14-12 23-24 23S9.5 41 8 27z" fill="#d8402a"/><path d="M12 35h40M14 41h36" stroke="#fff" stroke-width="2" stroke-dasharray="4 3" opacity=".7"/><path d="M18 27c3-3 5 3 8 0s5 3 8 0 5 3 8 0" fill="none" stroke="#f3cf5a" stroke-width="2.5"/><circle cx="40" cy="25" r="4" fill="#e79a8b"/></svg>');
 const GAMES = [
   { id: 'dwarf', n: 'ドワーフ', sub: '深掘り<br>チキンレース', ppl: '2〜4人', time: '約5分', ok: true, min: 1, max: 4, cls: 'gi-dwarf', icon: '<img class="gi-img gi-pxl" src="' + DWARF_ART + '" alt="">' },
   { id: 'trapper', n: 'チュンチュン大作戦', short: 'チュンチュン', sub: '罠士 VS 鳥3羽<br>1対3のすごろく', ppl: '1〜4人', time: '約10分', ok: true, min: 1, max: 4, cls: 'gi-trap', icon: TRAP_ICON },
@@ -499,19 +568,20 @@ const GAMES = [
   { id: 'tower', n: 'ぐらぐらタワー', sub: '順番に積んで<br>くずしたら負け', ppl: '1〜8人', time: '約5分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-tower', icon: '<img class="gi-img" src="' + ICON_ART.tower + '" alt="">' },
   { id: 'bomb', n: 'ばくだんパス', sub: 'お題に答えて<br>爆弾を次の人へ', ppl: '1〜8人', time: '約5分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-bomb', icon: '<img class="gi-img" src="' + ICON_ART.bomb + '" alt="">' },
   { id: 'boxing', n: 'ガツンとロボ', sub: '右・左・下の<br>読みあい', ppl: '1〜8人', time: '約10分', ok: true, min: 1, max: TABLE_MAX, cls: 'gi-box', icon: '<img class="gi-img" src="' + ICON_ART.boxing + '" alt="">' },
+  { id: 'icho', n: 'いっちょあがり！', short: 'いっちょあがり', sub: '冷蔵庫にためて<br>町中華をつくる', ppl: '1〜4人', time: '約10分', ok: false, min: 1, max: 4, cls: 'gi-icho', icon: '<img class="gi-img" src="' + ICH_ICON + '" alt="">' },
   { id: 'wordwolf', n: 'ワードウルフ', sub: 'ひとりだけ<br>ちがうお題', ppl: '3〜8人', time: '約5分', ok: false, min: 3, max: TABLE_MAX, cls: 'gi-ww', icon: '<img class="gi-img" src="' + ICON_ART.wordwolf + '" alt="">' },
   { id: 'alchemy', n: '月夜の錬金市場', short: '錬金市場', sub: '昼に薬を作り<br>夜にいっせいに売る', ppl: '1〜4人', time: '約30分', ok: false, min: 1, max: 4, cls: 'gi-alm', icon: '<svg viewBox="0 0 40 48" aria-hidden="true"><rect x="14" y="2" width="12" height="5" rx="2" fill="#c9975a"/><path d="M16 7h8v8.5a15 15 0 1 1-8 0z" fill="#fff"/><path d="M5.6 28a14.6 14.6 0 0 0 28.8 0z" fill="#2fa37a"/></svg>' },
 ];
 // チケットの「むずかしさ」（3段階）
-const GAME_LV = { boxing: 1, babanuki: 1, bingo: 1, bomb: 1, tower: 1, wordwolf: 2, dwarf: 2, reversi: 2, daifugo: 2, trapper: 3, shogi: 3, chess: 3, alchemy: 3 };
+const GAME_LV = { icho: 2, boxing: 1, babanuki: 1, bingo: 1, bomb: 1, tower: 1, wordwolf: 2, dwarf: 2, reversi: 2, daifugo: 2, trapper: 3, shogi: 3, chess: 3, alchemy: 3 };
 const gameById = id => GAMES.find(g => g.id === id && g.ok) || GAMES[0];
 // ゲーム選択の引き出しのジャンル。'wolf' はまだ遊べない（じゅんび中の枠）
-const GENRES = [['定番', ['daifugo', 'babanuki', 'reversi', 'shogi', 'chess', 'bingo']], ['みんなでワイワイ', ['dwarf', 'trapper', 'tower', 'boxing', 'bomb']]];
+const GENRES = [['定番', ['daifugo', 'babanuki', 'reversi', 'shogi', 'chess', 'bingo']], ['みんなでワイワイ', ['dwarf', 'trapper', 'tower', 'boxing', 'bomb']]]; // いっちょあがり！はいま非表示（もどすときは GAMES の ok と、ここに 'icho'）
 const SOON = { wolf: '人狼' };
 // 選んでいるゲームは端末ごと（部屋主と画面は合わせない）。まだ選んでいなければ卓の前のゲーム
 const hubScroll = {}; // 引き出しの横スクロールの位置（描き直しても動かないように）
 let hubSel = null, hubSheet = 0; // hubSheet：引き出し 0=閉じている 1=今あけた（動かす） 2=あいている
-const hubPick = d => local ? localGame : hubSel || (d && d.game) || 'dwarf';
+const hubPick = d => { const g = local ? localGame : hubSel || (d && d.game) || 'dwarf', x = GAMES.find(o => o.id === g); return x && x.ok ? g : 'dwarf'; }; // 非表示のゲームはドワーフにもどす
 let localN = 2, localGame = 'dwarf';
 function localHubDoc() { return { host: 'h0', players: Array.from({ length: localN }, (_, i) => 'h' + i), requests: [], denied: [], game: localGame, openedAt: Date.now() }; }
 const avaTxt = id => id === NPC ? 'コ' : local ? String(pIndex(id) + 1) : nameOf(id).slice(0, 1);
@@ -520,7 +590,7 @@ function tear(then) {
   const t = document.querySelector('.ticket');
   let reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { }
   if (!t || reduce || t.classList.contains('torn')) { then(); return; }
-  t.classList.add('torn'); if (navigator.vibrate) try { navigator.vibrate(25); } catch (e) { }
+  t.classList.add('torn'); SFX.play('tear'); if (navigator.vibrate) try { navigator.vibrate(25); } catch (e) { }
   setTimeout(then, 700);
 }
 function pickGame(id) {
@@ -545,13 +615,12 @@ function hubHead(right, back, help) {
 }
 function ticketEl(g, d) {
   const art = h('div', { class: 'tk-art' });
-  if (g.id === 'dwarf') { const cv = document.createElement('canvas'); drawShaft(cv, { depth: 4, phase: 'choose', next: { fork: false }, pot: 3, inside: ['h0', 'h1', 'h2'], players: [], out: {} }); art.append(cv); }
+  if (g.id === 'dwarf') { art.classList.add('tk-css'); art.style.position = 'relative'; art.append(h('img', { class: 'tka-cover tka-pxl', src: DWARF_ART, alt: '' })); } // アイコンと同じ絵
   if (BD_TITLE[g.id]) bdTicketArt(g.id, art);
   if (g.id === 'trapper') { art.classList.add('tk-css'); art.style.position = 'relative'; art.style.background = '#8fd0f8'; art.append(h('img', { class: 'tka-cover', src: ICON_ART.trapperTk, alt: '' })); }
   return h('div', { class: 'ticket', style: swayPhase(), role: 'group', 'aria-label': `えらんだゲーム：${g.n}` },
     h('div', { class: 'tk-top' }, art,
-      h('div', { class: 'tk-row' }, h('div', { class: 'tk-l' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('span', { class: 'tk-name' + (g.n.length > 6 ? ' long' : '') }, g.n)),
-        h('span', { class: 'tk-sub', svg: g.sub || '' }))),
+      h('div', { class: 'tk-row' }, h('div', { class: 'tk-l' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('span', { class: 'tk-name' + (g.n.length > 6 ? ' long' : '') }, g.n)))), // 右の説明文（フレーバー）は出さない（2026-11-14）
     h('div', { class: 'tk-perf' }),
     h('div', { class: 'tk-stub' },
       h('span', null, h('small', null, '人数'), h('b', null, g.ppl)),
@@ -571,7 +640,7 @@ function bootHold() {
   clearTimeout(bootT); bootT = setTimeout(render, r + 20); return true;
 }
 function viewBoot() {
-  if (!bootShownAt) bootShownAt = Date.now();
+  if (!bootShownAt) { bootShownAt = Date.now(); SFX.play('pi'); }
   const art = h('div', { class: 'boot-art', 'aria-hidden': 'true', style: `--bt:-${(Date.now() % 1800) / 1000}s` },
     h('div', { class: 'boot-ph' }), h('span', { class: 'boot-pi' }, 'ピッ'), h('div', { class: 'boot-ring' }), h('div', { class: 'boot-ring r2' }), h('div', { class: 'boot-coin' }));
   return h('div', { class: 'hub-wrap boot-wrap' }, hubHead(h('span', { class: 'hub-meta' }, `招待コード ${tableId || bootId}`), leaveTable),
@@ -679,7 +748,7 @@ function hubFootText(g, n, hostName) {
     : g.id === 'trapper' ? (n < 4 ? '足りない席はコンピュータ' : '')
     : g.id === 'bomb' || g.id === 'tower' ? (n < 3 ? 'コンピュータも入ります' : '')
     : g.id === 'boxing' ? (n !== 4 && n !== 8 ? 'コンピュータも入ります' : '')
-    : g.id === 'alchemy' ? (n < 4 ? '足りない席はコンピュータ' : '')
+    : g.id === 'alchemy' || g.id === 'icho' ? (n < 4 ? '足りない席はコンピュータ' : '')
     : CARDG[g.id] ? (n < 3 ? 'コンピュータも入ります' : '')
     : n === 1 ? '相手はコンピュータ' : '';
   return `${n}人で${g.n}をはじめます${note ? `（${note}）` : ''}`;
@@ -724,18 +793,100 @@ function viewOver() {
   const rows = g.players.map(id => ({ id, s: score(g, id) })).sort((x, y) => y.s - x.s);
   const best = rows[0].s, winners = rows.filter(r => r.s === best);
   const bar = h('div', { class: 'bar' }, h('div', { class: 'ttl' }, h('b', null, 'ドワーフ'), h('span', null, `${local ? '1台で遊ぶ' : '招待コード ' + tableId} ・ 5回の探検が終わった`)));
-  const art = document.createElement('canvas');
-  drawShaft(art, { depth: 4, phase: 'over', next: null, pot: 0, inside: [], players: g.players, out: Object.fromEntries(g.players.map(p => [p, { result: 'home' }])) });
-  const win = h('div', { class: 'winbox' }, art, h('div', { class: 'wtxt' }, h('span', null, 'いちばん持ち帰ったのは'), h('b', null, winners.length > 1 ? '引き分け！' : `${nameOf(winners[0].id)}の勝ち！`)));
-  const list = h('div', { class: 'card ranks' }, rows.map(r => h('div', { class: 'rank' + (r.s === best ? ' win' : '') },
+  // 鉱石の山くらべ：地上でひとりずつ、探検ごとに持ち帰った鉱石が足もとに積み上がる（マグマの回は赤くチカッ）→ 高い山の人がぴょんぴょん
+  // 動きはこのゲームで1回（G.pileAt）。タップでとばせる。案は tools/dwarf-result-mockup.html の1（https://claude.ai/artifact/7HdW4Y8NMz8bcrx6Hzdwid）
+  const art = document.createElement('canvas'), pts = rows.map(r => h('span', { class: 'pt' }, String(r.s)));
+  const wtxt = h('b', null, winners.length > 1 ? '引き分け！' : `${nameOf(winners[0].id)}の勝ち！`);
+  const win = h('div', { class: 'winbox piles' }, art);
+  const list = h('div', { class: 'card ranks' }, rows.map((r, k) => h('div', { class: 'rank' + (r.s === best ? ' win' : '') },
     h('span', { class: 'no' }, String(rows.findIndex(x => x.s === r.s) + 1)),
     h('div', { class: 'mid' }, h('b', null, nameOf(r.id) + (g.gone[r.id] ? '（途中で抜けた）' : '')),
-      h('div', { class: 'ores' }, (g.history || []).map(x => { const o = x.out[r.id]; return h('span', { class: o && o.result === 'magma' ? 'warn' : null }, o ? (o.result === 'home' ? `+${o.got}` : 'マグマ') : '—'); }))),
-    h('span', { class: 'pt' }, r.s))));
+      h('div', { class: 'ores' }, (g.history || []).map(x => { const o = x.out[r.id]; return h('span', { class: o && o.result === 'magma' ? 'warn' : null }, o ? (o.result === 'home' ? `+${o.got}` : o.saved ? `マグマ(+${o.saved})` : 'マグマ') : '—'); }))),
+    pts[k])));
+  const wl = h('div', { class: 'pilewin' }, h('span', null, '持ち帰った鉱石の山'), wtxt);
+  pileShow(art, g, rows, pts, wtxt);
   const btns = local || g.host === me
     ? h('div', { class: 'endbtns' }, h('button', { class: 'btn soft', onclick: backToHub }, 'ゲーム選択へ'), h('button', { class: 'btn', onclick: rematch }, 'もう一度'))
     : h('div', { class: 'card', style: 'text-align:center' }, '部屋主が次のゲームを選んでいます');
-  return h('div', { class: 'gscreen over' }, bar, win, list, btns);
+  return h('div', { class: 'gscreen over' }, bar, win, wl, list, btns);
+}
+// 探検のまとめの小さな山くらべ：前からある山の上に、今回の分（帰還・鉄カブトで残した分）が明るい色で積み上がる。マグマの人は山の上が赤くチカッ
+// 動きは探検ごとに1回（G.sumKey）。案は tools/dwarf-summary-mockup.html の1
+function sumPiles(cv, g) {
+  const W = 132, H = 64; cv.width = W; cv.height = H;
+  const key = dwGameKey(g) + ':' + g.exp, still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (G.sumKey !== key) { G.sumKey = key; G.sumAt = still ? -1e9 : Date.now(); }
+  const gain = id => { const o = g.out[id]; return !o ? 0 : o.result === 'home' ? o.got : o.saved || 0; };
+  const ids = g.players, best = Math.max(1, ...ids.map(id => g.bank[id] || 0));
+  const draw = () => {
+    if (!cv.isConnected && cv._on) return; if (cv.isConnected) cv._on = true; else if ((cv._n = (cv._n || 0) + 1) > 30) return;
+    const t = Date.now() - G.sumAt, a = Math.min(1, Math.max(0, (t - 250) / 900)), e = 1 - Math.pow(1 - a, 3), c = cv.getContext('2d');
+    const P = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); };
+    const GY = H - 9, sk = c.createLinearGradient(0, 0, 0, GY); sk.addColorStop(0, '#0d1230'); sk.addColorStop(1, '#27284a'); c.fillStyle = sk; c.fillRect(0, 0, W, GY);
+    for (let k = 0; k < 16; k++) P((k * 53) % W, (k * 29) % (GY - 12), 1, 1, '#c8d0ff');
+    P(0, GY, W, 2, '#3f8a3a'); P(0, GY + 2, W, H - GY - 2, '#4a3020');
+    const gap = W / ids.length, sc = Math.min(1, (GY - 22) / best);
+    ids.forEach((id, k) => {
+      const x0 = Math.round(gap * (k + .5)), hb = Math.round(((g.bank[id] || 0) - gain(id)) * sc), h = hb + Math.round(gain(id) * sc * e), hw0 = Math.min(12, gap / 2 - 2);
+      for (let y = 0; y < h; y += 3) { const hw = 3 + (hw0 - 3) * (1 - y / Math.max(h, 1)); for (let xx = -12; xx <= 12; xx += 4) if (Math.abs(xx) + 2 <= hw) { const x = x0 + xx - 2 + ((y / 3) % 2) * 2, yy = GY - 3 - y, nw = y >= hb; P(x, yy, 4, 3, nw ? '#ffe27a' : (xx + y) % 3 ? '#c8923a' : '#d8b04a'); P(x, yy, 2, 1, nw ? '#fff6c8' : '#e8d08a'); } }
+      const o = g.out[id]; if (o && o.result === 'magma' && t > 250 && t < 900 && Math.floor(t / 90) % 2) P(x0 - 8, GY - h - 3, 16, 3, '#c8321e');
+      sprite(c, x0, GY - h, Math.max(0, pIndex(id)), id === NPC, false);
+    });
+    if (t < 1400) requestAnimationFrame(draw);
+  };
+  requestAnimationFrame(draw);
+}
+const PILE_STEP = 650, PILE_T0 = 400;
+function pileShow(cv, g, rows, pts, wtxt) {
+  const key = g.startedAt + ':' + g.players.join(','), still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (G.pileAt == null || G.pileKey !== key) { G.pileKey = key; G.pileAt = still ? -1e9 : Date.now(); G.pileLayer = -1; G.pileCheer = false; }
+  const n = (g.history || []).length, done = PILE_T0 + n * PILE_STEP + 500;
+  const ids = g.players, best = rows[0].s;
+  cv.addEventListener('pointerdown', () => { G.pileAt = Date.now() - done - 1; G.pileCheer = true; });
+  let tries = 0;
+  const frame = () => {
+    // 画面から外れたら（描き直し・ゲーム選択へ）止める。出る前は少しだけ待つ
+    if (!cv.isConnected) { if (cv._mounted || ++tries > 30) return; requestAnimationFrame(frame); return; }
+    cv._mounted = true;
+    const box = cv.parentElement, bw = box ? box.clientWidth : 0, bh = box ? box.clientHeight : 0;
+    const H = 120, W = bw && bh ? Math.max(100, Math.min(260, Math.round(H * bw / bh))) : 160;
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const t = Date.now() - G.pileAt;
+    drawPiles(cv.getContext('2d'), g, W, H, Math.min(t, done + 100000), best);
+    // 数字のカウントアップと音
+    rows.forEach((r, k) => { const v = t >= done ? r.s : pileUpTo(g, r.id, t); if (pts[k].textContent !== String(v)) pts[k].textContent = v; });
+    const layer = Math.floor((t - PILE_T0) / PILE_STEP);
+    if (layer > G.pileLayer && layer < n && t < done) { G.pileLayer = layer; const some = ids.some(id => { const o = g.history[layer].out[id]; return o && o.result === 'home' && o.got > 0; }); if (window.SFX) SFX.play(some ? 'stone' : 'crack'); }
+    wtxt.style.visibility = t >= done - 400 ? 'visible' : 'hidden';
+    if (!G.pileCheer && t >= done - 400) { G.pileCheer = true; if (t < done + 300 && window.SFX) SFX.play('jackpot'); }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+// その時刻までに積み上がった鉱石の数（探検ごとに PILE_STEP ずつ）
+function pileUpTo(g, id, t) {
+  let s = 0; (g.history || []).forEach((x, e) => { const te = PILE_T0 + e * PILE_STEP, o = x.out[id], v = !o ? 0 : o.result === 'home' ? o.got : o.saved || 0; if (t < te || !v) return; s += Math.round(v * Math.min(1, (t - te) / 400)); }); // マグマでも鉄カブトで持ち帰った分は積む
+  return s;
+}
+function drawPiles(c, g, W, H, t, best) {
+  const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); };
+  const GY = H - 22, sk = c.createLinearGradient(0, 0, 0, GY); sk.addColorStop(0, '#0d1230'); sk.addColorStop(1, '#27284a'); c.fillStyle = sk; c.fillRect(0, 0, W, GY);
+  const r = rng(7); for (let k = 0; k < W / 4; k++) { const x = r() * W | 0, y = r() * (GY - 30) | 0; R(x, y, 1, 1, (Math.floor(t / 300) + k) % 7 ? '#c8d0ff' : '#ffffff'); }
+  R(0, GY, W, 3, '#3f8a3a'); R(0, GY + 3, W, 2, '#2c6a2a');
+  const dg = c.createLinearGradient(0, GY + 5, 0, H); dg.addColorStop(0, '#5a3a24'); dg.addColorStop(1, '#2b1a10'); c.fillStyle = dg; c.fillRect(0, GY + 5, W, H - GY - 5);
+  for (let k = 0; k < 30; k++) R((k * 37) % W, GY + 7 + (k * 13) % (H - GY - 8), 1, 1, '#6b4a30');
+  const ore = (x, y, k) => { R(x, y, 4, 3, k % 3 ? '#e0a83a' : '#f2c84b'); R(x, y, 2, 1, '#fff0a8'); R(x + 3, y + 2, 1, 1, '#a86e1e'); };
+  const ids = g.players, n = ids.length, gap = W / n, top = 26, sc = Math.min(1.1, (GY - top - 16) / Math.max(1, best));
+  const end = PILE_T0 + (g.history || []).length * PILE_STEP + 100;
+  ids.forEach((id, k) => {
+    const x0 = Math.round(gap * (k + .5)), hw0 = Math.min(12, gap / 2 - 3);
+    const hgt = Math.round(pileUpTo(g, id, t) * sc);
+    (g.history || []).forEach((x, e) => { const te = PILE_T0 + e * PILE_STEP, o = x.out[id]; if (o && o.result === 'magma' && t >= te && t - te < 320) { R(x0 - 8, GY - hgt - 3, 16, 3, '#c8321e'); for (let q = 0; q < 16; q += 3) R(x0 - 8 + q, GY - hgt - 3 + ((q + Math.floor(t / 80)) % 2), 2, 1, '#ff9a3a'); } });
+    for (let y = 0; y < hgt; y += 3) { const hw = 3 + (hw0 - 3) * (1 - y / Math.max(hgt, 1)); for (let xx = -12; xx <= 12; xx += 4) if (Math.abs(xx) + 2 <= hw) ore(x0 + xx - 2 + ((y / 3) % 2) * 2, GY - 3 - y, xx + y); }
+    const winner = t >= end && pileUpTo(g, id, t + 1e6) === best && best > 0, jump = winner ? Math.abs(Math.sin((t - end) / 160)) * 5 : 0;
+    sprite(c, x0, GY - hgt - jump, Math.max(0, pIndex(id)), id === NPC, false);
+    if (winner) { const f = Math.floor(t / 90) % 4, col = ['#fff', '#f2c84b', '#ffdf7a', '#fff'][f], sx = x0 + 8, sy = GY - hgt - 20; R(sx, sy - 3 - f, 1, 2, col); R(sx, sy + 2 + f, 1, 2, col); R(sx - 3 - f, sy, 2, 1, col); R(sx + 2 + f, sy, 2, 1, col); }
+  });
 }
 function viewOld() {
   return h('div', { class: 'stack' }, brand(leaveTable),
@@ -744,7 +895,7 @@ function viewOld() {
 
 /* =================== IN GAME =================== */
 const G = {};
-let boomFrom = 0, boomUntil = 0, boomBurnt = [], boomSides = [], boomWho = {};
+let boomFrom = 0, boomUntil = 0, boomBurnt = [], boomSides = [], boomWho = {}, boomLooks = {};
 function viewGameShell() {
   G.bar = h('div', { class: 'bar' }); G.crew = h('div', { class: 'crew' });
   G.cv = h('canvas', { class: 'view', role: 'img', 'aria-label': '坑道の断面' });
@@ -752,22 +903,33 @@ function viewGameShell() {
   G.heatLbl = h('div', { class: 'heatlbl' }); G.boom = h('div', { class: 'boom', hidden: true }, 'ドボン！');
   G.jp = h('div', { class: 'jptag' });
   G.tip = h('div', { class: 'dw-tip', hidden: true, role: 'status' }, h('b', null, '進む？ 帰る？'), 'マグマゲージを見て、いい塩梅で持ち帰ろう！');
-  G.board = h('div', { class: 'board' }, G.cv, G.depth, G.jp, G.heat, G.heatLbl, G.boom, G.tip);
+  G.fx = h('div', { class: 'fxtag', hidden: true, role: 'status' });
+  G.board = h('div', { class: 'board' }, G.cv, G.depth, G.jp, G.heat, G.heatLbl, G.boom, G.fx, G.tip);
   G.board.addEventListener('pointerdown', introSkip);
   G.reveal = h('div', { class: 'reveal', hidden: true, role: 'status', onclick: hideReveal });
   G.sum = h('div', { class: 'reveal sum', hidden: true, role: 'status' });
   G.rad = h('div', { class: 'radov', hidden: true });
   G.board.append(G.sum, G.rad, G.reveal);
   G.panel = h('div', { class: 'tray' });
-  try { if (window.ResizeObserver) { G.ro && G.ro.disconnect(); G.ro = new ResizeObserver(() => { if (doc && doc.status === 'playing' && G.cv && G.cv.isConnected && !digActive() && !introMoving()) drawShaft(G.cv, doc, { boom: Date.now() >= boomFrom && Date.now() < boomUntil, burnt: boomBurnt, sides: boomSides, who: boomWho, me: local ? localActor() : me, vh: boardVh() }); }); G.ro.observe(G.board); } } catch (e) { }
+  try { if (window.ResizeObserver) { G.ro && G.ro.disconnect(); G.ro = new ResizeObserver(() => { if (doc && doc.status === 'playing' && G.cv && G.cv.isConnected && !digActive() && !introMoving()) drawShaft(G.cv, doc, { boom: Date.now() >= boomFrom && Date.now() < boomUntil, burnt: boomBurnt, sides: boomSides, who: boomWho, looks: boomLooks, me: local ? localActor() : me, vh: boardVh() }); }); G.ro.observe(G.board); } } catch (e) { }
   return h('div', { class: 'gscreen' }, G.bar, G.crew, G.board, G.panel);
 }
 function boardVh() {
   const r = G.board ? G.board.getBoundingClientRect() : null;
   return r && r.width > 0 && r.height > 0 ? Math.max(110, Math.min(700, Math.round(VW * r.height / r.width))) : VH;
 }
+// 盤の下のほうに出す ひとこと（ウォッカ・鉄カブトの当たり、ラスト探検）。delay ms 後に dur ms
+function fxTag(text, cls, delay, dur = 1900) {
+  clearTimeout(G.fxT0); clearTimeout(G.fxT1);
+  G.fxT0 = setTimeout(() => { if (!G.fx || !G.fx.isConnected) return; G.fx.textContent = text; G.fx.className = 'fxtag ' + (cls || ''); G.fx.hidden = false;
+    G.fxT1 = setTimeout(() => { if (G.fx) G.fx.hidden = true; }, dur); }, Math.max(0, delay));
+}
 function hideReveal() { if (G.reveal) G.reveal.hidden = true; if (G.board) G.board.classList.remove('revealing'); }
+// ゲームが終わったら音（どのゲームも共通）
+let sfxStatus = '';
+function sfxOver() { const k = doc ? (doc.game || '') + ':' + doc.status : ''; if (sfxStatus.endsWith(':playing') && k.endsWith(':over')) SFX.play('win'); sfxStatus = k; }
 function afterChange() {
+  sfxOver();
   if (!doc) { render(); return; }
   if (isBoardDoc()) { if (BS.root && BS.root.isConnected && (doc.status === 'playing' || doc.status === 'over')) bdRender(); else render(); return; }
   if (isTrapDoc()) { if (TS.root && TS.root.isConnected && (doc.status === 'playing' || doc.status === 'over')) trRender(); else render(); return; }
@@ -775,7 +937,7 @@ function afterChange() {
   renderGame();
 }
 /* ---- 掘る演出：「せーの！」のあと、ツルハシを3回ふる（カツンごとに床のひびがのびる）→ パカッと割れて1段下に着地 ---- */
-const SEENO_MS = 900, DIG_MS = 1600;
+const SEENO_MS = 900, DIG_MS = 1600, CLIMB_MS = 1300;
 const digActive = () => !!G.dig && Date.now() < G.dig.end;
 const digEase = u => 1 - Math.pow(1 - Math.min(1, Math.max(0, u)), 3);
 function digPx(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); }
@@ -785,24 +947,48 @@ function digPick(c, x, y, down) { // ツルハシ：上げている／ふりお�
   else { digPx(c, x + 8, y - 6, 4, 1, '#8a5a32'); digPx(c, x + 11, y - 6, 1, 5, '#c9cdd6'); digPx(c, x + 10, y - 2, 1, 1, '#c9cdd6'); }
 }
 function drawDig(cv, a, now) {
-  const u = Math.min(1, Math.max(0, (now - a.start) / DIG_MS)), vh = boardVh();
+  const u = Math.min(1, Math.max(0, (now - a.start) / DIG_MS)), vh = boardVh(), D = Math.max(1, a.end - a.start), p = (now - a.start) / D;
   const fall = !a.split && u > .68, depth = fall ? a.depth : a.depth - 1;
-  drawShaft(cv, { ...a.from, out: a.out, depth, phase: 'dig', inside: [] }, { vh }); // 帰った人は地上に見せる
+  // 今回帰る人は、はしごを登りきるまで地上に出さない
+  const climbing = (a.leavers || []).length && p < .97, out = climbing ? Object.fromEntries(Object.entries(a.out || {}).filter(([id]) => !a.leavers.includes(id))) : a.out;
+  drawShaft(cv, { ...a.from, out, depth, phase: 'dig', inside: [] }, { vh }); // 帰った人は地上に見せる
   const c = cv.getContext('2d'), scroll = Math.max(0, TOP + depth * LV - Math.round(vh * 0.62)), bottom = TOP + depth * LV;
   c.save(); c.translate(0, -scroll);
   const swing = u < .6, hit = Math.floor(u / .2), ph = (u / .2) % 1, down = swing && ph > .5;
-  if (!fall) { // ひび：中央から左右へ、カツンのたびにのびる
+  if (!fall && a.stay.length) { // ひび：中央から左右へ、カツンのたびにのびる
     const n = Math.floor(10 * Math.min(1, (Math.min(hit, 3) + (down ? (ph - .5) * 2 : 0)) / 3));
     let x = SX + SW / 2, y = bottom - 1;
     for (let i = 0; i < n; i++) { digPx(c, x, y, 1, 1, '#f2c84b'); digPx(c, SX + SW - (x - SX), y, 1, 1, '#f2c84b'); x -= 1.7; y += i % 2 ? 1 : -1; }
   }
-  cv.style.transform = !swing && !fall ? `translate(${(Math.random() - .5) * 2}px,0)` : '';
+  cv.style.transform = !swing && !fall && a.stay.length ? `translate(${(Math.random() - .5) * 2}px,0)` : '';
   const dy = fall ? -LV * (1 - digEase((u - .68) / .22)) : 0, squash = fall && u > .9 && u < .95 ? 1 : 0, meId = local ? null : me;
-  a.stay.forEach((id, k) => { const x = SX + 8 + k * 8; sprite(c, x, bottom - 2 + dy + squash, pIndex(id), id === NPC, id === meId); if (swing) digPick(c, x, bottom - 2, down); });
-  if (down) { const r = rng(hit * 7 + 3), v = (ph - .5) * 2; for (let i = 0; i < 8; i++) { const vx = (r() - .5) * 40, vy = -20 - r() * 25; digPx(c, SX + SW / 2 + vx * v, bottom - 3 + vy * v + 60 * v * v, 1 + (r() < .3 ? 1 : 0), 1, r() < .25 ? '#ffd23a' : '#8a6a4a'); } }
+  // 公開のあとなので、鉄カブト・ウォッカはみんなの見た目に出す
+  const looks = a.looks || {}, bags = a.bags || {}, gain = a.gain || {}, got = fall ? Math.min(1, Math.max(0, (u - .74) / .22)) : 0;
+  a.stay.forEach((id, k) => { const x = SX + 8 + k * 8; sprite(c, x, bottom - 2 + dy + squash, pIndex(id), id === NPC, id === meId, looks[id], { bag: (bags[id] || 0) + Math.round((gain[id] || 0) * got) }); if (swing && a.stay.length) digPick(c, x, bottom - 2, down); });
+  // 帰る人：はしごへ歩いて（〜18%）→ リュックを背負ってえっさえっさ登る（〜95%）
+  const oldB = TOP + (a.depth - 1) * LV, lx = SX + SW - 7;
+  if (climbing) (a.leavers || []).forEach((id, k) => {
+    const x0 = SX + 8 + Math.max(0, (a.from.inside || []).indexOf(id)) * 8, w = Math.min(1, Math.max(0, p / .18)), cu = Math.min(1, Math.max(0, (p - .18) / .77));
+    if (p < 0 || cu <= 0) sprite(c, x0 + (lx - x0) * w, oldB - 2, pIndex(id), id === NPC, id === meId, null, { bag: bags[id] || 0, step: p > 0 && Math.floor(now / 110) % 2 === 0 });
+    else sprite(c, lx + k * 2, oldB - 2 - cu * (oldB - TOP + 1) + k * 6, pIndex(id), id === NPC, false, null, { bag: bags[id] || 0, climb: 1 + Math.floor(now / 130) + k });
+  });
+  // 鉱石が床からきらっと飛び出して、残った人のリュックへ
+  if (fall && u < .98) { const n = Math.min(12, a.stay.reduce((s, id) => s + (gain[id] || 0), 0)), r = rng(5);
+    for (let q = 0; q < n; q++) { const k = q % a.stay.length, v = Math.min(1, Math.max(0, (u - .7 - q * .012) / .22)); if (v <= 0 || v >= 1) continue;
+      const tx = SX + 8 + k * 8 - 6, ty = bottom - 8, sx = SX + 8 + r() * 24, sy = bottom + 2; digPx(c, sx + (tx - sx) * v, sy + (ty - sy) * v - Math.sin(v * Math.PI) * (14 + r() * 8), 3, 2, q % 3 ? '#e0a83a' : '#f2c84b'); } }
+  if (down && a.stay.length) { const r = rng(hit * 7 + 3), v = (ph - .5) * 2; for (let i = 0; i < 8; i++) { const vx = (r() - .5) * 40, vy = -20 - r() * 25; digPx(c, SX + SW / 2 + vx * v, bottom - 3 + vy * v + 60 * v * v, 1 + (r() < .3 ? 1 : 0), 1, r() < .25 ? '#ffd23a' : '#8a6a4a'); } }
   if (fall && u < .9) { const v = (u - .68) / .22, r = rng(9); for (let i = 0; i < 8; i++) digPx(c, SX + 4 + r() * (SW - 8), bottom - LV + 2 + v * v * 40 + r() * 4, 3, 2, '#5a4030'); }
   c.restore();
 }
+// 待っているあいだの気持ちの動き（汗・そわそわ・バンザイ）。ほかの動きがないときだけ、1秒に約6回だけ描き直す
+setInterval(() => {
+  if (!doc || doc.status !== 'playing' || !G.cv || !G.cv.isConnected || isTrapDoc() || isBoardDoc() || doc.game !== 'dwarf' && doc.game) return;
+  const now = Date.now();
+  if (digActive() || introMoving() || (now >= boomFrom && now < boomUntil)) return;
+  if (doc.phase !== 'choose' && !(now < (G.jpUntil || 0))) return;
+  try { if (matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) { }
+  drawShaft(G.cv, doc, { banzai: now >= (G.jpFrom || 0) && now < (G.jpUntil || 0), me: local ? localActor() : me, vh: boardVh(), t: now });
+}, 170);
 function digLoop() {
   if (!G.dig || !G.cv || !G.cv.isConnected) return;
   if (Date.now() >= G.dig.end) { G.dig = null; G.cv.style.transform = ''; if (doc && doc.status === 'playing' && !isTrapDoc() && !isBoardDoc()) renderGame(); return; }
@@ -887,12 +1073,32 @@ function renderGame() {
     const burnt = [], bs = [], bw = {}; for (const sd in rv.sides) if (rv.sides[sd].magma) { burnt.push(...rv.sides[sd].who); bs.push(sd); rv.sides[sd].who.forEach(id => bw[id] = sd); }
     let reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { }
     // マグマ・分かれ道は、割れたところで止めて結果へ
-    const split = burnt.length > 0 || !!rv.fork, dig = from && stay.length && !reduce ? (split ? DIG_MS * .68 : DIG_MS) : 0;
+    // 全員帰ったとき（だれも掘らない）も、はしごを登る動きだけは見せる（CLIMB_MS）
+    const leavers = rv.leavers || [], split = burnt.length > 0 || !!rv.fork || !stay.length;
+    const dig = from && !reduce ? (stay.length ? (split ? DIG_MS * .68 : DIG_MS) : leavers.length ? CLIMB_MS : 0) : 0;
     const t0 = Date.now(), after = dig ? SEENO_MS + dig : 0; G.revealAt = t0;
-    G.dig = dig ? { start: t0 + SEENO_MS, end: t0 + after, from, out: d.out, stay, depth: rv.depth, split } : null;
+    const bags = { ...(from.bag || {}) }, gain = {}; stay.forEach(id => { if (!burnt.includes(id)) gain[id] = Math.max(0, (d.bag[id] || 0) - (bags[id] || 0)); });
+    G.dig = dig ? { start: t0 + SEENO_MS, end: t0 + after, from, out: d.out, stay, depth: rv.depth, split, looks: rv.armed || {}, leavers, bags, gain } : null;
+    boomLooks = rv.armed || {};
     // 演出のあいだと結果が出た直後は、ボタンを止める（連打が次の段の選択にならないように）
     G.lockUntil = t0 + after + 1000; clearTimeout(G.lockT); G.lockT = setTimeout(renderPanel, after + 1050);
-    if (burnt.length) { boomFrom = t0 + after; boomUntil = boomFrom + 3500; boomBurnt = burnt; boomSides = bs; boomWho = bw; }
+    if (burnt.length) { boomFrom = t0 + after; boomUntil = boomFrom + 3500; boomBurnt = burnt; boomSides = bs; boomWho = bw; if (G.boom) G.boom.hidden = true; setTimeout(() => requestAnimationFrame(boomLoop), Math.max(0, after - 10)); }
+    // 音：せーの！ → ツルハシで3回カツン → パカッ（マグマならドカン、大鉱脈ならキラキラ）
+    SFX.play('seeno');
+    if (dig && stay.length) { [.1, .3, .5].forEach(u => SFX.later('dig', SEENO_MS + DIG_MS * u)); if (!split) SFX.later('crack', SEENO_MS + DIG_MS * .68); }
+    if (dig && leavers.length) [.3, .5, .7].forEach(u => SFX.later('tock', SEENO_MS + dig * u)); // はしごを登る足音
+    if (burnt.length) { SFX.later('crack', after); SFX.later('boom', after + DB_SPLASH); SFX.later('sizzle', after + DB_SPLASH + 150); }
+    // アイテムの当たり：鉄カブトで半分助かった（カーン）／ウォッカで2倍（ヒック）
+    const arm = rv.armed || {}, saved = burnt.filter(id => arm[id] === 'helm'), drunk = Object.values(rv.sides).flatMap(r => r.magma ? [] : r.drunk || []);
+    // ギリギリ セーフ！：帰ったすぐ次の段でマグマ（全員帰ったときは、掘らなかった次の段がマグマだったら種明かし）。いい判断を褒める
+    const myId = local ? null : me, nextHot = rv.end === 'allhome' && d.next && !d.next.fork && d.next.main && d.next.main.magma;
+    const safe = (burnt.length || nextHot) ? rv.leavers : [];
+    const safeTxt = !safe.length ? '' : (nextHot ? 'じつは 次の段は マグマだった！ ' : '') + (safe.includes(myId) ? 'ギリギリ セーフ！ ナイス判断' : `${safe.map(nameOf).join('・')} ギリギリ セーフ！`);
+    const at = burnt.length ? after + DB_SPLASH + 200 : Math.max(after, SEENO_MS) + 150; // 全員帰ったときは登りきってから
+    if (saved.length) { SFX.later('block', after + DB_SPLASH + 40); fxTag([safeTxt, `カーン！ ${saved.map(nameOf).join('・')}は 鉄カブトで 半分 持ち帰り`].filter(Boolean).join('\n'), 'helm', at, 2600); }
+    else if (safe.length) { SFX.later('ok', at); fxTag(safeTxt, 'safe', at, 2400); }
+    else if (drunk.length) { SFX.later('eat', after + 80); fxTag(`ヒック！ ${drunk.map(nameOf).join('・')}は ウォッカで 鉱石 ×2`, 'vodka', after + 60); }
+    else if (Object.values(rv.sides).some(r => r.jackpot)) { SFX.later('jackpot', after + 80); G.jpFrom = t0 + after; G.jpUntil = t0 + after + 2000; } // 大鉱脈：残った人がバンザイ
     if (Object.values(rv.sides).some(r => r.jackpot) && !burnt.length) {
       clearTimeout(renderGame.jt0); renderGame.jt0 = setTimeout(() => { if (!G.boom) return; G.boom.textContent = '大鉱脈！'; G.boom.className = 'boom gold'; G.boom.hidden = false; clearTimeout(renderGame.jt); renderGame.jt = setTimeout(() => { if (G.boom) G.boom.hidden = true; }, 2200); }, after);
     }
@@ -900,6 +1106,8 @@ function renderGame() {
     if (G.dig) requestAnimationFrame(digLoop);
   }
   G.lastDoc = d;
+  // ラスト探検：5回目の探検の始まりに、この端末で1回
+  if (d.exp === EXPEDITIONS && d.depth === 0 && d.phase === 'choose' && !d.reveal && G.lastExp !== dwGameKey(d)) { G.lastExp = dwGameKey(d); SFX.play('start'); fxTag('ラスト探検！ 最後のチャンス', 'last', 200, 2400); }
   // 掘っているあいだは、上の数字やボタンは掘る前のまま見せる
   const anim = digActive() ? G.dig : null, g = anim ? anim.from : d;
   G.bar.replaceChildren(h('div', { class: 'ttl' }, h('b', null, 'ドワーフ'), h('span', null, `${local ? '1台で遊ぶ' : '招待コード ' + tableId} ・ 探検 ${g.exp} / ${EXPEDITIONS}`)),
@@ -924,9 +1132,10 @@ function renderGame() {
   const now = Date.now(), boom = !anim && now >= boomFrom && now < boomUntil;
   if (anim) drawDig(G.cv, anim, now);
   else if (introMoving()) drawIntro(G.cv, d, now);
-  else drawShaft(G.cv, g, { boom, burnt: boomBurnt, sides: boomSides, who: boomWho, me: meId, vh: boardVh() });
-  if (boom) { G.boom.textContent = boomSides.includes('main') || boomSides.length > 1 ? 'ドボン！' : (boomSides[0] === 'left' ? '左が' : '右が') + 'ドボン！'; G.boom.className = 'boom'; G.boom.hidden = false; } else if (G.boom.className === 'boom') G.boom.hidden = true;
-  G.jp.textContent = `大鉱脈チャンス ${Math.round(jackpotRate(g.exp) * 100)}%`;
+  else drawShaft(G.cv, g, { banzai: now >= (G.jpFrom || 0) && now < (G.jpUntil || 0), boom, bt: boom ? now - boomFrom : null, burnt: boomBurnt, sides: boomSides, who: boomWho, looks: boomLooks, me: meId, vh: boardVh() });
+  if (boom && now - boomFrom >= DB_SPLASH) { G.boom.textContent = boomSides.includes('main') || boomSides.length > 1 ? 'ドボン！' : (boomSides[0] === 'left' ? '左が' : '右が') + 'ドボン！'; G.boom.className = 'boom'; G.boom.hidden = false; } else if (G.boom.className === 'boom') G.boom.hidden = true;
+  G.jp.textContent = `${g.exp === EXPEDITIONS ? 'ラスト探検 ・ ' : ''}大鉱脈チャンス ${Math.round(jackpotRate(g.exp) * 100)}%`;
+  G.jp.classList.toggle('last', g.exp === EXPEDITIONS);
   if (boom) setTimeout(() => { if (Date.now() >= boomUntil && G.cv && G.cv.isConnected && doc) { drawShaft(G.cv, doc, { me: local ? localActor() : me, vh: boardVh() }); G.boom.hidden = true; } }, 3600);
   const p = Math.round(magmaRate(g.depth + 1) * 100);
   G.depth.textContent = `深さ ${g.depth}`;
@@ -940,9 +1149,11 @@ function renderGame() {
 function showReveal(rv) {
   const hot = Object.values(rv.sides).some(r => r.magma);
   G.reveal.className = 'reveal seeno' + (hot ? ' hot' : '');
-  G.reveal.replaceChildren(h('div', { class: 'rtitle' }, 'せーの！'));
+  // 鉄カブト・ウォッカを使った人は、公開のときにみんなに見せる（レーダーは秘密のまま。帰った人の分はもどったので出ない）
+  const used = Object.entries(rv.armed || {}).map(([id, k]) => h('span', { class: 'ruse' }, itemArt(k), `${nameOf(id)}：${k === 'helm' ? '鉄カブト' : 'ウォッカ'}`));
+  G.reveal.replaceChildren(...[h('div', { class: 'rtitle' }, 'せーの！'), used.length ? h('div', { class: 'ruses' }, used) : null].filter(Boolean)); // replaceChildren に null をわたすと「null」の文字が出る
   G.reveal.hidden = false;
-  clearTimeout(showReveal.t); showReveal.t = setTimeout(hideReveal, 1000);
+  clearTimeout(showReveal.t); showReveal.t = setTimeout(hideReveal, used.length ? 1500 : 1000);
 }
 function radarSheet(a) {
   const g = doc, used = g.radarSeen[a] === g.depth + 1;
@@ -961,11 +1172,15 @@ function radarMsg(g, a) {
 function renderPanel() {
   if (!G.panel || !doc || doc.status !== 'playing') return;
   const g = digActive() ? G.dig.from : doc, out = [];
+  // ドボンの動き（顔がぷかっと浮くまで）を見せてから、探検のまとめを出す
+  const dbWait = boomFrom + 1700 - Date.now();
+  if (g.phase === 'summary' && dbWait > 0) { G.sum.hidden = true; clearTimeout(G.dbT); G.dbT = setTimeout(renderPanel, dbWait + 20); G.panel.replaceChildren(); return; }
   if (g.phase === 'summary') {
     const rows = g.players.map(id => { const o = g.out[id] || {}; return h('div', { class: 'rl' }, face(id, 22), h('span', { style: 'flex:1' }, nameOf(id)),
-      o.result === 'home' ? h('b', { class: 'home' }, `+${o.got} 持ち帰り`) : o.result === 'magma' ? h('b', { class: 'warn' }, `−${o.lost} マグマ`) : h('span', { class: 'cap' }, '—')); });
-    G.sum.replaceChildren(h('div', { class: 'rtitle' }, `${g.exp}回目の探検おわり`), h('div', { class: 'note' }, `深さ${g.depth}まで掘った`), ...rows,
-      g.exp < EXPEDITIONS ? h('div', { class: 'rres jack' }, `次の探検は大鉱脈チャンス ${Math.round(jackpotRate(g.exp + 1) * 100)}%`) : null);
+      o.result === 'home' ? h('b', { class: 'home' }, `+${o.got} 持ち帰り`) : o.result === 'magma' ? h('b', { class: 'warn' }, `−${o.lost} マグマ`, o.saved ? h('small', { class: 'saved' }, ` 鉄カブトで +${o.saved}`) : null) : h('span', { class: 'cap' }, '—')); });
+    const pc = h('canvas', { class: 'sumpile', 'aria-hidden': 'true' }); sumPiles(pc, g);
+    G.sum.replaceChildren(h('div', { class: 'rtitle' }, `${g.exp}回目の探検おわり`), h('div', { class: 'note' }, `深さ${g.depth}まで掘った`), pc, ...rows,
+      ...(g.exp < EXPEDITIONS ? [h('div', { class: 'rres jack' }, `次の探検は大鉱脈チャンス ${Math.round(jackpotRate(g.exp + 1) * 100)}%`)] : [])); // 最後の探検で「null」と出ないように
     G.sum.hidden = false; G.board.classList.add('revealing'); G.rad.hidden = true;
     out.push(h('button', { class: 'btn wide', style: 'min-height:56px', onclick: nextExpedition }, g.exp >= EXPEDITIONS ? '結果を見る' : `次の探検へ（${g.exp + 1} / ${EXPEDITIONS}）`));
     if (!local) out.push(h('div', { class: 'note' }, '少しすると自動で進みます'));
@@ -981,7 +1196,9 @@ function renderPanel() {
     out.push(h('div', { class: 'row info' },
       h('div', { class: 'bag' }, h('span', { class: 'cap' }, 'リュック'), h('b', null, g.bag[a] || 0)),
       h('div', { class: 'bag' }, h('span', { class: 'cap' }, '床に残った鉱石'), h('b', { class: 'plain' }, g.pot)),
-      h('button', { class: 'radar', disabled: (!g.radar[a] && !seen) || !!chosen || locked, onclick: () => openRadar(a) }, h('b', null, 'レーダー'), h('span', null, seen ? '反応を見る' : g.radar[a] ? '残り1回' : '使用済み'))));
+      bagBtn(g, a, chosen, locked)));
+    if (G.bagFor !== a + ':' + g.depth) { G.bagFor = a + ':' + g.depth; G.bagOpen = false; } // 番の人・段がかわったら閉じる
+    if (G.bagOpen && !chosen && !locked) out.unshift(bagPop(g, a)); else G.bagOpen = false;
     const opts = options(g);
     // 決めたら全部グレー。結果が出て次の段になるまで押せない
     out.push(h('div', { class: 'choices', style: `grid-template-columns:repeat(${opts.length},minmax(0,1fr))` }, opts.map(c => h('button', {
@@ -999,6 +1216,49 @@ function renderPanel() {
     out.push(h('div', { class: 'card', style: 'text-align:center' }, !isPlayer() ? '観戦中。このゲームが終わったら次から参加できます' : o && o.result === 'home' ? `地上に帰還！ この探検で ${o.got} 持ち帰りました。残った人の結末を見守ろう` : o && o.result === 'magma' ? 'マグマに落ちてしまった…。次の探検まで見守ろう' : '待っています'));
   }
   G.panel.replaceChildren(...out);
+}
+/* ---- バッグ：レーダー・鉄カブト・ウォッカ（どれも1ゲームに1回、1つの段に1つまで、選ぶ前に使う）
+   ふだんは革のバッグ1つ。タップでふくろが開いて3つと説明。案は tools/dwarf-bag-mockup.html の2（https://claude.ai/artifact/3Y1ZB8jpTDsnVzuLTqGSkv） ---- */
+const ITEMS = [
+  { k: 'radar', n: 'レーダー', d: '次の段に マグマがあるか 自分だけわかる' },
+  { k: 'helm', n: '鉄カブト', d: 'マグマでも リュックの半分は 持ち帰れる' },
+  { k: 'vodka', n: 'ウォッカ', d: '次の段の鉱石が 自分だけ2倍' },
+];
+const itemLeft = (g, a, k) => !!((g[k] || {})[a]);
+const itemArmed = (g, a) => (g.armed || {})[a] || (g.radarSeen[a] === g.depth + 1 ? 'radar' : null);
+let ITEM_ART = null;
+function itemArt(k) {
+  if (!ITEM_ART) {
+    const icon = draw => { const cv = document.createElement('canvas'); cv.width = 16; cv.height = 16; const c = cv.getContext('2d'); draw((x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); }); return cv.toDataURL(); };
+    ITEM_ART = {
+      radar: icon(P => { P(3, 3, 10, 10, '#2a5a3a'); P(2, 4, 12, 8, '#2a5a3a'); P(4, 2, 8, 12, '#2a5a3a'); P(4, 4, 8, 8, '#3f8a52'); P(7, 3, 1, 10, '#7fd19b'); P(3, 7, 10, 1, '#7fd19b'); P(8, 4, 3, 1, '#c8ffd8'); P(9, 5, 2, 1, '#c8ffd8'); P(10, 6, 1, 1, '#c8ffd8'); P(10, 9, 2, 2, '#ff6b5a'); P(6, 14, 4, 2, '#6b5a4a'); }),
+      helm: icon(P => { P(4, 3, 8, 1, '#8a909a'); P(3, 4, 10, 2, '#a8aeb8'); P(2, 6, 12, 4, '#a8aeb8'); P(4, 4, 4, 1, '#e8ecf2'); P(3, 6, 2, 2, '#d8dce4'); P(1, 10, 14, 2, '#6a707a'); P(4, 11, 1, 1, '#c8ccd4'); P(8, 11, 1, 1, '#c8ccd4'); P(11, 11, 1, 1, '#c8ccd4'); P(7, 2, 2, 2, '#c9a24a'); }),
+      vodka: icon(P => { P(7, 1, 2, 2, '#d8402a'); P(7, 3, 2, 3, '#dfe8ee'); P(6, 6, 4, 1, '#dfe8ee'); P(5, 7, 6, 8, '#dfe8ee'); P(6, 8, 1, 6, '#ffffff'); P(5, 9, 6, 3, '#d8402a'); P(7, 10, 2, 1, '#f2c84b'); P(5, 14, 6, 1, '#b8c4cc'); }),
+      sack: icon(P => { P(6, 2, 4, 2, '#3a2214'); P(5, 4, 6, 1, '#c9a24a'); P(4, 5, 8, 2, '#8a5a32'); P(3, 7, 10, 7, '#8a5a32'); P(4, 7, 3, 5, '#a8703e'); P(3, 14, 10, 1, '#5a3a22'); P(7, 9, 2, 2, '#c9a24a'); }),
+    };
+  }
+  return h('img', { class: 'itpx', src: ITEM_ART[k], alt: '' });
+}
+function bagBtn(g, a, chosen, locked) {
+  const n = ITEMS.filter(it => itemLeft(g, a, it.k)).length, on = itemArmed(g, a);
+  return h('button', { class: 'sackbtn' + (G.bagOpen ? ' open' : ''), 'aria-expanded': String(!!G.bagOpen), disabled: (!n && !on) || !!chosen || locked,
+    onclick: () => { if (on === 'radar') { openRadar(a); return; } G.bagOpen = !G.bagOpen; G.bagSel = null; G.bagFresh = G.bagOpen; SFX.play(G.bagOpen ? 'pop' : 'unpop'); renderPanel(); } },
+    itemArt(on || 'sack'), h('span', null, h('b', null, on ? ITEMS.find(x => x.k === on).n : 'バッグ'), h('small', null, on === 'radar' ? '反応を見る' : on ? '使用中' : `のこり ${n}`)));
+}
+function bagPop(g, a) {
+  const on = itemArmed(g, a), sel = G.bagSel;
+  const cells = ITEMS.map(it => { const left = itemLeft(g, a, it.k), cls = 'bagit' + (!left ? ' used' : '') + (sel === it.k ? ' sel' : '');
+    return h('button', { class: cls, disabled: !left || !!on, onclick: () => { G.bagSel = sel === it.k ? null : it.k; SFX.play('tap'); renderPanel(); } }, itemArt(it.k), h('b', null, it.n), h('small', null, left ? it.d : '使った')); });
+  const it = ITEMS.find(x => x.k === sel);
+  const use = () => {
+    G.bagOpen = false; G.bagSel = null;
+    if (it.k === 'radar') { openRadar(a); return; }
+    const x = { t: 'item', k: it.k }; SFX.play(it.k === 'vodka' ? 'eat' : 'block'); if (local) play(x); else choose(x);
+  };
+  // パネルは1.5秒ごとに描き直すので、開く動きはタップした1回目だけ（毎回つけると がくがく開いたり閉じたりして見えた）
+  const fresh = G.bagFresh; G.bagFresh = false;
+  return h('div', { class: 'bagpop' + (fresh ? ' in' : ''), role: 'dialog', 'aria-label': 'バッグ' }, h('div', { class: 'bagits' }, cells),
+    it ? h('button', { class: 'btn wide baguse', onclick: use }, `${it.n}を 使う`) : h('div', { class: 'cap', style: 'text-align:center' }, on ? 'この段では もう使いました' : '1つの段に 1つまで。鉄カブトとウォッカは 帰るを選ぶと もどる'));
 }
 function openRadar(a) {
   const g = doc, used = g.radarSeen[a] === g.depth + 1;
@@ -1043,6 +1303,7 @@ function openRules(id, foot) {
   else if (id === 'dwarf') openSlides('ドワーフ', dwarfSlides(), foot);
   else bdOpenRules(id, foot);
 }
+// 遊びかたの枠は縦長。比を保ったまま枠を埋める（.sla-px は object-fit:cover。左右の土が少し切れる。前は横につぶれていた）
 function shaftArt(g, opt) { const cv = document.createElement('canvas'); drawShaft(cv, g, opt); cv.className = 'sla-px'; return cv; }
 function dwarfSlides() {
   const P = ['h0', 'h1', 'h2'], at = (depth, inside, more) => ({ depth, phase: 'choose', next: { fork: false }, pot: 3, inside, players: [], out: {}, ...more });
@@ -1051,7 +1312,7 @@ function dwarfSlides() {
     { t: 'こっそり「進む」か「帰る」', s: 'せーの！で いっせいに 見せる', art: () => h('div', { class: 'sla-choice' }, h('span', { class: 'on' }, '進む'), h('span', null, '帰る')) },
     { t: '深いほど 鉱石が ざくざく', s: 'でも マグマが 出やすくなる', art: () => shaftArt(at(7, P, { pot: 6 })) },
     { t: 'マグマが出たら その回の 稼ぎはなし', s: '帰った人の分は 安全', art: () => shaftArt(at(5, [], { phase: 'boom' }), { boom: true, burnt: ['h0', 'h1'] }) },
-    { t: `${EXPEDITIONS}回の探検で 合計が多い人の勝ち`, s: 'レーダーは 1回だけ 使える', art: () => slaRank([['1位', '12こ'], ['2位', '9こ'], ['3位', '5こ']]) },
+    { t: `${EXPEDITIONS}回の探検で 合計が多い人の勝ち`, s: 'バッグの レーダー・鉄カブト・ウォッカは どれも1回だけ', art: () => slaRank([['1位', '12こ'], ['2位', '9こ'], ['3位', '5こ']]) },
   ];
 }
 function slaRank(rows) { return h('div', { class: 'sla-rank' }, rows.map(([a, b], k) => h('div', { class: k ? null : 'win' }, h('b', null, a), h('i', null, `プレイヤー${k + 1}`), h('span', null, b)))); }
@@ -1068,6 +1329,7 @@ function fitTk() {
 try { document.fonts && document.fonts.ready.then(fitTk); } catch (e) { }
 window.addEventListener('resize', fitTk);
 function render() {
+  sfxOver();
   if (TS.B) { TS.B.dispose(); TS.B = null; } TS.root = null;
   let v, inGame = false;
   // コイン（#コードつき）で開いたときは、つながる前から「卓を開いています…」（最初の画面を見せない）
@@ -1100,6 +1362,8 @@ function render() {
   if (doc && doc.status === 'lobby' && hubPick(doc) === 'wordwolf' || !tableId && local && localGame === 'wordwolf') wwLoad().catch(() => { });
   if (doc && doc.status === 'lobby' && hubPick(doc) === 'tower' || !tableId && local && localGame === 'tower') twLoad().catch(() => { });
   if (doc && doc.status === 'lobby' && hubPick(doc) === 'boxing' || !tableId && local && localGame === 'boxing') bxLoad().catch(() => { });
+  // いっちょあがり！を選んだら絵を描いておく。描き終わったらホームのアイコンも差しかわるので描き直す
+  if ((doc && doc.status === 'lobby' && hubPick(doc) === 'icho' || !tableId && local && localGame === 'icho') && !IC.art && !IC.ready) ichLoad().then(() => { if (!doc || doc.status === 'lobby' || !tableId) render(); }, () => { });
 }
 setInterval(() => {
   if (doc && doc.status === 'lobby') { const t = $('lobbyTimer'); const left = Math.max(0, OPEN_MS - (Date.now() - doc.openedAt)); if (t) t.textContent = `招待コード ${tableId} ・ ` + (left ? `あと${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}` : '受付終了'); if (!left && t && !t.dataset.closed) { t.dataset.closed = '1'; render(); } }

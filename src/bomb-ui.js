@@ -30,7 +30,7 @@ function bmSend(a, id) {
   if (local) { try { doc = BMB.act(doc, who, a); } catch (e) { console.warn(e); } BM.sent = false; afterChange(); return; }
   withLease(d => d && d.status === 'playing' && d.b && d.b.seq === seq0 ? BMB.act(d, who === me || !BMB.isNpc(who) ? me : who, a) : null, true).then(r => { if (r !== 'ok') BM.sent = false; });
 }
-function bmPass() { if (!bmMine() || BM.sent || doc.b.phase !== 'play') return; BM.fly = true; const el = document.querySelector('.bm-bomb'); if (el) el.classList.add('fly'); const used = Date.now() - BM.at; setTimeout(() => { BM.fly = false; bmSend({ t: 'pass', used }); }, 230); if (navigator.vibrate) try { navigator.vibrate(15); } catch (e) { } }
+function bmPass() { if (!bmMine() || BM.sent || doc.b.phase !== 'play') return; BM.fly = true; SFX.play('whoosh'); const el = document.querySelector('.bm-bomb'); if (el) el.classList.add('fly'); const used = Date.now() - BM.at; setTimeout(() => { BM.fly = false; bmSend({ t: 'pass', used }); }, 230); if (navigator.vibrate) try { navigator.vibrate(15); } catch (e) { } }
 function bmStage(b) {
   const mine = bmMine(), el = h('div', { class: 'bm-bomb' + (mine ? ' mine' : ''), role: mine ? 'button' : null, 'aria-label': mine ? '爆弾を次の人へ渡す' : null }, BM.art ? h('img', { src: BM.art, alt: '爆弾', draggable: 'false' }) : h('i', { class: 'bm-noart' }));
   if (mine) {
@@ -44,7 +44,7 @@ function bmStage(b) {
 }
 function bombView() {
   const g = doc, b = g.b, over = g.status !== 'playing';
-  if (BM.key !== b.gid + ':' + b.seq) { BM.key = b.gid + ':' + b.seq; BM.at = Date.now(); BM.sent = false; BM.wait = 1000 + Math.random() * 2200; if (navigator.vibrate && b.phase === 'boom') try { navigator.vibrate([120, 40, 200]); } catch (e) { } }
+  if (BM.key !== b.gid + ':' + b.seq) { const first = BM.key === -1; BM.key = b.gid + ':' + b.seq; BM.at = Date.now(); BM.sent = false; BM.wait = 1000 + Math.random() * 2200; BM.tickAt = 0; if (!first && b.phase === 'boom') SFX.play('boom'); else if (!first && b.phase === 'play' && b.last && b.last.kind === 'pass' && !bmMine()) SFX.play('whoosh'); if (navigator.vibrate && b.phase === 'boom') try { navigator.vibrate([120, 40, 200]); } catch (e) { } }
   const mine = bmMine(), seats = h('div', { class: 'bm-seats' }, b.order.map(s => [b.seats[s], s]).map(([id, s]) => h('div', { class: 'bm-seat' + (s === b.holder && b.phase === 'play' ? ' on' : '') + (b.lives[s] <= 0 ? ' out' : '') }, h('b', null, bdName(id)), h('span', null, Array.from({ length: Math.max(0, b.lives[s]) }, () => h('i'))))));
   const head = bdHead('ばくだんパス', `${b.round}回目 ・ ${local ? '1台で遊ぶ' : '招待コード ' + tableId}`, 'bomb');
   if (over) { const w = b.result.win; return h('div', { class: 'bm' }, head, seats, bdOverCard(`${bdName(b.seats[w])}の勝ち！`, '最後まで爆発しなかった人の勝ち', null)); }
@@ -62,6 +62,8 @@ setInterval(() => {
   if (!isBombDoc() || doc.status !== 'playing' || doc.b.phase !== 'play' || !BS.root || !BS.root.isConnected) return;
   const b = doc.b, used = Date.now() - BM.at, npc = BMB.isNpc(bmHolder()), mine = bmMine(), lcd = $('bmLcd'); if (lcd) lcd.textContent = bmClock(b);
   const el = document.querySelector('.bm-bomb'); if (el) el.style.setProperty('--sh', Math.min(9, 1 + used / 1500).toFixed(1) + 'px');
+  // 持っているあいだはチクタク（だんだん速く）
+  if (mine && !BM.fly) { const gap = Math.max(260, 900 - used / 25); if (Date.now() - (BM.tickAt || 0) >= gap) { BM.tock = !BM.tock; SFX.play(BM.tock ? 'tock' : 'tick'); BM.tickAt = Date.now(); } }
   const f = $('bmForce'); if (f && used > 25000) f.hidden = false;
   if (BM.fly || BM.sent) return;
   if ((mine || (npc && bmDriver())) && used >= b.fuse) { bmSend({ t: 'boom' }); return; }

@@ -1,8 +1,8 @@
 /* =================== 盤のゲーム（リバーシ・チェス・将棋）とビンゴ大会の画面 =================== */
 // app.js の /*__BOARD_UI__*/ の位置に差し込まれる（app.js の変数を共有）
 const BS = { root: null, sel: null, seen: 0, pending: false, tab: null, cache: null, taps: new Set(), peek: false, lastSeat: null, fx: null, ro: null };
-const isBoardDoc = () => !!doc && (doc.game === 'boxing' || doc.game === 'wordwolf' || doc.game === 'bingo' || doc.game === 'alchemy' || doc.game === 'bomb' || doc.game === 'tower' || !!DUEL[doc.game] || !!CARDG[doc.game]) && !!doc.b;
-const BD_TITLE = { reversi: 'リバーシ', chess: 'チェス', shogi: '将棋', bingo: 'ビンゴ大会', daifugo: '大富豪', babanuki: 'ババ抜き', alchemy: '月夜の錬金市場', bomb: 'ばくだんパス', tower: 'ぐらぐらタワー', wordwolf: 'ワードウルフ', boxing: 'ガツンとロボ' };
+const isBoardDoc = () => !!doc && (doc.game === 'boxing' || doc.game === 'icho' || doc.game === 'wordwolf' || doc.game === 'bingo' || doc.game === 'alchemy' || doc.game === 'bomb' || doc.game === 'tower' || !!DUEL[doc.game] || !!CARDG[doc.game]) && !!doc.b;
+const BD_TITLE = { reversi: 'リバーシ', chess: 'チェス', shogi: '将棋', bingo: 'ビンゴ大会', daifugo: '大富豪', babanuki: 'ババ抜き', alchemy: '月夜の錬金市場', bomb: 'ばくだんパス', tower: 'ぐらぐらタワー', wordwolf: 'ワードウルフ', boxing: 'ガツンとロボ', icho: 'いっちょあがり！' };
 const CHESS_G = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' }, CHESS_N = { Q: 'クイーン', R: 'ルーク', B: 'ビショップ', N: 'ナイト' };
 const chessGlyph = t => CHESS_G[t] + '︎'; // 絵文字にならないように文字として出す
 const SHOGI_K = { K: '玉', R: '飛', B: '角', G: '金', S: '銀', N: '桂', L: '香', P: '歩', D: '龍', H: '馬', Z: '全', M: '圭', Y: '杏', T: 'と' };
@@ -33,6 +33,7 @@ function bdSlides(id) {
   if (id === 'alchemy') return alSlides();
   if (id === 'wordwolf') return wwSlides();
   if (id === 'boxing') return bxSlides();
+  if (id === 'icho') return ichSlides();
   if (id === 'bomb') return bmSlides();
   if (id === 'tower') return twSlides();
   if (CARDG[id]) return cdSlides(id);
@@ -68,6 +69,7 @@ function bdTicketArt(id, art) {
   if (id === 'alchemy') { alTicketArt(art); return; }
   if (id === 'bomb') { bmTicketArt(art); return; }
   if (id === 'tower') { twTicketArt(art); return; }
+  if (id === 'icho') { ichTicketArt(art); return; }
   if (id === 'boxing') { art.classList.add('tk-css'); art.style.position = 'relative'; art.append(h('img', { class: 'tka-cover', src: ICON_ART.boxing, alt: '' })); return; }
   if (CARDG[id]) { cdTicketArt(id, art); return; }
   art.classList.add('tk-css', 'tk-' + id);
@@ -89,6 +91,7 @@ function viewBoard() {
   bd3Drop(); CS.sel.clear(); CS.shown = -1; CS.view = -1; CS.lhover = -1; CS.seen = doc.b.seq; CS.fieldKey = doc.b.field ? doc.b.seq : '';
   if (doc.game === 'tower') { const root = BS.root; twLoad().then(() => { if (BS.root === root && isTowerDoc()) bdRender(); }, () => toast('読みこめませんでした')); }
   if (doc.game === 'boxing') { const root = BS.root; bxLoad().then(() => { if (BS.root === root && isBoxDoc()) bdRender(); }, () => { BX.failed = true; if (BS.root === root && isBoxDoc()) bdRender(); }); }
+  if (doc.game === 'icho') { const root = BS.root; ichLoad().then(() => { if (BS.root === root && isIchoDoc()) bdRender(); }, () => { }); }
   if (doc.game === 'wordwolf') { const root = BS.root; wwLoad().then(() => { if (BS.root === root && isWordDoc()) bdRender(); }, () => { }); }
   if (doc.game === 'bomb') { const root = BS.root; bmLoad().then(() => { if (BS.root === root && isBombDoc()) bdRender(); }, () => { }); }
   if (doc.game === 'alchemy') { const root = BS.root; AL3.load().then(() => { if (BS.root === root && isAlcDoc()) bdRender(); }, () => { }); }
@@ -99,7 +102,7 @@ function viewBoard() {
 function bd3Drop() { if (BS.b3) { BS.b3.dispose(); BS.b3 = null; } if (BS.c3) { BS.c3.dispose(); BS.c3 = null; } }
 function bdRender() {
   if (!BS.root || !BS.root.isConnected) { render(); return; }
-  const parts = doc.game === 'boxing' ? boxView() : doc.game === 'wordwolf' ? wordView() : doc.game === 'tower' ? towerView() : doc.game === 'bomb' ? bombView() : doc.game === 'alchemy' ? alcView() : doc.game === 'bingo' ? bingoView() : CARDG[doc.game] ? cardView() : duelView();
+  const parts = doc.game === 'boxing' ? boxView() : doc.game === 'icho' ? ichoView() : doc.game === 'wordwolf' ? wordView() : doc.game === 'tower' ? towerView() : doc.game === 'bomb' ? bombView() : doc.game === 'alchemy' ? alcView() : doc.game === 'bingo' ? bingoView() : CARDG[doc.game] ? cardView() : duelView();
   BS.root.replaceChildren(...[parts].flat(2).filter(Boolean));
   bdFit();
 }
@@ -113,10 +116,12 @@ function bdFit() {
   if (s <= 0) return;
   gr.style.width = gr.style.height = s + 'px'; gr.style.setProperty('--cell', (s / n) + 'px');
 }
-function bdHead(title, sub, game) {
+function bdHead(title, sub, game, extra, onHelp) {
   // 終わったあとは「ゲーム選択へ」「もう一度」だけ（卓から出るボタンはまぎらわしいので出さない）
+  // extra：「？」の左に置くボタン（いっちょあがり！のレシピ）。onHelp：「？」でスライドの代わりにすること
   return h('div', { class: 'bd-head' }, h('div', { class: 'bd-ttl' }, h('b', { role: 'heading', 'aria-level': '1' }, title), h('small', null, sub)),
-    h('button', { class: 'hub-ib', 'aria-label': '遊びかた', onclick: () => bdOpenRules(game) }, '?'),
+    extra || null,
+    h('button', { class: 'hub-ib', 'aria-label': '遊びかた', onclick: () => onHelp ? onHelp() : bdOpenRules(game) }, '?'),
     doc.status === 'playing' ? h('button', { class: 'hub-ib quit', 'aria-label': '中断してホームにもどる', onclick: confirmQuit }, '中断')
       : null);
 }
@@ -172,6 +177,8 @@ function duelView() {
   const ev = b.last && b.last.seq > BS.seen ? b.last : null; BS.seen = Math.max(BS.seen, b.seq);
   BS.fx = ev && ev.flips ? new Set(ev.flips) : null;
   if (ev && ev.kind === 'move' && navigator.vibrate) try { navigator.vibrate(12); } catch (e) { }
+  // 音：コトッ（取ったら低く）。リバーシはひっくり返る石ごとにパタッ
+  if (ev && ev.kind === 'move') { SFX.play(ev.cap || ev.capture || ev.took ? 'capture' : 'stone'); (ev.flips || []).slice(0, 8).forEach((_, i) => SFX.later('flip', 260 + i * 90)); if (ev.check && !over) SFX.later('check', 200); }
   if (ev && ev.pass != null) bdBanner(`${E.LABEL[ev.pass]}は置ける場所がないのでパス`);
   if (ev && ev.check && !over) bdBanner(g.game === 'chess' ? 'チェック！' : '王手！');
   const head = bdHead(BD_TITLE[g.game], `${local ? '1台で遊ぶ' : '招待コード ' + tableId} ・ ${b.ply}手目`, g.game);
@@ -342,7 +349,8 @@ function bingoView() {
   // 1台のときはタブで「回す係」と各カードを切りかえる
   const who = local ? (BS.tab && (BS.tab === b.caller || b.cards[BS.tab]) ? BS.tab : b.caller) : me;
   const ev = b.last && b.last.seq > BS.seen ? b.last : null; BS.seen = Math.max(BS.seen, b.seq);
-  if (ev && ev.kind === 'bingo') { bdBanner(`${bdName(ev.id)}がビンゴ！`); if (navigator.vibrate) try { navigator.vibrate([30, 40, 60]); } catch (e) { } }
+  if (ev && ev.kind === 'draw') SFX.play('ball');
+  if (ev && ev.kind === 'bingo') { SFX.play('bingo'); bdBanner(`${bdName(ev.id)}がビンゴ！`); if (navigator.vibrate) try { navigator.vibrate([30, 40, 60]); } catch (e) { } }
   if (ev && ev.kind === 'draw' && b.cards[who] && navigator.vibrate) try { navigator.vibrate(15); } catch (e) { }
   const head = bdHead('ビンゴ大会', `${local ? '1台で遊ぶ' : '招待コード ' + tableId} ・ ${b.drawn.length} / 75`, 'bingo');
   const tabs = local ? h('div', { class: 'seg sm bg-tabs' }, [b.caller, ...holders].map(id => h('button', { class: id === who ? 'on' : '', 'aria-pressed': String(id === who), onclick: () => { BS.tab = id; bdRender(); } }, id === b.caller ? '回す係' : bdName(id)))) : null;

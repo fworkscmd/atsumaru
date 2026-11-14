@@ -136,6 +136,7 @@ function trBanner(text) { if (!TS.boardEl) return; const el = h('div', { class: 
 function trEventFx(ev, t) {
   const who = trRole(ev.seat), vs = trViewSeat();
   if (ev.kind === 'card') {
+    SFX.play('card');
     if (ev.k === 'poison') trBanner(vs === 0 ? `${TR.CARD.poison.n}：${ev.cell}マス目のエサに毒をしこんだ` : '罠士がどこかのエサに毒をしこんだ…');
     else if (ev.k === 'pit') trBanner(vs === 0 ? `${TR.CARD.pit.n}：${ev.cell}マス目にほった` : '罠士がどこかに落とし穴をほった…');
     else if (ev.k === 'call') trBanner(`${who}が${TR.BIRD_NAMES[ev.target - 1]}をよんだ！`);
@@ -143,15 +144,18 @@ function trEventFx(ev, t) {
     else if (ev.k === 'wind') trBanner(`強風！ このラウンドは鳥みんなの出目が−1`);
     else trBanner(`${who}が「${TR.CARD[ev.k].n}」を使った`);
   }
+  if (ev.kind === 'roll') SFX.play('dice');
   if (ev.kind === 'roll' && TS.dieEl) { TS.dieEl.classList.remove('spin'); void TS.dieEl.offsetWidth; TS.dieEl.classList.add('spin'); if (navigator.vibrate) try { navigator.vibrate(15); } catch (e) { } }
 }
 function trAfterMove(ev) {
   if (ev.kind === 'move') {
     if (ev.broke && ev.broke.length) trBanner(`体当たりで罠を${ev.broke.length}こ こわした！`);
     const drew = ev.drew ? (ev.caught ? '　罠士がカードを1枚ひいた' : '　鳥みんながカードを1枚ひいた') : '';
+    if (ev.caught) SFX.play('snap'); else if (ev.food) SFX.play('eat');
     if (ev.caught) { trPop(0, 'つかまった！', 'bad', 1.1); trBanner((ev.pit ? `${trRole(ev.seat)}が落とし穴に落ちた！` : `${trRole(ev.seat)}がつかまった！`) + drew); if (navigator.vibrate) try { navigator.vibrate([40, 40, 80]); } catch (e) { } }
     else if (ev.food) { trPop(ev.to, ev.poison ? `＋${ev.food}　でも毒！` : `＋${ev.food}`, ev.poison ? 'poison' : 'good'); if (ev.grabbed || drew) trBanner((ev.grabbed ? 'よこどりで となりのエサも！' : 'エサをゲット！') + drew); }
   }
+  if (ev.kind === 'place' && ev.cells.length) SFX.play('trap');
   if (ev.kind === 'place') trBanner(ev.cells.length ? `罠を${ev.cells.length}こ おいた` : '罠をおかなかった');
 }
 function viewTrapShell() {

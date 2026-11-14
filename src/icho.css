@@ -1,0 +1,215 @@
+/* ===== いっちょあがり！（町中華のクリーム・朱。案は tools/chuka-flow-mockup.html） ===== */
+.bd-icho{position:fixed;inset:0;max-width:none;margin:0;display:block;background:#fdebd3}
+.ic{--ic-bg:#fdebd3;--ic-ph:#fff6ea;--ic-ink:#3a2016;--ic-mute:#8a6a55;--ic-red:#d8402a;--ic-red-d:#a92e1c;--ic-gold:#f1a52a;--ic-green:#3fae5a;--ic-line:#efd9bd;--ic-fr:#eaf4f7;
+  height:100%;max-width:440px;margin:0 auto;box-sizing:border-box;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;color:var(--ic-ink);overflow:hidden;position:relative}
+.ic button{font-family:inherit;cursor:pointer}
+.ic .bd-ttl b{color:var(--ic-red)}
+.ic .hub-ib{background:#fff;border-color:var(--ic-line)}
+.ic-noart{display:block;width:100%;height:100%;background:radial-gradient(circle,#f3dfc0 30%,transparent 32%)}
+/* 相手 */
+.ic-opps{display:flex;gap:5px;flex:none}
+.ic-op{flex:1;min-width:0;display:flex;align-items:center;gap:4px;background:#fff;border:0;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:700;color:inherit;box-shadow:0 2px 0 var(--ic-line)}
+.ic-op em{font-style:normal;font-size:9px;font-weight:900;color:#fff;background:var(--ic-green);border-radius:999px;padding:0 5px}
+.ic-op i{width:8px;height:8px;border-radius:50%;flex:none}
+.ic-op span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ic-op b{font-size:11px;white-space:nowrap}
+.ic-op.wait{opacity:.6}
+/* 見出し */
+.ic-pr{display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;flex:none}
+.ic-pr b{font-family:"Dela Gothic One","Zen Kaku Gothic New",sans-serif;font-weight:400;font-size:24px;line-height:1.15}
+.ic-pr b.ng{color:var(--ic-red)}
+.ic-pr span{font-size:11px;font-weight:700;color:var(--ic-mute)}
+.ic-hint{display:flex;align-items:center;gap:6px;align-self:center;background:#fff4d6;border:2px solid var(--ic-gold);border-radius:12px;padding:2px 10px 2px 3px;font-size:12px;font-weight:900;color:#7a4a08;max-width:100%;flex:none}
+.ic-hint img,.ic-hint .ic-noart{width:30px;height:30px;flex:none}
+.ic-hint b{color:var(--ic-red)}
+/* 市場 */
+.ic-mk{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;background:#fff;border-radius:16px;padding:12px 6px 7px;box-shadow:0 3px 0 var(--ic-line);flex:none}
+.ic-mk.done{grid-template-columns:repeat(5,minmax(0,1fr))}
+.ic-mc{position:relative;display:flex;flex-direction:column;align-items:center;background:var(--ic-bg);border:0;border-radius:10px;padding:3px 2px 4px;color:inherit;box-shadow:0 3px 0 rgba(120,60,30,.18);min-width:0}
+.ic-mc img,.ic-mc .ic-noart{width:100%;aspect-ratio:1/1;display:block}
+.ic-mn{font-size:10px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ic-mc.on{outline:3px solid var(--ic-green);transform:translateY(-4px)}
+.ic-mk.done .ic-mc.on{transform:none}
+.ic-mc.clash{outline:3px solid var(--ic-red)}
+.ic-sz{position:absolute;top:4px;right:4px;display:grid;gap:1.5px}
+.ic-sz i{width:5px;height:5px;background:var(--ic-ink);opacity:.5;border-radius:1px;display:block}
+.ic-num{position:absolute;left:3px;top:3px;min-width:18px;height:18px;padding:0 3px;box-sizing:border-box;border-radius:999px;background:var(--ic-green);color:#fff;font-size:11px;font-weight:900;display:grid;place-items:center}
+.ic-hb{position:absolute;left:2px;right:2px;bottom:19px;font-size:8px;font-weight:900;background:var(--ic-gold);color:#fff;border-radius:999px;padding:1px 0;text-align:center}
+.ic-deck .ic-back{display:block;width:78%;aspect-ratio:3/4;margin:6% 0 4%;border-radius:6px;border:3px solid #fff;background:var(--ic-red);box-shadow:2px 2px 0 var(--ic-red-d)}
+.ic-who{position:absolute;left:0;right:0;top:-10px;display:flex;justify-content:center;gap:2px}
+.ic-who i{width:14px;height:14px;border-radius:50%;border:2px solid #fff;display:block}
+.ic-cl{position:absolute;left:-4px;right:-4px;bottom:20px;font-size:9px;font-weight:900;background:var(--ic-red);color:#fff;border-radius:999px;padding:1px 0;transform:rotate(-6deg);text-align:center}
+/* 冷蔵庫 */
+/* 冷蔵庫は残った場所に入るいちばん大きい4:3（小さい画面でもボタンが押せるように） */
+.ic-fr{background:#fff;border-radius:20px;padding:7px;box-shadow:0 5px 0 #d6cbbd,inset 0 0 0 2px #f1ece4;flex:1 1 0;min-height:120px;max-height:300px;display:flex;justify-content:center;align-items:center;box-sizing:border-box}
+.ic-in{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:5px;aspect-ratio:4/3;height:100%;max-width:100%;background:var(--ic-fr);border-radius:14px;padding:6px;box-sizing:border-box;box-shadow:inset 0 6px 12px rgba(120,170,190,.25)}
+.ic-shelf{position:absolute;left:4px;right:4px;height:3px;border-radius:2px;background:rgba(150,200,215,.7)}
+.ic-slot{border:1.5px dashed #c9dde4;border-radius:10px}
+.ic-it{position:relative;z-index:1;border:0;padding:0;border-radius:11px;background:var(--c,#fff);box-shadow:0 3px 0 rgba(60,90,100,.18);overflow:hidden;min-width:0;min-height:0;color:inherit}
+.ic-it img,.ic-it .ic-noart{width:100%;height:100%;object-fit:contain;display:block}
+.ic-nm{position:absolute;left:5px;bottom:4px;font-size:9px;font-weight:900;background:rgba(255,255,255,.9);border-radius:999px;padding:0 6px;white-space:nowrap}
+.ic-it.sel{outline:3px solid var(--ic-red);outline-offset:-1px}
+.ic-it.hot{outline:3px solid var(--ic-gold);outline-offset:-1px}
+/* いま取った材料：上から飛んで入る */
+.ic-it.new{animation:ic-in .5s cubic-bezier(.3,1.5,.5,1) both;outline:3px solid var(--ic-green);outline-offset:-1px}
+@keyframes ic-in{from{transform:translateY(-120px) scale(.5);opacity:0}}
+/* どっちを作る？ */
+.ic-pick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;flex:none}
+.ic-pk{background:#fff;border:0;border-radius:18px;padding:8px 8px 10px;box-shadow:0 4px 0 var(--ic-line);display:flex;flex-direction:column;align-items:center;gap:2px;color:inherit}
+.ic-pk img,.ic-pk .ic-noart{width:100%;max-width:120px;aspect-ratio:1/1;background:var(--ic-bg);border-radius:12px}
+.ic-pk b{font-size:15px;font-weight:900}
+.ic-pk small{font-size:11px;font-weight:700;color:var(--ic-red)}
+/* 相手の冷蔵庫をのぞく */
+.ic-peek{--ic-bg:#fdebd3;--ic-ink:#3a2016;--ic-mute:#8a6a55;--ic-red:#d8402a;--ic-red-d:#a92e1c;--ic-gold:#f1a52a;--ic-green:#3fae5a;--ic-line:#efd9bd;--ic-fr:#eaf4f7;max-width:420px;margin:0 auto;background:#fff6ea;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px;color:#3a2016}
+.ic-peek .ic-fr{flex:none;height:auto;max-height:none}
+.ic-peek .ic-in{height:auto;width:100%}
+.ic-pk-hd{display:flex;align-items:center;gap:8px}
+.ic-pk-hd i{width:10px;height:10px;border-radius:50%}
+.ic-pk-hd b{flex:1;font-size:16px;font-weight:900}
+.ic-pk-hd span{font-weight:900}
+.ic-tray{display:flex;align-items:center;gap:6px;justify-content:center;flex:none}
+.ic-tray small{font-size:11px;font-weight:900;color:var(--ic-red)}
+.ic-it.out{width:64px;height:64px;outline:2px dashed var(--ic-red)}
+.ic-tip{align-self:center;display:flex;gap:4px;align-items:baseline;background:#fff;border-radius:12px;padding:5px 12px;font-size:11px;box-shadow:0 4px 12px rgba(60,30,10,.16);flex:none;max-width:100%}
+.ic-tip b{color:var(--ic-red);font-size:12px}
+/* ボタン */
+.ic-go{height:50px;border:0;border-radius:16px;background:var(--ic-ink);color:#fff;font-weight:900;font-size:15px;flex:none;width:100%}
+.ic-go:disabled{opacity:.4}
+.ic-go.red{background:var(--ic-red);box-shadow:0 4px 0 var(--ic-red-d)}
+.ic-go.wh{background:#fff;color:var(--ic-ink);box-shadow:0 3px 0 var(--ic-line)}
+.ic-wait{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ic-mute);flex:none;min-height:50px;justify-content:center}
+.ic-force{border:1px solid var(--ic-line);background:#fff;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700}
+.ic-skip{align-self:center;border:0;background:none;color:var(--ic-mute);font-size:12px;font-weight:700;text-decoration:underline;flex:none}
+/* 作った料理 */
+.ic-mine{margin-top:auto;background:#fff;border-radius:16px;padding:5px 10px;display:flex;align-items:center;gap:6px;box-shadow:0 2px 0 var(--ic-line);flex:none}
+.ic-mine small{font-size:10px;font-weight:900;color:var(--ic-mute);white-space:nowrap}
+.ic-mine b{font-size:13px;white-space:nowrap}
+.ic-plates{flex:1;display:flex;gap:3px;overflow:hidden;min-width:0}
+.ic-pl{width:32px;height:32px;background:var(--ic-bg);border-radius:50%;flex:none}
+.ic-none{font-size:11px;color:var(--ic-mute)}
+/* 1台で回す */
+.ic-cover{margin:auto 0;background:#fff;border-radius:20px;padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 4px 0 var(--ic-line)}
+.ic-cover b{font-size:20px}
+.ic-cover span{font-size:12px;color:var(--ic-mute)}
+/* せーの！ */
+.ic-gots{display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;flex:none}
+.ic-gots small{font-size:12px;font-weight:900}
+.ic-got{display:flex;align-items:center;gap:4px;background:#fff;border-radius:999px;padding:2px 10px 2px 2px;box-shadow:0 2px 0 var(--ic-line)}
+.ic-got img,.ic-got .ic-noart{width:34px;height:34px}
+.ic-got b{font-size:13px}
+.ic-got small{font-size:10px;color:var(--ic-mute)}
+.ic-got small.cl{color:var(--ic-red)}
+.ic-done{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;flex:0 1 auto;min-height:0}
+.ic-dish{display:flex;flex-direction:column;align-items:center;gap:0;animation:ic-pop .45s cubic-bezier(.3,1.6,.5,1)}
+.ic-dish .big{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,#fff5df 0 56%,transparent 57%)}
+.ic-dish b{font-family:"Dela Gothic One","Zen Kaku Gothic New",sans-serif;font-weight:400;font-size:22px}
+.ic-dish span{font-size:13px;font-weight:900;color:var(--ic-red)}
+.ic-none2{text-align:center;font-size:12px;color:var(--ic-mute);padding:10px 0}
+.ic-others{text-align:center;font-size:11px;color:var(--ic-mute);flex:none}
+@keyframes ic-pop{from{transform:scale(.4);opacity:0}}
+/* 料理ができた「どーん！」（icCookFx）。画面いっぱいに重ねる */
+.ic-cook{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(253,235,211,.9)}
+.ic-ck{position:relative;width:300px;height:340px;max-width:92vw}
+.ic-ck>*{position:absolute}
+.ic-ck-ing{width:80px;height:80px;bottom:10px;border-radius:12px;outline:3px solid #f1a52a;background:rgba(255,236,190,.7)}
+.ic-ck-dish{width:170px;height:170px;left:65px;top:20px;opacity:0}
+.ic-ck-lbl{left:0;right:0;top:244px;text-align:center;font-family:"Zen Kaku Gothic New",sans-serif;font-weight:900;font-size:26px;color:#3a2016;opacity:0}
+.ic-ck-lbl small{display:block;font-family:"Zen Kaku Gothic New",sans-serif;font-weight:900;font-size:15px;color:#d8402a}
+.ic-ck-fl{position:fixed !important;inset:0;background:#fff;opacity:0;pointer-events:none}
+.ic-ck-stamp{left:50%;top:158px;width:176px;margin-left:-88px;padding:7px 0;border:4px solid #d8402a;border-radius:10px;color:#d8402a;background:rgba(255,250,240,.9);font-family:"Zen Kaku Gothic New",sans-serif;font-weight:900;font-size:28px;line-height:1.05;text-align:center;opacity:0}
+.ic-ck-stamp small{display:block;font-family:"Zen Kaku Gothic New",sans-serif;font-weight:900;font-size:13px;letter-spacing:.3em}
+/* 閉店 */
+.ic-res{flex:1;display:flex;flex-direction:column;gap:7px;min-height:0}
+.ic-rk{background:#fff;border-radius:14px;padding:6px 10px;display:grid;grid-template-columns:26px 1fr auto;gap:2px 8px;align-items:center;box-shadow:0 3px 0 var(--ic-line)}
+.ic-rk.me{outline:3px solid var(--ic-red)}
+.ic-rk .no{grid-row:span 2;font-family:"Dela Gothic One",sans-serif;font-size:20px;color:var(--ic-red);text-align:center}
+.ic-rk .nm{font-weight:900;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ic-rk .sc{grid-row:span 2;font-family:"Dela Gothic One",sans-serif;font-size:22px}
+.ic-rk .sc small{font-family:inherit;font-size:11px}
+.ic-rk .ds{display:flex;gap:2px;flex-wrap:wrap}
+.ic-rk .ds img,.ic-rk .ds .ic-noart{width:24px;height:24px;background:var(--ic-bg);border-radius:50%}
+.ic-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:auto}
+/* 木札の番付 */
+.ic-bz{text-align:center;display:flex;flex-direction:column;gap:2px}
+.ic-bz b{font-family:"Yuji Syuku","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:400;font-size:30px;color:var(--ic-red);line-height:1.15}
+.ic-bz span{font-size:12px;font-weight:900;color:var(--ic-mute)}
+.ic-fds{flex:1;min-height:0;max-height:330px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;padding:0 2px}
+.ic-fd{all:unset;cursor:pointer;min-height:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 0 10px;border-radius:6px 6px 12px 12px;
+  background:linear-gradient(90deg,#c99a62,#dcb27c 50%,#c08c52);box-shadow:0 4px 0 #8a5a32,inset 0 0 0 1px rgba(90,50,20,.25);color:#2a1a10;-webkit-tap-highlight-color:transparent}
+.ic-fd:active{transform:translateY(2px);box-shadow:0 2px 0 #8a5a32}
+.ic-fd.me{outline:3px solid var(--ic-red);outline-offset:2px}
+.ic-fd.drop{animation:ic-hang .6s both cubic-bezier(.3,1.5,.5,1)}
+@keyframes ic-hang{from{transform:translateY(-110vh)}}
+.ic-fd .r{flex:none;width:30px;height:30px;border-radius:50%;background:var(--ic-red);color:#fff;display:grid;place-items:center;font-family:"Dela Gothic One",sans-serif;font-size:18px}
+.ic-fd .n{flex:1;min-height:0;overflow:hidden;writing-mode:vertical-rl;font-family:"Yuji Syuku","Hiragino Mincho ProN","Yu Mincho",serif;line-height:1.1;letter-spacing:.05em}
+.ic-fd .y{flex:none;font-size:11px;font-weight:900}
+.ic-fd .g{flex:none;max-height:42%;overflow:hidden;writing-mode:vertical-rl;font-size:11px;font-weight:900;color:var(--ic-red);background:#fffaf0;padding:5px 2px;border-radius:3px;line-height:1.1}
+/* 開店：のれん */
+.ic-open{position:fixed;inset:0;z-index:60;overflow:hidden;background:rgba(253,235,211,.0);cursor:pointer}
+.ic-nr{position:absolute;left:0;right:0;top:0;height:46%;display:flex;gap:4px;padding:0 8px;transform-origin:top center}
+.ic-nr i{flex:1;font-style:normal;background:#d8402a;border-radius:0 0 12px 12px;box-shadow:inset 0 -8px 0 #a92e1c,0 6px 14px rgba(60,20,10,.25);display:grid;place-items:center;color:#fff;font-family:"Yuji Syuku","Hiragino Mincho ProN","Yu Mincho",serif;font-size:min(16vw,72px)}
+.ic-nr::before{content:"";position:absolute;left:0;right:0;top:0;height:12px;background:#5a3a22}
+.ic-op-big{position:absolute;left:0;right:0;top:40%;text-align:center;font-family:"Dela Gothic One",sans-serif;font-size:min(15vw,64px);color:#d8402a;opacity:0;text-shadow:0 3px 0 #fff}
+.ic-op-sub{position:absolute;left:16px;right:16px;top:calc(40% + min(19vw,82px));text-align:center;font-size:14px;font-weight:900;color:#3a2016;opacity:0}
+/* 見出し：レシピのボタンが入るぶん、題名を少し小さく */
+.ic .bd-ttl b{font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ic .ic-rcb{padding:0 10px}
+/* レシピ表（近い順） */
+.ic-rcs{max-height:86vh;display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.ic-rcs>*{align-self:stretch;width:auto}
+.ic-rcs .ic-rc-sec{align-self:flex-start}
+.ic-rc-key{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:11px;font-weight:700;color:var(--ic-mute)}
+.ic-rc-key span.have{width:12px;height:12px;border-radius:4px;border:2px solid var(--ic-green);background:#fff}
+.ic-rc-key em{font-style:normal}.ic-rc-key em.w{flex-basis:100%}
+.ic-rc-key i{width:9px;height:9px;border-radius:50%;background:var(--ic-gold);margin-left:6px}
+.ic-rc-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:5px;padding:2px 2px 4px;overscroll-behavior:contain}
+.ic-rc-sec{align-self:flex-start;font-size:11px;font-weight:900;color:#fff;background:#9a8270;border-radius:7px;padding:2px 9px;margin-top:4px}
+.ic-rc-sec.s0{background:var(--ic-red)}.ic-rc-sec.s1{background:var(--ic-gold)}
+.ic-rc{display:grid;grid-template-columns:44px 1fr auto;gap:8px;align-items:center;background:#fff;border-radius:12px;padding:4px 10px 4px 6px;box-shadow:0 2px 0 var(--ic-line)}
+.ic-rc .ic-rc-d{width:44px;height:44px}
+.ic-rc-m{min-width:0}
+.ic-rc-m b{font-size:13px;font-weight:900}
+.ic-rc-i{display:flex;gap:4px;margin-top:3px}
+.ic-rc-g{position:relative;width:32px;height:32px;border-radius:9px;background:var(--ic-bg);display:grid;place-items:center;opacity:.55}
+.ic-rc-g img,.ic-rc-g .ic-noart{width:28px;height:28px}
+.ic-rc-g.have{opacity:1;background:#fff;box-shadow:inset 0 0 0 2.5px var(--ic-green)}
+.ic-rc-g i{position:absolute;right:-2px;top:-2px;width:10px;height:10px;border-radius:50%;background:var(--ic-gold);border:2px solid #fff}
+.ic-rc-p{font-family:"Dela Gothic One",sans-serif;font-size:20px;color:var(--ic-red)}
+.ic-rc-p small{font-family:"Zen Kaku Gothic New",sans-serif;font-weight:900;font-size:10px}
+/* 遊びながら教える */
+.ic-coach{position:fixed;inset:0;z-index:55;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ic-co-hole{position:fixed;border-radius:16px;box-shadow:0 0 0 200vmax rgba(40,20,10,.6);transition:all .3s cubic-bezier(.3,.7,.3,1);outline:3px solid #f1a52a;outline-offset:2px}
+.ic-co-bub{position:fixed;left:16px;right:16px;max-width:400px;margin:0 auto;background:#fff;color:#3a2016;border-radius:16px;padding:12px 14px 10px;box-shadow:0 6px 0 rgba(0,0,0,.18);display:flex;flex-direction:column;gap:3px}
+.ic-co-bub b{font-size:16px;font-weight:900}
+.ic-co-bub small{font-size:12px;font-weight:700;color:#8a6a55;line-height:1.5}
+.ic-co-bub .n{align-self:flex-end;font-size:10.5px;font-weight:900;color:#d8402a}
+.ic-co-skip{position:fixed;right:16px;bottom:max(16px,env(safe-area-inset-bottom));height:36px;padding:0 16px;border-radius:12px;border:0;background:rgba(255,255,255,.92);color:#3a2016;font:900 13px "Zen Kaku Gothic New",sans-serif}
+/* 遊びかたのスライド */
+.ic-sla-fr{width:190px;--ic-bg:#fdebd3;--ic-line:#efd9bd;--ic-fr:#eaf4f7;--ic-mute:#8a6a55}
+.ic-sla-p{display:flex;flex-direction:column;align-items:center;gap:2px}
+.ic-sla-p b{font-family:"Dela Gothic One",sans-serif;color:#d8402a;font-size:16px}
+/* かぶった！：ひっぱりあい */
+.ic-tug{position:fixed;inset:0;z-index:58;background:rgba(253,235,211,.9);display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ic-tg{position:relative;width:300px;height:300px}
+.ic-tg>*{position:absolute}
+.ic-tg-x{left:102px;top:92px;width:96px;height:96px;filter:drop-shadow(0 6px 6px rgba(60,20,10,.2))}
+.ic-mit{top:112px;width:70px;height:60px;border-radius:28px 32px 32px 28px;background:var(--c);box-shadow:inset 0 -6px 0 rgba(0,0,0,.18)}
+.ic-mit::after{content:"";position:absolute;top:-12px;width:24px;height:34px;border-radius:13px;background:var(--c)}
+.ic-mit::before{content:"";position:absolute;inset:7px;border:2px dashed rgba(255,255,255,.6);border-radius:inherit}
+.ic-mit.l{left:52px}.ic-mit.l::after{right:9px;transform:rotate(25deg)}
+.ic-mit.r{left:178px}.ic-mit.r::after{left:9px;transform:rotate(-25deg)}
+.ic-tg-w{left:0;right:0;top:24px;text-align:center;font-family:"Dela Gothic One",sans-serif;font-size:34px;color:#d8402a;opacity:0;text-shadow:0 3px 0 #fff}
+.ic-tg-res{left:0;right:0;top:206px;text-align:center;opacity:0;display:flex;flex-direction:column;gap:2px;color:#3a2016}
+.ic-tg-res b{font-size:22px;font-weight:900}
+.ic-tg-res span{font-size:13px;font-weight:700;color:#8a6a55}
+.ic-tg-nm{left:0;right:0;top:262px;display:flex;justify-content:space-between;gap:8px}
+.ic-tg-nm span{max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;font-size:12px;font-weight:900;border-radius:999px;padding:3px 10px}
+/* 1ターン目：あと1つの材料を指さす */
+.ic-mc.coach{animation:ic-coach 1.1s ease-in-out infinite}
+@keyframes ic-coach{50%{box-shadow:0 0 0 5px rgba(241,165,42,.55)}}
+/* 遊びかた */
+.ic-sla{width:64px;height:64px}
+/* 小さい画面 */
+@media (max-height:740px){.ic{gap:6px}.ic-pr b{font-size:20px}.ic-go{height:44px}.ic-dish .big{width:110px;height:110px}.ic-mk{padding-top:10px}}
+@media (max-height:740px){.ic-fds{max-height:270px}.ic-bz b{font-size:24px}}
+@media (prefers-reduced-motion:reduce){.ic-co-hole{transition:none}.ic-fd.drop,.ic-mc.coach{animation:none}.ic-dish{animation:none}.ic-mc.on{transform:none}.ic-it.new{animation:none}}

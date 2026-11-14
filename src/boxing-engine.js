@@ -55,6 +55,8 @@ const BOX = (() => {
     if (g.status !== 'playing') throw new Error('トーナメントは終わっています');
     if (a.t === 'next') {
       if (b.phase !== 'matchover') throw new Error('まだ試合中です');
+      // 予想が当たった人（次の試合で声援が金色に光る）
+      b.lucky = Object.keys(m.bets || {}).filter(p => m.bets[p] === m.result.win);
       b.games.push({ tier: b.tier, seats: m.seats, result: m.result, hits: m.hits, rounds: m.log.length });
       b.mi++; startNext(g, rnd); b.seq++; return g;
     }
@@ -62,6 +64,13 @@ const BOX = (() => {
     if (a.t === 'cheer') {
       if (!CHEERS.includes(a.w)) throw new Error('その声援はありません');
       b.cn = (b.cn || 0) + 1; b.cheers = (b.cheers || []).concat({ id, w: a.w, n: b.cn }).slice(-6); return g;
+    }
+    // 勝敗の予想：リングにいない人が、試合が終わるまでに1回（変えてもいい）。w は 0（赤の席）か 1（青の席）。seq は進めない
+    if (a.t === 'bet') {
+      if (!m || m.result || b.phase !== 'pick') throw new Error('いまは予想できません');
+      if (m.seats.includes(id)) throw new Error('リングにいる人は予想できません');
+      if (a.w !== 0 && a.w !== 1) throw new Error('どちらかを選んでください');
+      m.bets = m.bets || {}; m.bets[id] = a.w; return g;
     }
     // 待たずに進める（部屋主）：まだ選んでいない人の分を、でたらめに選んで進める
     if (a.t === 'force') {

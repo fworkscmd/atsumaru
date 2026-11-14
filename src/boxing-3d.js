@@ -250,8 +250,8 @@ const BX3 = (() => {
         star(0, tgt, ev.hit[0] ? '#ffe27a' : '#9fd0ff', t - (T0 + .2)); const me = toWorld(myG[ev.mine.grd === 'left' ? 1 : 0]);
         star(1, ev.hit[1] ? [otx * .6, 1.3, 1.25] : me, ev.hit[1] ? '#ff6a4a' : '#9fd0ff', ev.hit[1] ? -1 : t - (T1 + .2));
         S.shake = (ev.hit[0] && t > T0 + .2 && t < T0 + .38 ? .02 : 0) + (ev.hit[1] && t > T1 + .2 && t < T1 + .5 ? .07 : 0);
-        if (ev.hit[1] && S.onEvent && !S.hurt && t > T1 + .2) { S.hurt = 1; S.onEvent('hurt'); }
-        if (ev.hit[0] && S.onEvent && !S.zap && t > T0 + .2) { S.zap = 1; S.onEvent('hit'); }
+        if (ev.hit[1] && S.onEvent && !S.hurt && t > T1 + .2) { S.hurt = 1; S.onEvent('hurt'); S.hsUntil = performance.now() + 110; }
+        if (ev.hit[0] && S.onEvent && !S.zap && t > T0 + .2) { S.zap = 1; S.onEvent('hit'); S.hsUntil = performance.now() + (S.slowK < 1 ? 220 : 110); }
       } }; }
     const toWorld = p => { rig.updateMatrixWorld(true); return rig.localToWorld(V(...p)).toArray(); };
     // 観戦：赤が打ってから青が打つ
@@ -262,6 +262,9 @@ const BX3 = (() => {
         B.set(track([[0, STANCE], [T0, GRD[p1.grd], 'o'], [T0 + .25, GRD[p1.grd]], [T0 + .3, ev.hit[0] ? HIT : GRD[p1.grd], 'o'], [T0 + .75, STANCE, 'io'], [T1, STANCE], [T1 + .2, pp(p1.atk), 'i'], [T1 + .45, pp(p1.atk)], [T1 + .8, STANCE, 'io']], t));
         const mid = [.02, 1.32, .06]; star(0, mid, ev.hit[0] ? '#ffe27a' : '#9fd0ff', t - (T0 + .2)); star(1, mid, ev.hit[1] ? '#ffe27a' : '#9fd0ff', t - (T1 + .2));
         S.shake = (ev.hit[0] && t > T0 + .2 && t < T0 + .35) || (ev.hit[1] && t > T1 + .2 && t < T1 + .35) ? .025 : 0;
+        // 横から見るときも、当たった瞬間に止める
+        if (ev.hit[0] && !S.zap && t > T0 + .2) { S.zap = 1; S.hsUntil = performance.now() + (S.slowK < 1 ? 220 : 90); if (S.onEvent) S.onEvent('sidehit'); }
+        if (ev.hit[1] && !S.hurt && t > T1 + .2) { S.hurt = 1; S.hsUntil = performance.now() + (S.slowK < 1 ? 220 : 90); if (S.onEvent) S.onEvent('sidehit'); }
       } }; }
     // KO：バネで頭が飛び出す（頭はつながったまま）。肩の板がはずれて落ち、ひざをついてうなだれる
     function koAnim(Rb, ev) { const pads = Rb.pads.map(p => ({ m: p, o: p.position.clone(), r: p.rotation.clone() }));
@@ -314,10 +317,10 @@ const BX3 = (() => {
       S.raf = 0; if (!S.alive) return; if (!el.isConnected) { S.paused = true; return; }
       let moving = false;
       // 動きの途中でまちがいがあっても止まらないように、その動きは終わりにして先へ進める
-      if (S.anim) { const t = (now - S.t0) / 1000; let bad = false; try { S.anim.step(Math.min(t, S.anim.dur)); } catch (e) { console.warn(e); bad = true; } moving = true; if (bad || t >= S.anim.dur) { const done = S.anim.done; S.anim = null; done && done(); } }
+      if (S.anim) { const dtt = Math.min(.05, (now - (S.lastF || now)) / 1000); S.lastF = now; S.at = (S.at || 0) + dtt * (now < (S.hsUntil || 0) ? 0 : (S.slowK || 1)); const t = S.t0 < -1e8 ? 1e9 : S.at; /* ヒットストップのあいだは時間を止める・とどめの1発はスロー */ let bad = false; try { S.anim.step(Math.min(t, S.anim.dur)); } catch (e) { console.warn(e); bad = true; } moving = true; if (bad || t >= S.anim.dur) { const done = S.anim.done; S.anim = null; done && done(); } }
       if (S.mode === 'champ') { stepConf(Math.min(.05, (now - (S.last || now)) / 1000)); moving = moving || 'champ'; }
       else if (!S.hold && !S.anim) { const b = Math.sin(now / 600) * .006; B.bod.position.y = b; A.bod.position.y = -b; if (S.mode === 'fp') rig.setHands(ARM_REST.map((h, i) => [h[0], h[1] + Math.sin(now / 520 + i * 1.7) * .008, h[2]])); }
-      placeCam(S.shake, S.roll || 0, S.drop || 0);
+      placeCam(S.shake + (now < (S.hsUntil || 0) ? .045 : 0), S.roll || 0, S.drop || 0); // 止まっているあいだは大きくふるえる
       if (moving === true) R.shadowMap.needsUpdate = true; // 紙吹雪だけのときは影を描き直さない
       const t0 = performance.now(); draw(); const dt = performance.now() - t0;
       // 重い端末はこまかさを下げる（動きのあいだ、続けて重いとき）
@@ -328,7 +331,7 @@ const BX3 = (() => {
     function schedule(ms) { if (S.raf || S.bk || !S.alive) return; const go = () => { S.raf = requestAnimationFrame(t => { clearTimeout(S.bk); S.bk = 0; frame(t); }); S.bk = setTimeout(() => { S.bk = 0; if (S.raf) { cancelAnimationFrame(S.raf); S.raf = 0; frame(performance.now()); } }, 150); };
       if (ms) S.raf = setTimeout(() => { S.raf = 0; go(); }, ms); else go(); }
     const stop = () => { if (S.raf) { cancelAnimationFrame(S.raf); clearTimeout(S.raf); S.raf = 0; } if (S.bk) { clearTimeout(S.bk); S.bk = 0; } };
-    function run(a) { return new Promise(ok => { S.hurt = S.zap = 0; S.anim = { ...a, done: ok }; S.t0 = performance.now(); stop(); schedule(0); }); }
+    function run(a) { return new Promise(ok => { S.hurt = S.zap = 0; S.at = 0; S.lastF = performance.now(); S.anim = { ...a, done: ok }; S.t0 = performance.now(); stop(); schedule(0); }); }
     schedule(0);
     return {
       el, setMode, resize,
@@ -345,6 +348,8 @@ const BX3 = (() => {
       reset: () => { S.anim = null; S.roll = S.drop = 0; A.reset(); B.reset(); A.set(STANCE); B.set(STANCE); fx.forEach(f => f.visible = false); sparks.forEach(s => s.m.visible = false); rig.setHands(ARM_REST); R.shadowMap.needsUpdate = true; schedule(0); },
       set onEvent(f) { S.onEvent = f; },
       busy: () => !!S.anim,
+      // とどめの1発：k 倍の速さ（スロー）と、寄ったカメラ（null でもどす）
+      setSlow: k => { S.slowK = k; }, setCam: c => { S.camO = c; schedule(0); },
       dispose: () => { S.alive = false; stop(); R.dispose(); R.forceContextLoss && R.forceContextLoss(); el.remove(); },
     };
   }

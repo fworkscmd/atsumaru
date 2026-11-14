@@ -37,4 +37,12 @@
 .gi-towi{display:block;position:relative;width:46%;height:62%;background:linear-gradient(#e8eef0 0 48%,#c8573f 48%);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
 .tk-tower{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='xMidYMid slice'%3E%3Crect width='100' height='100' fill='%23ffb347'/%3E%3Cg fill='%23ffd27a'%3E%3Cpath d='M50 55L-10 0H20z'/%3E%3Cpath d='M50 55L40 -10H70z'/%3E%3Cpath d='M50 55L95 -5H120V15z'/%3E%3Cpath d='M50 55L120 55V80z'/%3E%3Cpath d='M50 55L90 120H60z'/%3E%3Cpath d='M50 55L25 120H-5z'/%3E%3Cpath d='M50 55L-10 75V45z'/%3E%3C/g%3E%3C/svg%3E") center/cover;position:relative}
 .tka-tower{position:absolute;left:50%;top:50%;height:88%;transform:translate(-50%,-50%)}
-@media (prefers-reduced-motion:reduce){.tw-big{animation:none}}
+/* 積めたら高さがぴょこっ */
+.tw-hi.pop{animation:tw-pop .3s cubic-bezier(.3,1.7,.5,1);transform-origin:right center}
+@keyframes tw-pop{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
+/* 時間切れのゲージ（自分の番、残り10秒から） */
+.tw-tm{position:absolute;left:50%;top:calc(94px + env(safe-area-inset-top,0px));width:min(200px,50%);transform:translateX(-50%);height:24px;border-radius:12px;background:rgba(255,255,255,.85);box-shadow:0 2px 0 rgba(29,58,87,.25);overflow:hidden;pointer-events:none}
+.tw-tm i{position:absolute;left:0;top:0;bottom:0;background:#4c8fd6;transition:width .15s linear}
+.tw-tm.hot i{background:#e8402a}
+.tw-tm span{position:relative;display:block;text-align:center;font-size:13px;font-weight:900;line-height:24px;color:#1d3a57}
+@media (prefers-reduced-motion:reduce){.tw-big,.tw-hi.pop{animation:none}}

@@ -34,7 +34,7 @@ const bxLocalPicker = b => { const m = b.m; return [0, 1].find(i => !BOX.isNpc(m
 const bxSnap = m => ({ hits: m.hits.slice(), streak: m.streak.slice(), round: m.round, sudden: m.sudden });
 const bxWait = ms => new Promise(r => setTimeout(r, ms));
 function bxSend(a, who) {
-  const cheer = a.t === 'cheer'; if (!cheer) { if (BX.sent) return; BX.sent = true; }
+  const cheer = a.t === 'cheer' || a.t === 'bet'; if (!cheer) { if (BX.sent) return; BX.sent = true; }
   if (local) { try { doc = BOX.act(doc, who, a); } catch (e) { toast(e.message); } if (!cheer) BX.sent = false; afterChange(); return; }
   withLease(d => { if (!d || d.status !== 'playing' || !d.b) return null; try { return BOX.act(d, me, a); } catch (e) { return null; } }, cheer).then(r => { if (r !== 'ok' && !cheer) { BX.sent = false; if (isBoxDoc()) bdRender(); } });
 }
@@ -64,19 +64,26 @@ function bxSync(b) {
     BX.anim = true; BX.banner = null;
     const ev = mode === 'fp' ? { mine: e.picks[s], opp: e.picks[1 - s], hit: [e.hit[s], e.hit[1 - s]] } : { picks: e.picks, hit: e.hit };
     const st = BX.st, k0 = BX.mk;
+    // 音：自分の目のときは当たった瞬間（onEvent）。横から見るときと、どちらも当たらなかったときはここで
+    if (mode !== 'fp' && !e.hit[0] && !e.hit[1]) SFX.later('block', 650); // 当たったときの音は当たった瞬間（onEvent）
+    else if (!e.hit[0] && !e.hit[1]) SFX.later('block', 650);
+    // とどめの1発（KO になるラウンド）：スロー。自分の目なら、自分が決めるときはカメラがぐっと寄る
+    BX.fin = !!(res && res.how === 'ko') && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (BX.fin) { st.setSlow(.32); if (mode === 'fp' && res.win === s) st.setCam({ pos: [0, 1.42, 1.55], look: [0, 1.15, 0], hf: 28 }); }
     st.round(ev).then(async () => {
+      if (BX.fin) { st.setSlow(1); st.setCam(null); BX.fin = false; }
       if (BX.mk !== k0 || BX.st !== st) return;
       BX.view = bxSnap(m); BX.banner = bxBanner(e, s, b); bdRender();
       await bxWait(res ? 1100 : 1500); if (BX.mk !== k0) return; BX.banner = null;
       // KO はバネで頭が飛び出す。判定・サドンデスはふつうにひざから崩れる
-      if (res) { bdRender(); const L = 1 - res.win, who = mode === 'fp' ? (L === s ? 'me' : 'op') : L; await (res.how === 'ko' ? st.ko(who) : st.down(who)); if (BX.mk !== k0) return; }
+      if (res) { bdRender(); const L = 1 - res.win, who = mode === 'fp' ? (L === s ? 'me' : 'op') : L; SFX.play(res.how === 'ko' ? 'ko' : 'crash'); await (res.how === 'ko' ? st.ko(who) : st.down(who)); if (BX.mk !== k0) return; }
       if (res && s >= 0) bxTutDone();
       BX.anim = false; BX.at = Date.now(); BX.sent = false; BX.step = 'atk'; BX.atk = null; if (res) BX.over = true; if (isBoxDoc()) bdRender();
     });
   } else if (m.result && !BX.anim && m.log.length === BX.seen) BX.over = true;
 }
 // 新しい試合：まず「○○ VS ○○」を約2秒（いきなり始まらないように）。時間はそのあとから数える
-function bxVsStart() { BX.intro = Date.now() + 2300; BX.at = BX.intro; setTimeout(() => { if (isBoxDoc()) bdRender(); }, 2350); }
+function bxVsStart() { SFX.later('start', 1500); BX.intro = Date.now() + 2300; BX.at = BX.intro; setTimeout(() => { if (isBoxDoc()) bdRender(); }, 2350); }
 // トーナメントの始まりの動き。札は「○コーナー」（機体の色）とニックネーム。画面をタップでとばせる
 const BX_CN = ['赤', '青', '黄', '緑', 'オレンジ', 'むらさき', '白', '黒'];
 function bxOpen(b, s, mode) {
@@ -118,7 +125,24 @@ function bxPickCard(b, who) {
     grd ? h('button', { class: 'bx-back', onclick: () => { BX.step = 'atk'; BX.atk = null; bdRender(); } }, '打つ向きを選びなおす') : h('div', { class: 'bx-hint' }, '右・左は 画面の見たまま'));
 }
 // ---- 声援（観戦する人） ----
-function bxCheers() { return h('div', { class: 'bx-cheer' }, h('small', null, '声援は 試合中の2人の画面にも出ます'), h('div', null, BOX.CHEERS.map((w, i) => h('button', { class: 'c' + i, onclick: () => bxSend({ t: 'cheer', w }, local ? doc.b.entrants.find(x => !BOX.isNpc(x)) : me) }, w)))); }
+// あと1発！：3回連続で当てたら（次に当てたら KO）。自分なら画面のはしが赤く脈打つ。相手なら「ピンチ！」。観戦は名前つき
+function bxReach(b, s) {
+  const m = b.m, v = BX.view || bxSnap(m), r = [0, 1].map(i => v.streak[i] === BOX.KO - 1);
+  const mine = s >= 0 && r[s], pinch = s >= 0 && r[1 - s];
+  BX.wrap.classList.toggle('reach', mine && !matchMedia('(prefers-reduced-motion: reduce)').matches);
+  if (mine) return h('div', { class: 'bx-reach' }, 'あと1発！', h('small', null, pinch ? '相手も あと1発。読みあい！' : '次に当てたら KO'));
+  if (pinch) return h('div', { class: 'bx-reach p' }, 'ピンチ！', h('small', null, '次に当てられたら KO'));
+  if (s < 0 && (r[0] || r[1])) return h('div', { class: 'bx-reach w' }, r[0] && r[1] ? 'どちらも あと1発！' : `${bdName(m.seats[r[0] ? 0 : 1])} あと1発！`);
+  return null;
+}
+// 勝敗の予想（リングにいない人）。当たったら次の試合の声援が金色に光る
+function bxBet(b) {
+  const m = b.m, bets = m.bets || {}, mine = bets[me], n = [0, 1].map(w => Object.values(bets).filter(x => x === w).length), all = n[0] + n[1];
+  const btn = w => h('button', { class: 'bxb ' + (w ? 'b' : 'a') + (mine === w ? ' sel' : ''), style: '--c:' + BX_ACC[bxCi(m.seats[w])], onclick: () => { SFX.play('tap'); bxSend({ t: 'bet', w }, me); } }, bdName(m.seats[w]));
+  return h('div', { class: 'bx-bet' }, h('small', null, mine == null ? 'どっちが勝つ？ 当たったら 次の声援が金色に' : 'あなたの予想（変えられます）'), h('div', { class: 'bxb-row' }, btn(0), btn(1)),
+    all ? h('div', { class: 'bxb-bar' }, h('i', { style: `width:${n[0] / all * 100}%;background:${BX_ACC[bxCi(m.seats[0])]}` }), h('u', { style: 'background:' + BX_ACC[bxCi(m.seats[1])] })) : null);
+}
+function bxCheers() { const gold = !local && (doc.b.lucky || []).includes(me); return h('div', { class: 'bx-cheer' + (gold ? ' gold' : '') }, h('small', null, gold ? '予想的中！ 声援が金色に光ります' : '声援は 試合中の2人の画面にも出ます'), h('div', null, BOX.CHEERS.map((w, i) => h('button', { class: 'c' + i, onclick: () => bxSend({ t: 'cheer', w }, local ? doc.b.entrants.find(x => !BOX.isNpc(x)) : me) }, w)))); }
 function bxFloat(b) {
   const cs = b.cheers || [], n = b.cn || 0; if (BX.cn < 0) { BX.cn = n; return; } if (n <= BX.cn) return;
   cs.filter(c => c.n > BX.cn).forEach((c, k) => { const el = h('div', { class: 'bx-fl c' + BOX.CHEERS.indexOf(c.w), style: `left:${12 + ((c.n * 37) % 60)}%;animation-delay:${k * .25}s` }, h('small', null, bdName(c.id)), c.w); BX.wrap.append(el); setTimeout(() => el.remove(), 2800 + k * 250); });
@@ -200,15 +224,20 @@ function bxAnn(b, s) {
 // ---- 画面 ----
 function bxMount() {
   if (BX.wrap) return;
-  BX.wrap = h('div', { class: 'bx' }); BX.host = h('div', { class: 'bx-stage' }); BX.hud = h('div', { class: 'bx-hud' }); BX.lbl = h('div', { class: 'bx-olb' }); BX.wrap.append(BX.host, BX.lbl, BX.hud);
+  BX.wrap = h('div', { class: 'bx' }); BX.host = h('div', { class: 'bx-stage' }); BX.hud = h('div', { class: 'bx-hud' }); BX.lbl = h('div', { class: 'bx-olb' });
+  BX.fl = h('div', { class: 'bx-flash' }); BX.ko = h('div', { class: 'bx-kotx' }, 'KO！'); BX.wrap.append(BX.host, BX.fl, BX.ko, BX.lbl, BX.hud);
   // 始まりの動きは、画面をタップでとばせる
   BX.host.addEventListener('pointerdown', () => { if (BX.opening === 2 && BX.st) BX.st.skip(); });
   addEventListener('resize', () => { if (BX.st && isBoxDoc()) BX.st.resize(); });
 }
+// 当たった瞬間のフラッシュ（ヒットストップと同時。自分が打たれたときは赤）。動きを減らす設定ならなし
+function bxFlash(ms, col) { if (!BX.fl || matchMedia('(prefers-reduced-motion: reduce)').matches) return; BX.fl.style.background = col; BX.fl.animate([{ opacity: .7 }, { opacity: 0 }], { duration: ms * 1.8, easing: 'ease-out' }); }
+// とどめの1発の「KO！」
+function bxKoText() { if (!BX.ko) return; BX.ko.animate([{ opacity: 0, transform: 'translate(-50%,-50%) scale(2.2)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1)', offset: .12 }, { opacity: 1, offset: .8 }, { opacity: 0, transform: 'translate(-50%,-50%) scale(1)' }], { duration: 2000, easing: 'ease-out' }); }
 function bxStart() {
   if (BX.st || BX.failed || !window.THREE || !BX.wrap.isConnected) return;
   try { BX.st = BX3.stage(); } catch (e) { console.warn(e); BX.failed = true; return; }
-  BX.host.append(BX.st.el); BX.st.onEvent = k => { if (k === 'hurt') { BX.wrap.classList.remove('hurt'); void BX.wrap.offsetWidth; BX.wrap.classList.add('hurt'); clearTimeout(BX.hurtT); BX.hurtT = setTimeout(() => BX.wrap.classList.remove('hurt'), 650); } }; // 光り終わったら外す（つけたままだと描き直すたびに光りなおす）
+  BX.host.append(BX.st.el); BX.st.onEvent = k => { bxFlash(BX.fin ? 260 : 130, k === 'hurt' ? '#ff4a3a' : '#ffffff'); if (BX.fin && k !== 'hurt') bxKoText(); if (k === 'sidehit') SFX.play('punch'); if (k === 'hit') SFX.play('punch'); if (k === 'hurt') { SFX.play('hurt'); BX.wrap.classList.remove('hurt'); void BX.wrap.offsetWidth; BX.wrap.classList.add('hurt'); clearTimeout(BX.hurtT); BX.hurtT = setTimeout(() => BX.wrap.classList.remove('hurt'), 650); } }; // 光り終わったら外す（つけたままだと描き直すたびに光りなおす）
   BX.st.resize(); if (isBoxDoc()) { BX.st.setMode(bxSeat(doc.b) >= 0 ? 'fp' : 'side'); bdRender(); }
 }
 function boxView() {
@@ -219,6 +248,8 @@ function boxView() {
   const parts = [bxTop(b, s)];
   if (BX.opening && BX.st) { BX.hud.replaceChildren(parts[0], h('div', { class: 'bx-oskip' }, 'タップでとばす')); return BX.wrap; }
   if (m && b.phase !== 'over') parts.push(bxVs(b, s));
+  const reachOk = m && b.phase === 'pick' && !BX.anim && !BX.over && !BX.table && Date.now() >= (BX.intro || 0);
+  if (reachOk) parts.push(bxReach(b, s)); else BX.wrap.classList.remove('reach');
   if (!BX.st) parts.push(h('div', { class: 'bx-load' }, BX.failed ? '3Dを表示できませんでした' : '読みこんでいます…'));
   if (BX.banner) parts.push(h('div', { class: 'bx-ban' }, BX.banner.map(([c, t]) => h('div', { class: c }, t))));
   if (BX.table) parts.push(h('div', { class: 'bx-sheet' }, h('div', { class: 'bx-res' }, h('small', null, 'トーナメント表'), h('b', null, b.phase === 'over' ? 'けっか' : `${BOX.tierName(b, b.tier)}　第${b.mi + 1}試合`)), bxBracket(b), h('button', { class: 'bx-sub', onclick: () => { BX.table = false; bdRender(); } }, 'とじる')));
@@ -234,7 +265,7 @@ function boxView() {
     } else if (s >= 0) {
       if (!m.picks[s] && !BX.sent) parts.push(bxAnn(b, s), bxPickCard(b, m.seats[s]));
       else parts.push(h('div', { class: 'bx-wait' }, h('span', null, '相手を待っています…'), bxHostOk() && !local ? h('button', { class: 'bx-force', id: 'bxForce', hidden: Date.now() - BX.at < BX_FORCE_MS, onclick: () => bdConfirm('来ていない人を待たずに 進めますか？', '進める', () => bxSend({ t: 'force' }, me)) }, '待たずに進める') : null));
-    } else { parts.push(bxCheers()); if (bxHostOk() && !local) parts.push(h('button', { class: 'bx-force', id: 'bxForce', hidden: Date.now() - BX.at < BX_FORCE_MS, onclick: () => bdConfirm('来ていない人を待たずに 進めますか？', '進める', () => bxSend({ t: 'force' }, me)) }, '待たずに進める')); }
+    } else { if (!local) parts.push(bxBet(b)); parts.push(bxCheers()); if (bxHostOk() && !local) parts.push(h('button', { class: 'bx-force', id: 'bxForce', hidden: Date.now() - BX.at < BX_FORCE_MS, onclick: () => bdConfirm('来ていない人を待たずに 進めますか？', '進める', () => bxSend({ t: 'force' }, me)) }, '待たずに進める')); }
   } else if (m && s < 0 && !BX.over && !local) parts.push(bxCheers());
   BX.hud.replaceChildren(...parts.filter(Boolean));
   bxFloat(b);

@@ -11,6 +11,12 @@
 .set-name input::placeholder{color:var(--h-line)}
 .set-name label{width:22px;height:22px;flex:none;color:var(--h-mute);display:grid;place-items:center;cursor:pointer}
 .set-note{font-size:11px;color:var(--h-mute)}
+/* 音 あり／なし */
+.set-snd{display:flex;align-items:center;gap:10px;margin-top:6px}
+.set-snd .set-lab{margin-top:0}
+.set-seg{display:inline-flex;background:var(--h-soft,#e9e7e1);border-radius:999px;padding:3px}
+.set-seg button{border:0;background:none;color:var(--h-ink,#141414);font:inherit;font-weight:700;font-size:13px;padding:5px 16px;border-radius:999px;cursor:pointer}
+.set-seg button.on{background:var(--h-ink,#141414);color:var(--h-card,#fff)}
 .set-tk .tk-stub{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 14px 12px}
 .set-tk .tk-stub button{min-height:42px;border:0;border-radius:10px;background:none;color:rgba(255,255,255,.75);font:inherit;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
 .set-tk .tk-stub button.on{background:rgba(255,255,255,.25);color:#fff}
