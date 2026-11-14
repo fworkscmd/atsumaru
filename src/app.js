@@ -241,7 +241,8 @@ function drawShaft(cv, g, opt = {}) {
   }
   // 気持ちの動き：リュックは中身の分ふくらむ。選んでいるあいだはそわそわ、危ない段（マグマ16%〜）では汗。大鉱脈のあとはバンザイ
   const tt = opt.t || Date.now(), choosing = g.phase === 'choose', hot = choosing && magmaRate(depth + 1) >= .16, fr = Math.floor(tt / 180);
-  inside.forEach((id, k) => sprite(c, SX + 8 + k * 8, shaftBottom - 2, pIndex(id), id === NPC, id === opt.me, id === opt.me ? (g.armed || {})[id] : null,
+  // 右の人から描く（リュックは体の左にあるので、左の人を手前にしないと、となりのリュックが顔にかぶる）
+  inside.map((id, k) => [id, k]).reverse().forEach(([id, k]) => sprite(c, SX + 8 + k * 8, shaftBottom - 2, pIndex(id), id === NPC, id === opt.me, id === opt.me ? (g.armed || {})[id] : null,
     { bag: (g.bag || {})[id] || 0, sweat: hot ? fr + k + 1 : 0, step: choosing && !(g.choice || {})[id] && (Math.floor(tt / 260) + k) % 2 === 0, banzai: !!opt.banzai && (Math.floor(tt / 200) + k) % 2 === 0 }));
   const home = g.players.filter(id => g.out && g.out[id] && g.out[id].result === 'home');
   home.forEach((id, k) => {
@@ -258,7 +259,9 @@ const DB_FALL = 160, DB_SPLASH = 380, DB_MS = 1500;
 function dobon(c, sb, burnt, e, looks = {}) {
   sb -= LV; // 立っていたのは1段上の床（マグマでも深さは1つ進む）。その床が割れて、下の段が溶岩の池になる
   const P =(x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); };
-  const lv = c.createLinearGradient(0, sb - 40, 0, sb + 50); lv.addColorStop(0, 'rgba(255,120,40,0)'); lv.addColorStop(.45, `rgba(255,120,40,${e < DB_FALL ? .2 : .45})`); lv.addColorStop(1, 'rgba(255,90,20,.9)'); c.fillStyle = lv; c.fillRect(0, sb - 40, VW, 90);
+  // 溶岩の光：池を中心にした丸い光。地面より上には出さない（前は横いっぱいの帯で、浅い段だと地上のすぐ下だけ赤くなって変だった）
+  const gy = sb + LV / 2, lv = c.createRadialGradient(SX + SW / 2, gy, 6, SX + SW / 2, gy, 62); lv.addColorStop(0, `rgba(255,110,30,${e < DB_FALL ? .25 : .55})`); lv.addColorStop(1, 'rgba(255,90,20,0)');
+  const y0 = Math.max(TOP + 1, gy - 62); c.fillStyle = lv; c.fillRect(0, y0, VW, gy + 62 - y0);
   const xs = burnt.map((_, k) => SX + 8 + k * 8);
   if (e < DB_FALL) { // ひびがのびる
     const v = e / DB_FALL; P(SX + 19, sb - 2, 1, 2 + v * 3, '#000'); P(SX + 19 - v * 10, sb - 1, v * 10, 1, '#000'); P(SX + 20, sb, v * 12, 1, '#000');
@@ -590,6 +593,8 @@ function tear(then) {
   const t = document.querySelector('.ticket');
   let reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { }
   if (!t || reduce || t.classList.contains('torn')) { then(); return; }
+  // ゆれの途中の角度のまま止める（前はゆれを止めた瞬間に元の角度へ飛んで、ガクッとしていた）
+  const cur = getComputedStyle(t).transform; if (cur && cur !== 'none') t.style.transform = cur;
   t.classList.add('torn'); SFX.play('tear'); if (navigator.vibrate) try { navigator.vibrate(25); } catch (e) { }
   setTimeout(then, 700);
 }
@@ -618,14 +623,16 @@ function ticketEl(g, d) {
   if (g.id === 'dwarf') { art.classList.add('tk-css'); art.style.position = 'relative'; art.append(h('img', { class: 'tka-cover tka-pxl', src: DWARF_ART, alt: '' })); } // アイコンと同じ絵
   if (BD_TITLE[g.id]) bdTicketArt(g.id, art);
   if (g.id === 'trapper') { art.classList.add('tk-css'); art.style.position = 'relative'; art.style.background = '#8fd0f8'; art.append(h('img', { class: 'tka-cover', src: ICON_ART.trapperTk, alt: '' })); }
+  // 影は上の部分と半券に分けてつける（tk-sh）。前はチケット全体にかけていて、半券をちぎると毎コマ影を描きなおして がくがくし、Safari では半券の影が切れていた
   return h('div', { class: 'ticket', style: swayPhase(), role: 'group', 'aria-label': `えらんだゲーム：${g.n}` },
-    h('div', { class: 'tk-top' }, art,
-      h('div', { class: 'tk-row' }, h('div', { class: 'tk-l' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('span', { class: 'tk-name' + (g.n.length > 6 ? ' long' : '') }, g.n)))), // 右の説明文（フレーバー）は出さない（2026-11-14）
-    h('div', { class: 'tk-perf' }),
-    h('div', { class: 'tk-stub' },
+    h('div', { class: 'tk-sh tk-shtop' },
+      h('div', { class: 'tk-top' }, art,
+        h('div', { class: 'tk-row' }, h('div', { class: 'tk-l' }, h('span', { class: 'tk-admit' }, 'ADMIT ・ 入場券'), h('span', { class: 'tk-name' + (g.n.length > 6 ? ' long' : '') }, g.n)))), // 右の説明文（フレーバー）は出さない（2026-11-14）
+      h('div', { class: 'tk-perf' })),
+    h('div', { class: 'tk-sh tk-shs' }, h('div', { class: 'tk-stub' },
       h('span', null, h('small', null, '人数'), h('b', null, g.ppl)),
       h('span', null, h('small', null, '時間'), h('b', null, g.time)),
-      h('span', null, h('small', null, 'むずかしさ'), h('b', { 'aria-label': `3段階の${GAME_LV[g.id] || 2}` }, '★'.repeat(GAME_LV[g.id] || 2) + '☆'.repeat(3 - (GAME_LV[g.id] || 2))))));
+      h('span', null, h('small', null, 'むずかしさ'), h('b', { 'aria-label': `3段階の${GAME_LV[g.id] || 2}` }, '★'.repeat(GAME_LV[g.id] || 2) + '☆'.repeat(3 - (GAME_LV[g.id] || 2)))))));
 }
 // 部屋主のOKを待つ画面：自分の名前が書かれた入場券を、部屋主がチェックしている
 let admitAt = 0;
@@ -966,7 +973,7 @@ function drawDig(cv, a, now) {
   const dy = fall ? -LV * (1 - digEase((u - .68) / .22)) : 0, squash = fall && u > .9 && u < .95 ? 1 : 0, meId = local ? null : me;
   // 公開のあとなので、鉄カブト・ウォッカはみんなの見た目に出す
   const looks = a.looks || {}, bags = a.bags || {}, gain = a.gain || {}, got = fall ? Math.min(1, Math.max(0, (u - .74) / .22)) : 0;
-  a.stay.forEach((id, k) => { const x = SX + 8 + k * 8; sprite(c, x, bottom - 2 + dy + squash, pIndex(id), id === NPC, id === meId, looks[id], { bag: (bags[id] || 0) + Math.round((gain[id] || 0) * got) }); if (swing && a.stay.length) digPick(c, x, bottom - 2, down); });
+  a.stay.map((id, k) => [id, k]).reverse().forEach(([id, k]) => { const x = SX + 8 + k * 8; sprite(c, x, bottom - 2 + dy + squash, pIndex(id), id === NPC, id === meId, looks[id], { bag: (bags[id] || 0) + Math.round((gain[id] || 0) * got) }); if (swing && a.stay.length) digPick(c, x, bottom - 2, down); });
   // 帰る人：はしごへ歩いて（〜18%）→ リュックを背負ってえっさえっさ登る（〜95%）
   const oldB = TOP + (a.depth - 1) * LV, lx = SX + SW - 7;
   if (climbing) (a.leavers || []).forEach((id, k) => {
