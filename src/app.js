@@ -287,7 +287,7 @@ function dobon(c, sb, burnt, e, looks = {}) {
 // ドボンの動き（割れてから DB_MS）。ゆれと赤いフラッシュは、動きを減らす設定ならなし
 function boomLoop() {
   if (!G.cv || !G.cv.isConnected || !doc || doc.status !== 'playing' || digActive()) { if (G.cv) G.cv.style.transform = ''; return; }
-  const e = Date.now() - boomFrom; if (e < 0 || Date.now() >= boomUntil) { G.cv.style.transform = ''; return; } // 顔がぷかぷかしているあいだも動かす
+  const e = Date.now() - boomFrom; if (e < 0 || !boomOn(doc)) { G.cv.style.transform = ''; return; } // 顔がぷかぷかしているあいだも動かす
   drawShaft(G.cv, doc, { boom: true, bt: e, burnt: boomBurnt, sides: boomSides, who: boomWho, looks: boomLooks, me: local ? localActor() : me, vh: boardVh() });
   let still = false; try { still = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (x) { }
   if (!still) {
@@ -895,7 +895,9 @@ function viewOld() {
 
 /* =================== IN GAME =================== */
 const G = {};
-let boomFrom = 0, boomUntil = 0, boomBurnt = [], boomSides = [], boomWho = {}, boomLooks = {};
+let boomFrom = 0, boomUntil = 0, boomBurnt = [], boomSides = [], boomWho = {}, boomLooks = {}, boomKey = '';
+// ドボンを描くのは、マグマが出たその探検・その深さのあいだだけ（次の探検が始まったら描かない。前は地上に溶岩が一瞬うつっていた）
+const boomOn = g => { const n = Date.now(); return n >= boomFrom && n < boomUntil && !!g && boomKey === (g.startedAt || g.players.join()) + ':' + g.exp + ':' + g.depth; };
 function viewGameShell() {
   G.bar = h('div', { class: 'bar' }); G.crew = h('div', { class: 'crew' });
   G.cv = h('canvas', { class: 'view', role: 'img', 'aria-label': '坑道の断面' });
@@ -911,7 +913,7 @@ function viewGameShell() {
   G.rad = h('div', { class: 'radov', hidden: true });
   G.board.append(G.sum, G.rad, G.reveal);
   G.panel = h('div', { class: 'tray' });
-  try { if (window.ResizeObserver) { G.ro && G.ro.disconnect(); G.ro = new ResizeObserver(() => { if (doc && doc.status === 'playing' && G.cv && G.cv.isConnected && !digActive() && !introMoving()) drawShaft(G.cv, doc, { boom: Date.now() >= boomFrom && Date.now() < boomUntil, burnt: boomBurnt, sides: boomSides, who: boomWho, looks: boomLooks, me: local ? localActor() : me, vh: boardVh() }); }); G.ro.observe(G.board); } } catch (e) { }
+  try { if (window.ResizeObserver) { G.ro && G.ro.disconnect(); G.ro = new ResizeObserver(() => { if (doc && doc.status === 'playing' && G.cv && G.cv.isConnected && !digActive() && !introMoving()) drawShaft(G.cv, doc, { boom: boomOn(doc), bt: boomOn(doc) ? Date.now() - boomFrom : null, burnt: boomBurnt, sides: boomSides, who: boomWho, looks: boomLooks, me: local ? localActor() : me, vh: boardVh() }); }); G.ro.observe(G.board); } } catch (e) { }
   return h('div', { class: 'gscreen' }, G.bar, G.crew, G.board, G.panel);
 }
 function boardVh() {
@@ -984,7 +986,7 @@ function drawDig(cv, a, now) {
 setInterval(() => {
   if (!doc || doc.status !== 'playing' || !G.cv || !G.cv.isConnected || isTrapDoc() || isBoardDoc() || doc.game !== 'dwarf' && doc.game) return;
   const now = Date.now();
-  if (digActive() || introMoving() || (now >= boomFrom && now < boomUntil)) return;
+  if (digActive() || introMoving() || boomOn(doc)) return;
   if (doc.phase !== 'choose' && !(now < (G.jpUntil || 0))) return;
   try { if (matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) { }
   drawShaft(G.cv, doc, { banzai: now >= (G.jpFrom || 0) && now < (G.jpUntil || 0), me: local ? localActor() : me, vh: boardVh(), t: now });
@@ -1082,7 +1084,7 @@ function renderGame() {
     boomLooks = rv.armed || {};
     // 演出のあいだと結果が出た直後は、ボタンを止める（連打が次の段の選択にならないように）
     G.lockUntil = t0 + after + 1000; clearTimeout(G.lockT); G.lockT = setTimeout(renderPanel, after + 1050);
-    if (burnt.length) { boomFrom = t0 + after; boomUntil = boomFrom + 3500; boomBurnt = burnt; boomSides = bs; boomWho = bw; if (G.boom) G.boom.hidden = true; setTimeout(() => requestAnimationFrame(boomLoop), Math.max(0, after - 10)); }
+    if (burnt.length) { boomFrom = t0 + after; boomUntil = boomFrom + 3500; boomKey = dwGameKey(d) + ':' + d.exp + ':' + d.depth; boomBurnt = burnt; boomSides = bs; boomWho = bw; if (G.boom) G.boom.hidden = true; setTimeout(() => requestAnimationFrame(boomLoop), Math.max(0, after - 10)); }
     // 音：せーの！ → ツルハシで3回カツン → パカッ（マグマならドカン、大鉱脈ならキラキラ）
     SFX.play('seeno');
     if (dig && stay.length) { [.1, .3, .5].forEach(u => SFX.later('dig', SEENO_MS + DIG_MS * u)); if (!split) SFX.later('crack', SEENO_MS + DIG_MS * .68); }
@@ -1129,14 +1131,14 @@ function renderGame() {
       face(id, 26), h('span', { class: 'nm' }, nameOf(id)), h('span', { class: 'sc' + (up ? ' bump' : '') }, score(g, id), bag ? h('small', null, `(+${bag})`) : null), h('span', { class: 'sub ' + cls }, st));
   }));
   g.players.forEach(id => { G.prevBag[id] = g.inside.includes(id) ? g.bag[id] || 0 : 0; G.prevHome[id] = !!(g.out[id] && g.out[id].result === 'home'); });
-  const now = Date.now(), boom = !anim && now >= boomFrom && now < boomUntil;
+  const now = Date.now(), boom = !anim && boomOn(g);
   if (anim) drawDig(G.cv, anim, now);
   else if (introMoving()) drawIntro(G.cv, d, now);
   else drawShaft(G.cv, g, { banzai: now >= (G.jpFrom || 0) && now < (G.jpUntil || 0), boom, bt: boom ? now - boomFrom : null, burnt: boomBurnt, sides: boomSides, who: boomWho, looks: boomLooks, me: meId, vh: boardVh() });
   if (boom && now - boomFrom >= DB_SPLASH) { G.boom.textContent = boomSides.includes('main') || boomSides.length > 1 ? 'ドボン！' : (boomSides[0] === 'left' ? '左が' : '右が') + 'ドボン！'; G.boom.className = 'boom'; G.boom.hidden = false; } else if (G.boom.className === 'boom') G.boom.hidden = true;
   G.jp.textContent = `${g.exp === EXPEDITIONS ? 'ラスト探検 ・ ' : ''}大鉱脈チャンス ${Math.round(jackpotRate(g.exp) * 100)}%`;
   G.jp.classList.toggle('last', g.exp === EXPEDITIONS);
-  if (boom) setTimeout(() => { if (Date.now() >= boomUntil && G.cv && G.cv.isConnected && doc) { drawShaft(G.cv, doc, { me: local ? localActor() : me, vh: boardVh() }); G.boom.hidden = true; } }, 3600);
+  if (boom) setTimeout(() => { if (!boomOn(doc) && G.cv && G.cv.isConnected && doc && doc.status === 'playing') { drawShaft(G.cv, doc, { me: local ? localActor() : me, vh: boardVh() }); G.boom.hidden = true; } }, 3600);
   const p = Math.round(magmaRate(g.depth + 1) * 100);
   G.depth.textContent = `深さ ${g.depth}`;
   G.heat.firstChild.style.height = Math.min(100, p / 60 * 100) + '%';
